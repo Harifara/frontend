@@ -204,7 +204,7 @@ const Login = () => {
           </Card>
 
           <div className="text-center text-xs text-muted-foreground">
-            <p>© 2025 E.C.A.R.T. Tous droits réservés.</p>
+            <p>© 2025 E.C.A.R.T. Tous droits réservés. fhelflelelaf</p>
           </div>
         </div>
       </div>
