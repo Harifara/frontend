@@ -1,8 +1,15 @@
+// ------------------------
+// Configuration API
+// ------------------------
+// ------------------------
+// Configuration API
+// ------------------------
 export const API_BASE_URL =
-  window.__CONFIG__?.API_BASE_URL || import.meta.env.VITE_API_BASE_URL;
+  window.__CONFIG__?.API_BASE_URL || import.meta.env.VITE_API_BASE_URL || "https://api.ecartmada.com";
 
 export const MEDIA_URL =
-  window.__CONFIG__?.MEDIA_URL || import.meta.env.VITE_MEDIA_URL;
+  window.__CONFIG__?.MEDIA_URL || import.meta.env.VITE_MEDIA_URL || "https://api.ecartmada.com/media/";
+
 
 const DRF_TOKEN_KEY = "drf_token";
 const KONG_TOKEN_KEY = "kong_token";
