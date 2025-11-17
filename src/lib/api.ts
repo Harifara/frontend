@@ -1,14 +1,10 @@
-// ------------------------
-// Configuration API
-// ------------------------
+// src/api/auth.ts
 // ------------------------
 // Configuration API
 // ------------------------
 export const API_BASE_URL = "https://api.ecartmada.com/api";
-
 export const MEDIA_URL =
   window.__CONFIG__?.MEDIA_URL || import.meta.env.VITE_MEDIA_URL || "https://api.ecartmada.com/media/";
-
 
 const DRF_TOKEN_KEY = "drf_token";
 const KONG_TOKEN_KEY = "kong_token";
@@ -66,8 +62,8 @@ export const authApi = {
   login: async (username: string, password: string) => {
     const data = await fetchWithLog(`${API_BASE_URL}/auth/login/`, {
       method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify({ username, password }),
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ username: username.trim(), password }),
     });
     if (data.access) setDrfToken(data.access);
     if (data.access) {
