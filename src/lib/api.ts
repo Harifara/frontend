@@ -1,10 +1,11 @@
-// src/api/auth.ts
 // ------------------------
 // Configuration API
 // ------------------------
-export const API_BASE_URL = "https://api.ecartmada.com/api";
-export const MEDIA_URL =
-  window.__CONFIG__?.MEDIA_URL || import.meta.env.VITE_MEDIA_URL || "https://api.ecartmada.com/media/";
+// ------------------------
+// Configuration API
+// ------------------------
+export const API_BASE_URL = "http://auth_service:8000/api"; // au lieu de https://api.ecartmada.com/api
+export const MEDIA_URL = "http://auth_service:8000/media/";
 
 const DRF_TOKEN_KEY = "drf_token";
 const KONG_TOKEN_KEY = "kong_token";
@@ -59,11 +60,12 @@ export const fetchWithLog = async (url: string, options: RequestInit = {}) => {
 // AUTH API (DRF Token)
 // ------------------------
 export const authApi = {
+  
   login: async (username: string, password: string) => {
     const data = await fetchWithLog(`${API_BASE_URL}/auth/login/`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ username: username.trim(), password }),
+      headers: getHeaders(),
+      body: JSON.stringify({ username, password }),
     });
     if (data.access) setDrfToken(data.access);
     if (data.access) {
