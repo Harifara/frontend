@@ -66,17 +66,12 @@ export const fetchWithLog = async (url: string, options: RequestInit = {}) => {
 export const authApi = {
   
   login: async (username: string, password: string) => {
-    const data = await fetch("https://api.ecartmada.com/api/auth/login/", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ username: "admin", password: "admin123" })
-});
-
-    if (data.access) setDrfToken(data.access);
-    if (data.access) {
-      const kongData = await authApi.fetchKongToken();
-      if (kongData) setKongToken(kongData);
-    }
+    const data = await fetchWithLog(`${API_BASE_URL}/auth/login/`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ username, password }),
+    });
+    
     return data;
   },
 
