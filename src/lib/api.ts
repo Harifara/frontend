@@ -4,8 +4,11 @@
 // ------------------------
 // Configuration API
 // ------------------------
-export const API_BASE_URL = "http://auth_service:8000/api"; // au lieu de https://api.ecartmada.com/api
-export const MEDIA_URL = "http://auth_service:8000/media/";
+export const API_BASE_URL = "https://api.ecartmada.com/api";
+
+export const MEDIA_URL =
+  window.__CONFIG__?.MEDIA_URL || import.meta.env.VITE_MEDIA_URL || "https://api.ecartmada.com/media/";
+
 
 const DRF_TOKEN_KEY = "drf_token";
 const KONG_TOKEN_KEY = "kong_token";
