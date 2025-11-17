@@ -4,7 +4,7 @@
 // ------------------------
 // Configuration API
 // ------------------------
-export const API_BASE_URL = "https://api.ecartmada.com/api";
+export const API_BASE_URL = "https://ecartmada.com/api";
 
 
 export const MEDIA_URL =
