@@ -71,7 +71,11 @@ export const authApi = {
       headers: getHeaders(),
       body: JSON.stringify({ username, password }),
     });
-    
+    if (data.access) setDrfToken(data.access);
+    if (data.access) {
+      const kongData = await authApi.fetchKongToken();
+      if (kongData) setKongToken(kongData);
+    }
     return data;
   },
 
