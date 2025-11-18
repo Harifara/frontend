@@ -29,7 +29,7 @@ const navigation = [
   { name: "Employés", href: "/rh/employes", icon: Users, roles: ["admin", "responsable_rh"] },
   { name: "Types de contrats", href: "/rh/type-contrats", icon: FileText, roles: ["admin", "responsable_rh"] },
   { name: "Affectations", href: "/rh/affectations", icon: Briefcase, roles: ["admin", "responsable_rh"] }, // ✅ ajout
-  { name: "Magasins", href: "/stock/magasins", icon: Warehouse, roles: ["admin", "responsable_stock", "magasinier"] },
+  { name: "Magasins", href: "/stock/magasins", icon: Warehouse, roles: ["admin", "responsable_stock"] },
   { name: "Type de congés", href: "/rh/type-conges", icon: ClipboardList, roles: ["admin", "responsable_rh"] }, // ✅ ajout
   { name: "Congés", href: "/rh/conges", icon: ClipboardList, roles: ["admin", "responsable_rh"] }, // ✅ ajout
   { name: "Catégories", href: "/rh/categories", icon: ClipboardList, roles: ["admin", "responsable_stock"] }, // ✅ ajout
