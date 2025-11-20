@@ -5,14 +5,10 @@ import {
   ClipboardList,
   Warehouse,
   FileText,
-  MapPin,
-  Briefcase,
   AlertCircle,
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { motion } from "framer-motion";
-
 import {
   LineChart,
   Line,
@@ -58,88 +54,61 @@ export const Dashboard = () => {
 
   return (
     <div className="p-6 flex-1 bg-gray-50 min-h-screen">
-      {/* Titre */}
       <h1 className="text-2xl font-bold text-sidebar-foreground mb-6">
         Bonjour, {user?.full_name || user?.username}
       </h1>
 
-      {/* Cartes KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {(user.role === "admin" || user.role === "responsable_rh") && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <Card className="p-4 bg-green-50 border border-green-200">
-              <div className="flex items-center">
-                <Users className="w-6 h-6 text-green-700 mr-3" />
-                <div>
-                  <p className="text-lg font-semibold text-green-800">120</p>
-                  <p className="text-sm text-green-700">Employés</p>
-                </div>
+          <Card className="p-4 bg-green-50 border border-green-200">
+            <div className="flex items-center">
+              <Users className="w-6 h-6 text-green-700 mr-3" />
+              <div>
+                <p className="text-lg font-semibold text-green-800">120</p>
+                <p className="text-sm text-green-700">Employés</p>
               </div>
-            </Card>
-          </motion.div>
+            </div>
+          </Card>
         )}
 
         {(user.role === "admin" || user.role === "responsable_rh") && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <Card className="p-4 bg-yellow-50 border border-yellow-200">
-              <div className="flex items-center">
-                <ClipboardList className="w-6 h-6 text-yellow-700 mr-3" />
-                <div>
-                  <p className="text-lg font-semibold text-yellow-800">8</p>
-                  <p className="text-sm text-yellow-700">Congés en attente</p>
-                </div>
+          <Card className="p-4 bg-yellow-50 border border-yellow-200">
+            <div className="flex items-center">
+              <ClipboardList className="w-6 h-6 text-yellow-700 mr-3" />
+              <div>
+                <p className="text-lg font-semibold text-yellow-800">8</p>
+                <p className="text-sm text-yellow-700">Congés en attente</p>
               </div>
-            </Card>
-          </motion.div>
+            </div>
+          </Card>
         )}
 
         {(user.role === "admin" || user.role === "responsable_stock") && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-          >
-            <Card className="p-4 bg-blue-50 border border-blue-200">
-              <div className="flex items-center">
-                <Warehouse className="w-6 h-6 text-blue-700 mr-3" />
-                <div>
-                  <p className="text-lg font-semibold text-blue-800">5</p>
-                  <p className="text-sm text-blue-700">Magasins</p>
-                </div>
+          <Card className="p-4 bg-blue-50 border border-blue-200">
+            <div className="flex items-center">
+              <Warehouse className="w-6 h-6 text-blue-700 mr-3" />
+              <div>
+                <p className="text-lg font-semibold text-blue-800">5</p>
+                <p className="text-sm text-blue-700">Magasins</p>
               </div>
-            </Card>
-          </motion.div>
+            </div>
+          </Card>
         )}
 
         {(user.role === "admin" || user.role === "responsable_stock" || user.role === "magasinier") && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <Card className="p-4 bg-purple-50 border border-purple-200">
-              <div className="flex items-center">
-                <FileText className="w-6 h-6 text-purple-700 mr-3" />
-                <div>
-                  <p className="text-lg font-semibold text-purple-800">320</p>
-                  <p className="text-sm text-purple-700">Articles en stock</p>
-                  <Progress value={75} className="mt-2 h-2 rounded-full" />
-                </div>
+          <Card className="p-4 bg-purple-50 border border-purple-200">
+            <div className="flex items-center">
+              <FileText className="w-6 h-6 text-purple-700 mr-3" />
+              <div>
+                <p className="text-lg font-semibold text-purple-800">320</p>
+                <p className="text-sm text-purple-700">Articles en stock</p>
+                <Progress value={75} className="mt-2 h-2 rounded-full" />
               </div>
-            </Card>
-          </motion.div>
+            </div>
+          </Card>
         )}
       </div>
 
-      {/* Graphiques */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {(user.role === "admin" || user.role === "responsable_stock" || user.role === "magasinier") && (
           <Card className="p-4 border border-sidebar-accent/20">
@@ -174,7 +143,6 @@ export const Dashboard = () => {
         )}
       </div>
 
-      {/* Alertes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {recentStockMovements.map((item, idx) => (
           <Card key={idx} className="p-4 border border-red-200 bg-red-50 flex items-center">
@@ -191,7 +159,6 @@ export const Dashboard = () => {
         ))}
       </div>
 
-      {/* Tableaux récents */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="p-4 border border-sidebar-accent/20">
           <h3 className="text-md font-semibold text-sidebar-foreground mb-2">
