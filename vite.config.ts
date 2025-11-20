@@ -17,4 +17,9 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+
+  // ✅ AJOUT IMPORTANT POUR FIX L'ERREUR
+  optimizeDeps: {
+    include: ["framer-motion"],
+  },
 }));
