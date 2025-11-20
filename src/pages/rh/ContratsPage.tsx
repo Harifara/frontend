@@ -258,7 +258,7 @@ const ContratsPage: React.FC = () => {
 
 
 
-        <Select value={filterNature || ""} onValueChange={(v) => setFilterNature(v || null)}>
+        {/* <Select value={filterNature || ""} onValueChange={(v) => setFilterNature(v || null)}>
           <SelectTrigger><SelectValue placeholder="Nature" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="">-- Tous --</SelectItem>
@@ -266,9 +266,9 @@ const ContratsPage: React.FC = () => {
             <SelectItem value="mission">Mission</SelectItem>
             <SelectItem value="prestation">Prestation</SelectItem>
           </SelectContent>
-        </Select>
+        </Select> */}
 
-        <Select value={filterEmployer || ""} onValueChange={(v) => setFilterEmployer(v || null)}>
+        {/* <Select value={filterEmployer || ""} onValueChange={(v) => setFilterEmployer(v || null)}>
           <SelectTrigger><SelectValue placeholder="Employé" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="">-- Tous --</SelectItem>
@@ -282,7 +282,7 @@ const ContratsPage: React.FC = () => {
             <SelectItem value="">-- Tous --</SelectItem>
             {types.map(t => <SelectItem key={t.id} value={t.id}>{t.nom_type}</SelectItem>)}
           </SelectContent>
-        </Select>
+        </Select> */}
       </div>
 
       {/* TABLE */}
