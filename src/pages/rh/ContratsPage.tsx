@@ -244,17 +244,18 @@ const ContratsPage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
         <Input placeholder="Recherche libre..." value={search} onChange={e => setSearch(e.target.value)} />
 
-        <Select value={filterStatus || ""} onValueChange={(v) => setFilterStatus(v || null)}>
-          <SelectTrigger><SelectValue placeholder="Statut" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">-- Tous --</SelectItem>
+        <Select value={filterStatus || "all"} onValueChange={(v) => setFilterStatus(v === "all" ? null : v)}>
+        <SelectTrigger><SelectValue placeholder="Statut" /></SelectTrigger>
+        <SelectContent>
+            <SelectItem value="all">-- Tous --</SelectItem>
             <SelectItem value="actif">Actif</SelectItem>
             <SelectItem value="expire">Expiré</SelectItem>
             <SelectItem value="resilie">Résilié</SelectItem>
             <SelectItem value="suspendu">Suspendu</SelectItem>
             <SelectItem value="termine">Terminé</SelectItem>
-          </SelectContent>
+        </SelectContent>
         </Select>
+
 
         <Select value={filterNature || ""} onValueChange={(v) => setFilterNature(v || null)}>
           <SelectTrigger><SelectValue placeholder="Nature" /></SelectTrigger>
