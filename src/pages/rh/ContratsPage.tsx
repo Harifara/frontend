@@ -1,19 +1,27 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { rhApi } from "@/lib/api";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
-  Card, CardHeader, CardTitle, CardContent
-} from "@/components/ui/card";
-import {
-  Table, TableHeader, TableRow, TableHead, TableBody, TableCell
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 type Employer = { id: string; nom: string };
 type TypeContrat = { id: string; nom_type: string };
@@ -28,6 +36,7 @@ type Contrat = {
   status_contrat: string;
   date_debut_contrat: string;
   date_fin_contrat?: string | null;
+  duree_jours?: number | null;
   salaire?: number | string;
   montant_total?: number | string | null;
   description_mission?: string | null;
@@ -44,6 +53,8 @@ const STATUS_BADGE = (status: string) => {
     default: return "bg-gray-100 text-gray-800";
   }
 };
+
+const NATURE_OPTIONS = ["emploi", "prestation", "mission"];
 
 const ContratsPage: React.FC = () => {
   const [contrats, setContrats] = useState<Contrat[]>([]);
@@ -115,35 +126,28 @@ const ContratsPage: React.FC = () => {
     });
   }, [contrats, filterStatus, filterNature, filterEmployer, filterType, search]);
 
+  // OUVRIR MODAL CREATION
   const openCreate = () => {
     setEditing({
       nature_contrat: "emploi",
       status_contrat: "actif",
       date_debut_contrat: new Date().toISOString().slice(0, 10),
-      salaire: 0
+      salaire: 0,
+      employer: "",
+      type_contrat: ""
     });
     setFileToUpload(null);
     setIsModalOpen(true);
   };
 
   const openEdit = (c: Contrat) => {
-    setEditing({ ...c });
+    setEditing({
+      ...c,
+      employer: c.employer,
+      type_contrat: c.type_contrat
+    });
     setFileToUpload(null);
     setIsModalOpen(true);
-  };
-
-  const openDetail = async (c: Contrat) => {
-    try {
-      if ((rhApi as any).getContrat && c.id) {
-        const full = await (rhApi as any).getContrat(c.id);
-        setDetailContrat(full);
-      } else {
-        setDetailContrat(c);
-      }
-      setIsDetailOpen(true);
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de charger le contrat.", variant: "destructive" });
-    }
   };
 
   const saveContrat = async () => {
@@ -155,30 +159,24 @@ const ContratsPage: React.FC = () => {
     try {
       if (fileToUpload) {
         const fd = new FormData();
-        Object.entries(editing).forEach(([k, v]) => {
-          if (v !== undefined && v !== null) fd.append(k, String(v));
-        });
+        Object.entries(editing).forEach(([k, v]) => { if (v !== undefined && v !== null) fd.append(k, String(v)); });
         fd.append("contrat_file", fileToUpload);
-        if (editing.id && (rhApi as any).updateContratFormData) {
-          await (rhApi as any).updateContratFormData(editing.id, fd);
-        } else if (!editing.id && (rhApi as any).createContratFormData) {
-          await (rhApi as any).createContratFormData(fd);
-        } else {
-          toast({ title: "Attention", description: "L'API ne supporte pas l'upload multipart.", variant: "destructive" });
-          return;
-        }
+        if (editing.id && (rhApi as any).updateContratFormData) await (rhApi as any).updateContratFormData(editing.id, fd);
+        else if (!editing.id && (rhApi as any).createContratFormData) await (rhApi as any).createContratFormData(fd);
+        else { toast({ title: "Attention", description: "L'API ne supporte pas l'upload multipart.", variant: "destructive" }); return; }
       } else {
-        const payload = { ...editing };
+        const payload = {
+          ...editing,
+          employer: typeof editing.employer === "object" ? editing.employer.id : editing.employer,
+          type_contrat: typeof editing.type_contrat === "object" ? editing.type_contrat.id : editing.type_contrat
+        };
         if (editing.id) await rhApi.updateContrat(editing.id, payload);
         else await rhApi.createContrat(payload);
       }
       setIsModalOpen(false);
-      setEditing(null);
-      setFileToUpload(null);
       fetchAll();
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || err?.message || "Impossible de sauvegarder.";
-      toast({ title: "Erreur", description: msg, variant: "destructive" });
+      toast({ title: "Erreur", description: err.message || "Impossible de sauvegarder.", variant: "destructive" });
     }
   };
 
@@ -201,64 +199,61 @@ const ContratsPage: React.FC = () => {
       {/* FILTRES */}
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
         <Input placeholder="Recherche libre..." value={search} onChange={e => setSearch(e.target.value)} />
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-          <option value="all">-- Tous --</option>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="border rounded p-2">
+          <option value="all">Tous les statuts</option>
           <option value="actif">Actif</option>
           <option value="expire">Expiré</option>
           <option value="resilie">Résilié</option>
           <option value="suspendu">Suspendu</option>
           <option value="termine">Terminé</option>
         </select>
-        <select value={filterNature} onChange={e => setFilterNature(e.target.value)}>
-          <option value="all">-- Tous --</option>
-          <option value="emploi">Contrat de travail</option>
-          <option value="mission">Mission</option>
-          <option value="prestation">Prestation</option>
+        <select value={filterNature} onChange={e => setFilterNature(e.target.value)} className="border rounded p-2">
+          <option value="all">Toutes les natures</option>
+          {NATURE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
         </select>
-        <select value={filterEmployer} onChange={e => setFilterEmployer(e.target.value)}>
-          <option value="all">-- Tous --</option>
-          {employers.map(e => <option key={e.id} value={e.id}>{e.nom}</option>)}
+        <select value={filterEmployer} onChange={e => setFilterEmployer(e.target.value)} className="border rounded p-2">
+          <option value="all">Tous les employés</option>
+          {employers.map(emp => <option key={emp.id} value={emp.id}>{emp.nom}</option>)}
         </select>
-        <select value={filterType} onChange={e => setFilterType(e.target.value)}>
-          <option value="all">-- Tous --</option>
+        <select value={filterType} onChange={e => setFilterType(e.target.value)} className="border rounded p-2">
+          <option value="all">Tous les types</option>
           {types.map(t => <option key={t.id} value={t.id}>{t.nom_type}</option>)}
         </select>
       </div>
 
-      {/* TABLE */}
+      {/* TABLEAU */}
       <Card>
-        <CardHeader><CardTitle>Liste des contrats ({filtered.length})</CardTitle></CardHeader>
-        <CardContent>
+        <CardHeader>
+          <CardTitle>Liste des contrats</CardTitle>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Employé</TableHead>
-                <TableHead>Nature</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Début</TableHead>
-                <TableHead>Fin</TableHead>
-                <TableHead>Statut</TableHead>
+                <TableHead>Nature</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Date début</TableHead>
+                <TableHead>Date fin</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.length ? filtered.map(c => (
-                <TableRow key={c.id} className="hover:bg-gray-50">
-                  <TableCell>{c.employer_nom || (typeof c.employer === "string" ? c.employer : (c as any).employer?.nom)}</TableCell>
+              {filtered.map(c => (
+                <TableRow key={c.id}>
+                  <TableCell>{c.employer_nom}</TableCell>
+                  <TableCell>{c.type_nom}</TableCell>
                   <TableCell>{c.nature_contrat}</TableCell>
-                  <TableCell>{c.type_nom || (c as any).type_contrat?.nom_type || "-"}</TableCell>
+                  <TableCell><Badge className={STATUS_BADGE(c.status_contrat)}>{c.status_contrat}</Badge></TableCell>
                   <TableCell>{c.date_debut_contrat}</TableCell>
                   <TableCell>{c.date_fin_contrat || "-"}</TableCell>
-                  <TableCell><Badge className={STATUS_BADGE(c.status_contrat)}>{c.status_contrat}</Badge></TableCell>
-                  <TableCell className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => openDetail(c)}>Détail</Button>
-                    <Button size="sm" variant="outline" onClick={() => openEdit(c)}>Modifier</Button>
+                  <TableCell className="space-x-2">
+                    <Button size="sm" onClick={() => openEdit(c)}>Editer</Button>
                     <Button size="sm" variant="destructive" onClick={() => askDelete(c.id)}>Supprimer</Button>
                   </TableCell>
                 </TableRow>
-              )) : (
-                <TableRow><TableCell colSpan={7} className="text-center py-6">Aucun contrat trouvé.</TableCell></TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </CardContent>
@@ -266,46 +261,68 @@ const ContratsPage: React.FC = () => {
 
       {/* MODAL AJOUT / EDIT */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader><DialogTitle>{editing?.id ? "Modifier un contrat" : "Créer un contrat"}</DialogTitle></DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <DialogContent aria-describedby="modal-description" className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editing?.id ? "Modifier un contrat" : "Créer un contrat"}</DialogTitle>
+            <DialogDescription id="modal-description">
+              Remplissez les informations du contrat pour créer ou modifier.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+
             {/* Employé */}
             <div>
               <Label>Employé *</Label>
-              <select className="border rounded p-2 w-full"
-                value={(editing?.employer as any)?.id || (editing?.employer as string) || ""}
-                onChange={e => setEditing({ ...editing, employer: e.target.value })}>
+              <select
+                className="border rounded p-2 w-full"
+                value={typeof editing?.employer === "object" ? editing.employer.id : editing?.employer || ""}
+                onChange={e => {
+                  const emp = employers.find(emp => emp.id === e.target.value);
+                  setEditing(prev => ({ ...prev, employer: emp || e.target.value }));
+                }}
+              >
                 <option value="">-- Choisir --</option>
                 {employers.map(emp => <option key={emp.id} value={emp.id}>{emp.nom}</option>)}
               </select>
             </div>
+
             {/* Type */}
             <div>
               <Label>Type</Label>
-              <select className="border rounded p-2 w-full"
-                value={(editing?.type_contrat as any)?.id || (editing?.type_contrat as string) || ""}
-                onChange={e => setEditing({ ...editing, type_contrat: e.target.value })}>
+              <select
+                className="border rounded p-2 w-full"
+                value={typeof editing?.type_contrat === "object" ? editing.type_contrat.id : editing?.type_contrat || ""}
+                onChange={e => {
+                  const t = types.find(t => t.id === e.target.value);
+                  setEditing(prev => ({ ...prev, type_contrat: t || e.target.value }));
+                }}
+              >
                 <option value="">-- Choisir --</option>
                 {types.map(t => <option key={t.id} value={t.id}>{t.nom_type}</option>)}
               </select>
             </div>
+
             {/* Nature */}
             <div>
-              <Label>Nature</Label>
-              <select className="border rounded p-2 w-full"
-                value={editing?.nature_contrat || "emploi"}
-                onChange={e => setEditing({ ...editing, nature_contrat: e.target.value })}>
-                <option value="emploi">Contrat de travail</option>
-                <option value="mission">Mission</option>
-                <option value="prestation">Prestation</option>
+              <Label>Nature *</Label>
+              <select
+                className="border rounded p-2 w-full"
+                value={editing?.nature_contrat || ""}
+                onChange={e => setEditing(prev => ({ ...prev, nature_contrat: e.target.value }))}
+              >
+                {NATURE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
-            {/* Statut */}
+
+            {/* Status */}
             <div>
-              <Label>Statut</Label>
-              <select className="border rounded p-2 w-full"
-                value={editing?.status_contrat || "actif"}
-                onChange={e => setEditing({ ...editing, status_contrat: e.target.value })}>
+              <Label>Status *</Label>
+              <select
+                className="border rounded p-2 w-full"
+                value={editing?.status_contrat || ""}
+                onChange={e => setEditing(prev => ({ ...prev, status_contrat: e.target.value }))}
+              >
                 <option value="actif">Actif</option>
                 <option value="expire">Expiré</option>
                 <option value="resilie">Résilié</option>
@@ -313,74 +330,44 @@ const ContratsPage: React.FC = () => {
                 <option value="termine">Terminé</option>
               </select>
             </div>
-            {/* Dates et salaire */}
+
+            {/* Dates */}
             <div>
               <Label>Date début *</Label>
-              <Input type="date" value={editing?.date_debut_contrat || ""} onChange={e => setEditing({ ...editing, date_debut_contrat: e.target.value })} />
+              <Input type="date" value={editing?.date_debut_contrat || ""} onChange={e => setEditing(prev => ({ ...prev, date_debut_contrat: e.target.value }))} />
             </div>
             <div>
               <Label>Date fin</Label>
-              <Input type="date" value={editing?.date_fin_contrat || ""} onChange={e => setEditing({ ...editing, date_fin_contrat: e.target.value })} />
+              <Input type="date" value={editing?.date_fin_contrat || ""} onChange={e => setEditing(prev => ({ ...prev, date_fin_contrat: e.target.value }))} />
             </div>
+
+            {/* Salaire et montant total */}
             <div>
               <Label>Salaire</Label>
-              <Input type="number" value={editing?.salaire as any || "0"} onChange={e => setEditing({ ...editing, salaire: Number(e.target.value) })} />
+              <Input type="number" value={editing?.salaire || ""} onChange={e => setEditing(prev => ({ ...prev, salaire: e.target.value }))} />
             </div>
             <div>
               <Label>Montant total</Label>
-              <Input type="number" value={editing?.montant_total as any || ""} onChange={e => setEditing({ ...editing, montant_total: Number(e.target.value) })} />
+              <Input type="number" value={editing?.montant_total || ""} onChange={e => setEditing(prev => ({ ...prev, montant_total: e.target.value }))} />
             </div>
-            <div className="col-span-1 md:col-span-2">
-              <Label>Description / Mission</Label>
-              <textarea className="border rounded p-2 w-full"
-                value={editing?.description_mission || ""}
-                onChange={e => setEditing({ ...editing, description_mission: e.target.value })} />
+
+            {/* Description mission */}
+            <div className="md:col-span-2">
+              <Label>Description de la mission / prestation</Label>
+              <textarea className="border rounded p-2 w-full" value={editing?.description_mission || ""} onChange={e => setEditing(prev => ({ ...prev, description_mission: e.target.value }))}></textarea>
             </div>
-            <div>
-              <Label>Fichier contrat (PDF)</Label>
-              <input type="file" accept="application/pdf" onChange={e => setFileToUpload(e.target.files?.[0] || null)} />
-              {fileToUpload && <p className="text-sm">Fichier sélectionné : {fileToUpload.name}</p>}
+
+            {/* Fichier */}
+            <div className="md:col-span-2">
+              <Label>Contrat (PDF)</Label>
+              <Input type="file" accept="application/pdf" onChange={e => setFileToUpload(e.target.files ? e.target.files[0] : null)} />
             </div>
+
           </div>
+
           <DialogFooter className="mt-4 flex gap-2">
             <Button onClick={() => { setIsModalOpen(false); setEditing(null); setFileToUpload(null); }}>Annuler</Button>
             <Button onClick={saveContrat}>{editing?.id ? "Enregistrer" : "Créer"}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* DETAIL */}
-      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader><DialogTitle>Détails du contrat</DialogTitle></DialogHeader>
-          {detailContrat ? (
-            <div className="space-y-2">
-              <p><strong>Employé:</strong> {detailContrat.employer_nom || (typeof detailContrat.employer === "string" ? detailContrat.employer : (detailContrat as any).employer?.nom)}</p>
-              <p><strong>Nature:</strong> {detailContrat.nature_contrat}</p>
-              <p><strong>Type:</strong> {detailContrat.type_nom || (detailContrat as any).type_contrat?.nom_type || "-"}</p>
-              <p><strong>Date début:</strong> {detailContrat.date_debut_contrat}</p>
-              <p><strong>Date fin:</strong> {detailContrat.date_fin_contrat || "-"}</p>
-              <p><strong>Statut:</strong> <Badge className={STATUS_BADGE(detailContrat.status_contrat)}>{detailContrat.status_contrat}</Badge></p>
-              <p><strong>Salaire:</strong> {detailContrat.salaire || 0}</p>
-              <p><strong>Montant total:</strong> {detailContrat.montant_total || "-"}</p>
-              {detailContrat.description_mission && <p><strong>Description:</strong> {detailContrat.description_mission}</p>}
-              {detailContrat.contrat_file && <p><a href={detailContrat.contrat_file} target="_blank" className="text-blue-500 underline">Télécharger le fichier</a></p>}
-            </div>
-          ) : <p>Chargement...</p>}
-          <DialogFooter>
-            <Button onClick={() => setIsDetailOpen(false)}>Fermer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* SUPPRESSION */}
-      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Confirmation</DialogTitle></DialogHeader>
-          <p>Voulez-vous vraiment supprimer ce contrat ?</p>
-          <DialogFooter className="flex gap-2 mt-4">
-            <Button onClick={() => setIsDeleteOpen(false)}>Annuler</Button>
-            <Button variant="destructive" onClick={confirmDelete}>Supprimer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
