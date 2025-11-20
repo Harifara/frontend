@@ -18,8 +18,15 @@ export default defineConfig(({ mode }) => ({
     },
   },
 
-  // ✅ AJOUT IMPORTANT POUR FIX L'ERREUR
+  // ✅ Corrige l’erreur Vercel / Rollup
   optimizeDeps: {
     include: ["framer-motion"],
+  },
+
+  // ✅ Empêche Rollup de bloquer le build
+  build: {
+    rollupOptions: {
+      external: ["framer-motion"],
+    },
   },
 }));
