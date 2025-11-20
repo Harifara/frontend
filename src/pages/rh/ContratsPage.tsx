@@ -244,7 +244,7 @@ const ContratsPage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
         <Input placeholder="Recherche libre..." value={search} onChange={e => setSearch(e.target.value)} />
 
-        <Select value={filterStatus || "all"} onValueChange={(v) => setFilterStatus(v === "all" ? null : v)}>
+        {/* <Select value={filterStatus || "all"} onValueChange={(v) => setFilterStatus(v === "all" ? null : v)}>
         <SelectTrigger><SelectValue placeholder="Statut" /></SelectTrigger>
         <SelectContent>
             <SelectItem value="all">-- Tous --</SelectItem>
@@ -254,7 +254,7 @@ const ContratsPage: React.FC = () => {
             <SelectItem value="suspendu">Suspendu</SelectItem>
             <SelectItem value="termine">Terminé</SelectItem>
         </SelectContent>
-        </Select>
+        </Select> */}
 
 
 
