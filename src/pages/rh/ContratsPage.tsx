@@ -257,6 +257,7 @@ const ContratsPage: React.FC = () => {
         </Select>
 
 
+
         <Select value={filterNature || ""} onValueChange={(v) => setFilterNature(v || null)}>
           <SelectTrigger><SelectValue placeholder="Nature" /></SelectTrigger>
           <SelectContent>
