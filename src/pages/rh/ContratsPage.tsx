@@ -1,14 +1,19 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { rhApi } from "@/lib/api";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import {
+  Card, CardHeader, CardTitle, CardContent
+} from "@/components/ui/card";
+import {
+  Table, TableHeader, TableRow, TableHead, TableBody, TableCell
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 type Employer = { id: string; nom: string };
 type TypeContrat = { id: string; nom_type: string };
@@ -23,7 +28,6 @@ type Contrat = {
   status_contrat: string;
   date_debut_contrat: string;
   date_fin_contrat?: string | null;
-  duree_jours?: number | null;
   salaire?: number | string;
   montant_total?: number | string | null;
   description_mission?: string | null;
@@ -73,7 +77,11 @@ const ContratsPage: React.FC = () => {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [c, e, t] = await Promise.all([rhApi.getContrats(), rhApi.getEmployes(), rhApi.getTypeContrats()]);
+      const [c, e, t] = await Promise.all([
+        rhApi.getContrats(),
+        rhApi.getEmployes(),
+        rhApi.getTypeContrats()
+      ]);
       const normalized: Contrat[] = (c || []).map((x: any) => ({
         ...x,
         employer_nom: typeof x.employer === "string" ? x.employer : x.employer?.nom || x.employer,
@@ -107,9 +115,13 @@ const ContratsPage: React.FC = () => {
     });
   }, [contrats, filterStatus, filterNature, filterEmployer, filterType, search]);
 
-  // OUVRIR MODAL CREATION
   const openCreate = () => {
-    setEditing({ nature_contrat: "emploi", status_contrat: "actif", date_debut_contrat: new Date().toISOString().slice(0, 10), salaire: 0 });
+    setEditing({
+      nature_contrat: "emploi",
+      status_contrat: "actif",
+      date_debut_contrat: new Date().toISOString().slice(0, 10),
+      salaire: 0
+    });
     setFileToUpload(null);
     setIsModalOpen(true);
   };
@@ -143,20 +155,30 @@ const ContratsPage: React.FC = () => {
     try {
       if (fileToUpload) {
         const fd = new FormData();
-        Object.entries(editing).forEach(([k, v]) => { if (v !== undefined && v !== null) fd.append(k, String(v)); });
+        Object.entries(editing).forEach(([k, v]) => {
+          if (v !== undefined && v !== null) fd.append(k, String(v));
+        });
         fd.append("contrat_file", fileToUpload);
-        if (editing.id && (rhApi as any).updateContratFormData) await (rhApi as any).updateContratFormData(editing.id, fd);
-        else if (!editing.id && (rhApi as any).createContratFormData) await (rhApi as any).createContratFormData(fd);
-        else { toast({ title: "Attention", description: "L'API ne supporte pas l'upload multipart.", variant: "destructive" }); return; }
+        if (editing.id && (rhApi as any).updateContratFormData) {
+          await (rhApi as any).updateContratFormData(editing.id, fd);
+        } else if (!editing.id && (rhApi as any).createContratFormData) {
+          await (rhApi as any).createContratFormData(fd);
+        } else {
+          toast({ title: "Attention", description: "L'API ne supporte pas l'upload multipart.", variant: "destructive" });
+          return;
+        }
       } else {
         const payload = { ...editing };
         if (editing.id) await rhApi.updateContrat(editing.id, payload);
         else await rhApi.createContrat(payload);
       }
       setIsModalOpen(false);
+      setEditing(null);
+      setFileToUpload(null);
       fetchAll();
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de sauvegarder.", variant: "destructive" });
+      const msg = err?.response?.data?.detail || err?.message || "Impossible de sauvegarder.";
+      toast({ title: "Erreur", description: msg, variant: "destructive" });
     }
   };
 
@@ -179,44 +201,28 @@ const ContratsPage: React.FC = () => {
       {/* FILTRES */}
       <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
         <Input placeholder="Recherche libre..." value={search} onChange={e => setSearch(e.target.value)} />
-
-        <Select value={filterStatus} onValueChange={v => setFilterStatus(v)}>
-          <SelectTrigger><SelectValue placeholder="Statut" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">-- Tous --</SelectItem>
-            <SelectItem value="actif">Actif</SelectItem>
-            <SelectItem value="expire">Expiré</SelectItem>
-            <SelectItem value="resilie">Résilié</SelectItem>
-            <SelectItem value="suspendu">Suspendu</SelectItem>
-            <SelectItem value="termine">Terminé</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={filterNature} onValueChange={v => setFilterNature(v)}>
-          <SelectTrigger><SelectValue placeholder="Nature" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">-- Tous --</SelectItem>
-            <SelectItem value="emploi">Contrat de travail</SelectItem>
-            <SelectItem value="mission">Mission</SelectItem>
-            <SelectItem value="prestation">Prestation</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={filterEmployer} onValueChange={v => setFilterEmployer(v)}>
-          <SelectTrigger><SelectValue placeholder="Employé" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">-- Tous --</SelectItem>
-            {employers.map(e => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        <Select value={filterType} onValueChange={v => setFilterType(v)}>
-          <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">-- Tous --</SelectItem>
-            {types.map(t => <SelectItem key={t.id} value={t.id}>{t.nom_type}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+          <option value="all">-- Tous --</option>
+          <option value="actif">Actif</option>
+          <option value="expire">Expiré</option>
+          <option value="resilie">Résilié</option>
+          <option value="suspendu">Suspendu</option>
+          <option value="termine">Terminé</option>
+        </select>
+        <select value={filterNature} onChange={e => setFilterNature(e.target.value)}>
+          <option value="all">-- Tous --</option>
+          <option value="emploi">Contrat de travail</option>
+          <option value="mission">Mission</option>
+          <option value="prestation">Prestation</option>
+        </select>
+        <select value={filterEmployer} onChange={e => setFilterEmployer(e.target.value)}>
+          <option value="all">-- Tous --</option>
+          {employers.map(e => <option key={e.id} value={e.id}>{e.nom}</option>)}
+        </select>
+        <select value={filterType} onChange={e => setFilterType(e.target.value)}>
+          <option value="all">-- Tous --</option>
+          {types.map(t => <option key={t.id} value={t.id}>{t.nom_type}</option>)}
+        </select>
       </div>
 
       {/* TABLE */}
@@ -262,36 +268,44 @@ const ContratsPage: React.FC = () => {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader><DialogTitle>{editing?.id ? "Modifier un contrat" : "Créer un contrat"}</DialogTitle></DialogHeader>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Employé */}
             <div>
               <Label>Employé *</Label>
-              <select className="border rounded p-2 w-full" value={(editing?.employer as any)?.id || (editing?.employer as string) || ""} onChange={e => setEditing({ ...editing, employer: e.target.value })}>
+              <select className="border rounded p-2 w-full"
+                value={(editing?.employer as any)?.id || (editing?.employer as string) || ""}
+                onChange={e => setEditing({ ...editing, employer: e.target.value })}>
                 <option value="">-- Choisir --</option>
                 {employers.map(emp => <option key={emp.id} value={emp.id}>{emp.nom}</option>)}
               </select>
             </div>
-
+            {/* Type */}
             <div>
               <Label>Type</Label>
-              <select className="border rounded p-2 w-full" value={(editing?.type_contrat as any)?.id || (editing?.type_contrat as string) || ""} onChange={e => setEditing({ ...editing, type_contrat: e.target.value })}>
+              <select className="border rounded p-2 w-full"
+                value={(editing?.type_contrat as any)?.id || (editing?.type_contrat as string) || ""}
+                onChange={e => setEditing({ ...editing, type_contrat: e.target.value })}>
                 <option value="">-- Choisir --</option>
                 {types.map(t => <option key={t.id} value={t.id}>{t.nom_type}</option>)}
               </select>
             </div>
-
+            {/* Nature */}
             <div>
               <Label>Nature</Label>
-              <select className="border rounded p-2 w-full" value={editing?.nature_contrat || "emploi"} onChange={e => setEditing({ ...editing, nature_contrat: e.target.value })}>
+              <select className="border rounded p-2 w-full"
+                value={editing?.nature_contrat || "emploi"}
+                onChange={e => setEditing({ ...editing, nature_contrat: e.target.value })}>
                 <option value="emploi">Contrat de travail</option>
                 <option value="mission">Mission</option>
                 <option value="prestation">Prestation</option>
               </select>
             </div>
-
+            {/* Statut */}
             <div>
               <Label>Statut</Label>
-              <select className="border rounded p-2 w-full" value={editing?.status_contrat || "actif"} onChange={e => setEditing({ ...editing, status_contrat: e.target.value })}>
+              <select className="border rounded p-2 w-full"
+                value={editing?.status_contrat || "actif"}
+                onChange={e => setEditing({ ...editing, status_contrat: e.target.value })}>
                 <option value="actif">Actif</option>
                 <option value="expire">Expiré</option>
                 <option value="resilie">Résilié</option>
@@ -299,40 +313,35 @@ const ContratsPage: React.FC = () => {
                 <option value="termine">Terminé</option>
               </select>
             </div>
-
+            {/* Dates et salaire */}
             <div>
               <Label>Date début *</Label>
               <Input type="date" value={editing?.date_debut_contrat || ""} onChange={e => setEditing({ ...editing, date_debut_contrat: e.target.value })} />
             </div>
-
             <div>
               <Label>Date fin</Label>
               <Input type="date" value={editing?.date_fin_contrat || ""} onChange={e => setEditing({ ...editing, date_fin_contrat: e.target.value })} />
             </div>
-
             <div>
               <Label>Salaire</Label>
               <Input type="number" value={editing?.salaire as any || "0"} onChange={e => setEditing({ ...editing, salaire: Number(e.target.value) })} />
             </div>
-
             <div>
               <Label>Montant total</Label>
               <Input type="number" value={editing?.montant_total as any || ""} onChange={e => setEditing({ ...editing, montant_total: Number(e.target.value) })} />
             </div>
-
             <div className="col-span-1 md:col-span-2">
               <Label>Description / Mission</Label>
-              <textarea className="border rounded p-2 w-full" value={editing?.description_mission || ""} onChange={e => setEditing({ ...editing, description_mission: e.target.value })} />
+              <textarea className="border rounded p-2 w-full"
+                value={editing?.description_mission || ""}
+                onChange={e => setEditing({ ...editing, description_mission: e.target.value })} />
             </div>
-
             <div>
               <Label>Fichier contrat (PDF)</Label>
               <input type="file" accept="application/pdf" onChange={e => setFileToUpload(e.target.files?.[0] || null)} />
               {fileToUpload && <p className="text-sm">Fichier sélectionné : {fileToUpload.name}</p>}
             </div>
-
           </div>
-
           <DialogFooter className="mt-4 flex gap-2">
             <Button onClick={() => { setIsModalOpen(false); setEditing(null); setFileToUpload(null); }}>Annuler</Button>
             <Button onClick={saveContrat}>{editing?.id ? "Enregistrer" : "Créer"}</Button>
@@ -344,7 +353,6 @@ const ContratsPage: React.FC = () => {
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader><DialogTitle>Détails du contrat</DialogTitle></DialogHeader>
-
           {detailContrat ? (
             <div className="space-y-2">
               <p><strong>Employé:</strong> {detailContrat.employer_nom || (typeof detailContrat.employer === "string" ? detailContrat.employer : (detailContrat as any).employer?.nom)}</p>
@@ -359,7 +367,6 @@ const ContratsPage: React.FC = () => {
               {detailContrat.contrat_file && <p><a href={detailContrat.contrat_file} target="_blank" className="text-blue-500 underline">Télécharger le fichier</a></p>}
             </div>
           ) : <p>Chargement...</p>}
-
           <DialogFooter>
             <Button onClick={() => setIsDetailOpen(false)}>Fermer</Button>
           </DialogFooter>
