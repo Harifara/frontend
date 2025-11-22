@@ -107,6 +107,7 @@ const ContratsPage: React.FC = () => {
         rhApi.getTypeContrats()
       ]);
 
+      // Normaliser contrats pour employer_nom et type_nom
       const normalized: Contrat[] = (c || []).map((x: any) => ({
         ...x,
         employer_nom:
@@ -123,7 +124,7 @@ const ContratsPage: React.FC = () => {
 
       setContrats(normalized);
       setEmployers(e || []);
-      setTypes(t || []);
+      setTypes(Array.isArray(t) ? t : []); // 🔹 Correction tableau types
     } catch (err: any) {
       toast({
         title: "Erreur",
