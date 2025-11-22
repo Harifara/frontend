@@ -11,9 +11,16 @@ import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { createPDFDoc } from "@/lib/pdfTemplate";
 
+// ======================= INTERFACES =========================
 interface ModePayement {
   id: string;
   mode_payement: string;
+}
+
+interface SimpleObject {
+  id: string;
+  nom?: string;
+  numero_compteur?: string;
 }
 
 interface Payement {
@@ -24,71 +31,105 @@ interface Payement {
   reference?: string;
   mode_payement?: ModePayement;
   mode_payement_id?: string;
+  location_id?: string;
+  electricite_id?: string;
+  contrat_id?: string;
+  location?: SimpleObject;
+  electricite?: SimpleObject;
+  contrat?: SimpleObject;
 }
 
+// ======================= COMPONENT =========================
 const PayementsPage = () => {
   const [payements, setPayements] = useState<Payement[]>([]);
   const [modesPayement, setModesPayement] = useState<ModePayement[]>([]);
+  const [locations, setLocations] = useState<SimpleObject[]>([]);
+  const [electricites, setElectricites] = useState<SimpleObject[]>([]);
+  const [contrats, setContrats] = useState<SimpleObject[]>([]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPayement, setEditingPayement] = useState<Payement | null>(null);
-  const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [form, setForm] = useState<Payement>({ montant: undefined, mode_payement_id: "" });
+  const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
+
+  const [form, setForm] = useState<Payement>({
+    montant: undefined,
+    mode_payement_id: "",
+    location_id: "",
+    electricite_id: "",
+    contrat_id: "",
+  });
+
   const { toast } = useToast();
 
+  // ======================= FETCH =========================
   useEffect(() => {
-    fetchData();
-    fetchModes();
+    fetchAll();
   }, []);
 
-  const fetchData = async () => {
+  const fetchAll = async () => {
     setIsLoading(true);
     try {
-      const data = await rhApi.getPayements();
-      setPayements(data || []);
+      const [payments, modes, locs, elecs, conts] = await Promise.all([
+        rhApi.getPayements(),
+        rhApi.getModePayements(),
+        rhApi.getLocations(),
+        rhApi.getElectricites(),
+        rhApi.getContrats(),
+      ]);
+
+      setPayements(payments || []);
+      setModesPayement(modes || []);
+      setLocations(locs || []);
+      setElectricites(elecs || []);
+      setContrats(conts || []);
+
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de charger les paiements.", variant: "destructive" });
-      setPayements([]);
+      toast({
+        title: "Erreur",
+        description: err.message || "Impossible de charger les données.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fetchModes = async () => {
-    try {
-      const data = await rhApi.getModePayements();
-      setModesPayement(data || []);
-    } catch (err: any) {
-      console.error(err);
-      setModesPayement([]);
-    }
-  };
-
+  // ======================= MODAL =========================
   const handleOpenModal = (payement?: Payement) => {
     if (payement) {
       setEditingPayement(payement);
       setForm({
         montant: payement.montant,
         mode_payement_id: payement.mode_payement?.id || "",
+        location_id: payement.location?.id || "",
+        electricite_id: payement.electricite?.id || "",
+        contrat_id: payement.contrat?.id || "",
       });
     } else {
       setEditingPayement(null);
-      setForm({ montant: undefined, mode_payement_id: "" });
+      setForm({
+        montant: undefined,
+        mode_payement_id: "",
+        location_id: "",
+        electricite_id: "",
+        contrat_id: "",
+      });
     }
     setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingPayement(null);
-  };
-
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
+
     if (!form.montant || !form.mode_payement_id) {
-      toast({ title: "Erreur", description: "Veuillez remplir tous les champs obligatoires.", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: "Veuillez remplir les champs obligatoires.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -100,77 +141,107 @@ const PayementsPage = () => {
         await rhApi.createPayement(form);
         toast({ title: "Succès", description: "Paiement créé." });
       }
-      handleCloseModal();
-      fetchData();
+
+      setIsModalOpen(false);
+      fetchAll();
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Erreur lors de l'opération.", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: err.message || "Échec de l'opération.",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleOpenDeleteModal = (id: string) => {
-    setSelectedIdToDelete(id);
-    setIsDeleteModalOpen(true);
-  };
-
+  // ======================= DELETE =========================
   const handleDelete = async () => {
     if (!selectedIdToDelete) return;
+
     try {
-      setIsDeleteModalOpen(false);
       await rhApi.deletePayement(selectedIdToDelete);
       toast({ title: "Succès", description: "Paiement supprimé." });
-      fetchData();
+      fetchAll();
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Erreur lors de la suppression.", variant: "destructive" });
-    } finally {
-      setSelectedIdToDelete(null);
+      toast({
+        title: "Erreur",
+        description: err.message || "Échec de suppression.",
+        variant: "destructive",
+      });
     }
+    setIsDeleteModalOpen(false);
   };
 
-  const filteredPayements = payements.filter(p =>
+  // ======================= FILTER =========================
+  const filteredPayements = payements.filter((p) =>
     p.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.mode_payement?.mode_payement.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // --- Export PDF
+  // ======================= EXPORT =========================
   const exportPDF = async () => {
-    const data = filteredPayements.map(p => [p.reference, p.montant, p.status, p.mode_payement?.mode_payement || ""]);
-    const columns = ["Référence", "Montant", "Statut", "Mode de Paiement"];
+    const data = filteredPayements.map((p) => [
+      p.reference,
+      p.montant,
+      p.status,
+      p.mode_payement?.mode_payement || "",
+      p.location?.nom || "",
+      p.electricite?.numero_compteur || "",
+      p.contrat?.id || "",
+    ]);
+
+    const columns = [
+      "Référence",
+      "Montant",
+      "Statut",
+      "Mode de Paiement",
+      "Location",
+      "Électricité",
+      "Contrat",
+    ];
+
     await createPDFDoc("Liste des Paiements", data, columns, "payements.pdf");
   };
 
-  // --- Export Excel
   const exportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      filteredPayements.map(p => ({
+      filteredPayements.map((p) => ({
         Référence: p.reference,
         Montant: p.montant,
         Statut: p.status,
-        "Mode de Paiement": p.mode_payement?.mode_payement || ""
+        "Mode de Paiement": p.mode_payement?.mode_payement || "",
+        Location: p.location?.nom || "",
+        "Électricité": p.electricite?.numero_compteur || "",
+        Contrat: p.contrat?.id || "",
       }))
     );
+
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Payements");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Payments");
     XLSX.writeFile(workbook, "payements.xlsx");
   };
 
-  if (isLoading) return <p className="p-8 text-center">Chargement...</p>;
+  // ======================= RENDER =========================
+  if (isLoading) return <p className="text-center p-8">Chargement...</p>;
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between">
         <h1 className="text-3xl font-bold">Paiements</h1>
-        <Button onClick={() => handleOpenModal()}>Ajouter un Paiement</Button>
+        <Button onClick={() => handleOpenModal()}>Ajouter un paiement</Button>
       </div>
 
       <div className="flex gap-4">
         <Input
-          placeholder="Rechercher par référence ou mode de paiement..."
+          placeholder="Rechercher un paiement…"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1"
         />
-        <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
-        <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
+        <Button variant="outline" onClick={exportPDF}>
+          PDF
+        </Button>
+        <Button variant="outline" onClick={exportExcel}>
+          Excel
+        </Button>
       </div>
 
       <Card>
@@ -184,25 +255,47 @@ const PayementsPage = () => {
                 <TableHead className="text-center">Référence</TableHead>
                 <TableHead className="text-center">Montant</TableHead>
                 <TableHead className="text-center">Statut</TableHead>
-                <TableHead className="text-center">Mode de Paiement</TableHead>
+                <TableHead className="text-center">Mode</TableHead>
+                <TableHead className="text-center">Location</TableHead>
+                <TableHead className="text-center">Électricité</TableHead>
+                <TableHead className="text-center">Contrat</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
-              {filteredPayements.length ? filteredPayements.map(p => (
-                <TableRow key={p.id}>
-                  <TableCell className="text-center">{p.reference}</TableCell>
-                  <TableCell className="text-center">{p.montant}</TableCell>
-                  <TableCell className="text-center">{p.status}</TableCell>
-                  <TableCell className="text-center">{p.mode_payement?.mode_payement}</TableCell>
-                  <TableCell className="text-center space-x-2">
-                    <Button size="sm" variant="outline" onClick={() => handleOpenModal(p)}>Modifier</Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(p.id!)}>Supprimer</Button>
-                  </TableCell>
-                </TableRow>
-              )) : (
+              {filteredPayements.length ? (
+                filteredPayements.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="text-center">{p.reference}</TableCell>
+                    <TableCell className="text-center">{p.montant}</TableCell>
+                    <TableCell className="text-center">{p.status}</TableCell>
+                    <TableCell className="text-center">{p.mode_payement?.mode_payement}</TableCell>
+                    <TableCell className="text-center">{p.location?.nom || "-"}</TableCell>
+                    <TableCell className="text-center">{p.electricite?.numero_compteur || "-"}</TableCell>
+                    <TableCell className="text-center">{p.contrat?.id || "-"}</TableCell>
+                    <TableCell className="text-center space-x-2">
+                      <Button size="sm" variant="outline" onClick={() => handleOpenModal(p)}>
+                        Modifier
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => {
+                          setSelectedIdToDelete(p.id!);
+                          setIsDeleteModalOpen(true);
+                        }}
+                      >
+                        Supprimer
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-6">Aucun paiement trouvé.</TableCell>
+                  <TableCell colSpan={8} className="text-center py-6">
+                    Aucun résultat.
+                  </TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -210,56 +303,126 @@ const PayementsPage = () => {
         </CardContent>
       </Card>
 
-      {/* Modal Création / Modification */}
+      {/* ======================= MODAL AJOUT/EDIT ======================= */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{editingPayement ? "Modifier le Paiement" : "Créer un Paiement"}</DialogTitle>
+            <DialogTitle>
+              {editingPayement ? "Modifier le Paiement" : "Créer un Paiement"}
+            </DialogTitle>
           </DialogHeader>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="montant">Montant</Label>
+              <Label>Montant</Label>
               <Input
-                id="montant"
                 type="number"
                 value={form.montant || ""}
-                onChange={(e) => setForm({ ...form, montant: parseFloat(e.target.value) })}
+                onChange={(e) =>
+                  setForm({ ...form, montant: parseFloat(e.target.value) })
+                }
                 required
               />
             </div>
+
             <div>
-              <Label htmlFor="mode">Mode de Paiement</Label>
+              <Label>Mode de Paiement</Label>
               <select
-                id="mode"
-                value={form.mode_payement_id}
-                onChange={(e) => setForm({ ...form, mode_payement_id: e.target.value })}
                 className="w-full border rounded p-2"
+                value={form.mode_payement_id}
+                onChange={(e) =>
+                  setForm({ ...form, mode_payement_id: e.target.value })
+                }
                 required
               >
-                <option value="">-- Sélectionner un mode --</option>
+                <option value="">-- Sélectionner --</option>
                 {modesPayement.map((m) => (
-                  <option key={m.id} value={m.id}>{m.mode_payement}</option>
+                  <option key={m.id} value={m.id}>
+                    {m.mode_payement}
+                  </option>
                 ))}
               </select>
             </div>
+
+            <div>
+              <Label>Location</Label>
+              <select
+                className="w-full border rounded p-2"
+                value={form.location_id}
+                onChange={(e) =>
+                  setForm({ ...form, location_id: e.target.value })
+                }
+              >
+                <option value="">-- Aucune --</option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.nom}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Label>Électricité</Label>
+              <select
+                className="w-full border rounded p-2"
+                value={form.electricite_id}
+                onChange={(e) =>
+                  setForm({ ...form, electricite_id: e.target.value })
+                }
+              >
+                <option value="">-- Aucune --</option>
+                {electricites.map((el) => (
+                  <option key={el.id} value={el.id}>
+                    {el.numero_compteur}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <Label>Contrat</Label>
+              <select
+                className="w-full border rounded p-2"
+                value={form.contrat_id}
+                onChange={(e) =>
+                  setForm({ ...form, contrat_id: e.target.value })
+                }
+              >
+                <option value="">-- Aucun --</option>
+                {contrats.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseModal}>Annuler</Button>
-              <Button type="submit">{editingPayement ? "Mettre à jour" : "Créer"}</Button>
+              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="submit">{editingPayement ? "Enregistrer" : "Créer"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Modal Suppression */}
+      {/* ======================= MODAL DELETE ======================= */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
           </DialogHeader>
-          <p>Êtes-vous sûr de vouloir supprimer ce paiement ? Cette action est irréversible.</p>
+          <p>Cette action est définitive.</p>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Annuler</Button>
-            <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Supprimer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
