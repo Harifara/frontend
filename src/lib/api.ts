@@ -334,6 +334,13 @@ export const rhApi = {
       method: "DELETE",
       headers: getHeaders(await ensureKongToken()),
     }),
+     createContratFormData: (formData: FormData) => axios.post(`${API_URL}/contrats/`, formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  }).then(res => res.data),
+
+  updateContratFormData: (id: string, formData: FormData) => axios.put(`${API_URL}/contrats/${id}/`, formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  }).then(res => res.data),
 
   getConges: async () =>
     fetchWithLog(`${API_BASE_URL}/rh/conges/`, { headers: getHeaders(await ensureKongToken()) }),
