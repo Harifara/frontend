@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
+import { createPDFDoc } from "@/lib/pdfTemplate";
 
 interface Location {
   id: string;
@@ -140,6 +142,23 @@ const ElectricitesPage = () => {
     e.location?.nom.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // --- Export PDF
+  const exportPDF = async () => {
+    const data = filteredElectricites.map(e => [e.numero_compteur, e.fournisseur, e.location?.nom || ""]);
+    const columns = ["Numéro Compteur", "Fournisseur", "Location"];
+    await createPDFDoc("Liste des Compteurs Électricité", data, columns, "electricites.pdf");
+  };
+
+  // --- Export Excel
+  const exportExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      filteredElectricites.map(e => ({ "Numéro Compteur": e.numero_compteur, "Fournisseur": e.fournisseur, Location: e.location?.nom || "" }))
+    );
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Electricites");
+    XLSX.writeFile(workbook, "electricites.xlsx");
+  };
+
   if (isLoading) return <p className="p-8 text-center">Chargement...</p>;
 
   return (
@@ -156,6 +175,8 @@ const ElectricitesPage = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-1"
         />
+        <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
+        <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
       </div>
 
       <Card>
