@@ -1,6 +1,9 @@
+
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import logo from "@/assets/logo.jpg";
+
+
 
 export const createContratPDF = async (contrat: any) => {
   const doc = new jsPDF("p", "pt");

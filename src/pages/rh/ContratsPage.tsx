@@ -10,6 +10,7 @@ import {
   TableBody,
   TableCell
 } from "@/components/ui/table";
+import { createContratPDF } from "@/lib/pdfContrat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -245,6 +246,10 @@ const ContratsPage: React.FC = () => {
     montant: contrat.montant_total || contrat.salaire || "-",
     description: contrat.description_mission || "-"
   };
+
+  // Ici tu peux mettre la logique PDF
+  console.log("Générer PDF", data);
+};
 
   // Envoi (create/update)
   const saveContrat = async () => {
