@@ -124,7 +124,7 @@ const ContratsPage: React.FC = () => {
 
       setContrats(normalized);
       setEmployers(e || []);
-      setTypes(Array.isArray(t) ? t : []); // 🔹 Correction tableau types
+      setTypes(Array.isArray(t) ? t : []);
     } catch (err: any) {
       toast({
         title: "Erreur",
@@ -199,7 +199,6 @@ const ContratsPage: React.FC = () => {
       return false;
     }
 
-    // Vérifier durée max pour prestation/mission
     if (editing.nature_contrat && editing.nature_contrat !== "emploi") {
       const typeId = typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat;
       const type = types.find(t => String(t.id) === String(typeId));
@@ -396,7 +395,7 @@ const ContratsPage: React.FC = () => {
               <Label>Employé</Label>
               <select
                 className="border rounded p-2 w-full"
-                value={typeof editing?.employer === "object" ? (editing.employer as Employer).id : editing?.employer ?? ""}
+                value={editing?.employer ? (typeof editing.employer === "object" ? editing.employer.id : editing.employer) : ""}
                 onChange={e => {
                   const emp = employers.find(emp => emp.id === e.target.value);
                   setEditing(prev => ({ ...prev, employer: emp ?? e.target.value }));
@@ -414,7 +413,7 @@ const ContratsPage: React.FC = () => {
               <Label>Type de contrat</Label>
               <select
                 className="border rounded p-2 w-full"
-                value={typeof editing?.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing?.type_contrat ?? ""}
+                value={editing?.type_contrat ? (typeof editing.type_contrat === "object" ? editing.type_contrat.id : editing.type_contrat) : ""}
                 onChange={e => {
                   const type = types.find(t => t.id === e.target.value);
                   setEditing(prev => ({ ...prev, type_contrat: type ?? e.target.value }));
@@ -489,7 +488,7 @@ const ContratsPage: React.FC = () => {
 
           <DialogFooter className="mt-4 space-x-2">
             <Button onClick={saveContrat}>{editing?.id ? "Enregistrer" : "Créer"}</Button>
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)}>Annuler</Button>
+            <Button variant="ghost" onClick={() => { setIsModalOpen(false); setEditing(null); }}>Annuler</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
