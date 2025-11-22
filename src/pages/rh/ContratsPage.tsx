@@ -25,18 +25,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
 // Types
-type Employer = {
-  id: string;
-  nom_employer: string;
-  prenom_employer: string;
-};
-
-type TypeContrat = {
-  id: string;
-  nom_type: string;
-  duree_max_jours?: number | null;
-};
-
+type Employer = { id: string; nom_employer: string; prenom_employer: string; };
+type TypeContrat = { id: string; nom_type: string; duree_max_jours?: number | null; };
 type Contrat = {
   id?: string;
   employer: string | Employer;
@@ -64,7 +54,6 @@ const STATUS_BADGE = (status: string) => {
     default: return "bg-gray-100 text-gray-800";
   }
 };
-
 const NATURE_OPTIONS = ["emploi", "prestation", "mission"];
 
 const ContratsPage: React.FC = () => {
@@ -87,30 +76,42 @@ const ContratsPage: React.FC = () => {
 
   const { toast } = useToast();
 
-  // Chargement initial
+  // ------------------- FETCH DATA -------------------
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [c, e, t] = await Promise.all([
+      const [cRaw, e, t] = await Promise.all([
         rhApi.getContrats().catch(err => { console.error(err); return []; }),
         rhApi.getEmployes().catch(err => { console.error(err); return []; }),
         rhApi.getTypeContrats().catch(err => { console.error(err); return []; })
       ]);
 
-      const normalized: Contrat[] = (c || []).map((x: any) => ({
-        ...x,
-        employer_nom:
-          typeof x.employer === "string"
-            ? x.employer
-            : x.employer
-            ? `${x.employer.nom_employer || ""} ${x.employer.prenom_employer || ""}`.trim()
-            : (x.employer_nom || ""),
-        type_nom:
-          (x.type_contrat && typeof x.type_contrat === "object" && x.type_contrat.nom_type) ||
-          x.type_nom ||
-          (typeof x.type_contrat === "string" ? x.type_contrat : "-"),
-        nature_contrat: x.nature_contrat || "-",
-      }));
+      const normalized: Contrat[] = (cRaw || []).map((x: any) => {
+        // Employer nom
+        let employer_nom = "";
+        if (typeof x.employer === "object" && x.employer) {
+          employer_nom = `${x.employer.nom_employer || ""} ${x.employer.prenom_employer || ""}`.trim();
+        } else if (typeof x.employer === "string") {
+          const empObj = e.find(emp => emp.id === x.employer);
+          employer_nom = empObj ? `${empObj.nom_employer} ${empObj.prenom_employer}` : x.employer;
+        }
+
+        // Type nom
+        let type_nom = "";
+        if (typeof x.type_contrat === "object" && x.type_contrat) {
+          type_nom = x.type_contrat.nom_type;
+        } else if (typeof x.type_contrat === "string") {
+          const typeObj = t.find(tt => tt.id === x.type_contrat);
+          type_nom = typeObj ? typeObj.nom_type : x.type_contrat;
+        }
+
+        return {
+          ...x,
+          employer_nom,
+          type_nom,
+          nature_contrat: x.nature_contrat || "-"
+        };
+      });
 
       setContrats(normalized);
       setEmployers(e || []);
@@ -124,13 +125,19 @@ const ContratsPage: React.FC = () => {
 
   useEffect(() => { fetchAll(); }, []);
 
-  // Filtrage
+  // ------------------- FILTRAGE -------------------
   const filtered = useMemo(() => {
     return contrats.filter(c => {
       if (filterStatus !== "all" && c.status_contrat !== filterStatus) return false;
       if (filterNature !== "all" && c.nature_contrat !== filterNature) return false;
-      if (filterEmployer !== "all" && String((c as any).employer?.id || c.employer) !== filterEmployer) return false;
-      if (filterType !== "all" && String((c as any).type_contrat?.id || c.type_contrat) !== filterType) return false;
+      if (filterEmployer !== "all") {
+        const empId = typeof c.employer === "object" ? c.employer.id : c.employer;
+        if (empId !== filterEmployer) return false;
+      }
+      if (filterType !== "all") {
+        const typeId = typeof c.type_contrat === "object" ? c.type_contrat.id : c.type_contrat;
+        if (typeId !== filterType) return false;
+      }
       if (search) {
         const s = search.toLowerCase();
         const combined = `${c.employer_nom || ""} ${c.type_nom || ""} ${c.nature_contrat || ""} ${c.status_contrat || ""}`.toLowerCase();
@@ -140,11 +147,7 @@ const ContratsPage: React.FC = () => {
     });
   }, [contrats, filterStatus, filterNature, filterEmployer, filterType, search]);
 
-  // Calcul du montant total
-  const totalMontant = useMemo(() => {
-    return filtered.reduce((acc, c) => acc + (Number(c.montant_total) || 0), 0);
-  }, [filtered]);
-
+  // ------------------- CREATE / EDIT -------------------
   const openCreate = () => {
     setEditing({
       nature_contrat: "emploi",
@@ -159,13 +162,13 @@ const ContratsPage: React.FC = () => {
   };
 
   const openEdit = (c: Contrat) => {
-    const empObj = c.employer && typeof c.employer === "object" ? c.employer as Employer : undefined;
-    const typeObj = c.type_contrat && typeof c.type_contrat === "object" ? c.type_contrat as TypeContrat : undefined;
+    const empObj = typeof c.employer === "object" ? c.employer : undefined;
+    const typeObj = typeof c.type_contrat === "object" ? c.type_contrat : undefined;
 
     setEditing({
       ...c,
-      employer: empObj ? empObj : (c.employer || ""),
-      type_contrat: typeObj ? typeObj : (c.type_contrat || ""),
+      employer: empObj || c.employer || "",
+      type_contrat: typeObj || c.type_contrat || "",
       employer_nom: c.employer_nom || (empObj ? `${empObj.nom_employer} ${empObj.prenom_employer}` : "")
     });
     setFileToUpload(null);
@@ -183,8 +186,7 @@ const ContratsPage: React.FC = () => {
   };
 
   const saveContrat = async () => {
-    if (!editing) return;
-    if (!validateBeforeSave()) return;
+    if (!editing || !validateBeforeSave()) return;
 
     try {
       const payload: any = {
@@ -196,13 +198,12 @@ const ContratsPage: React.FC = () => {
         montant_total: editing.montant_total,
         description_mission: editing.description_mission
       };
-
       payload.employer_id = typeof editing.employer === "object" ? (editing.employer as Employer).id : editing.employer;
       if (editing.type_contrat) payload.type_contrat_id = typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat;
 
       if (fileToUpload) {
         const fd = new FormData();
-        Object.entries(payload).forEach(([k, v]) => { if (v !== undefined && v !== null) fd.append(k, String(v)); });
+        Object.entries(payload).forEach(([k, v]) => { if (v != null) fd.append(k, String(v)); });
         fd.append("contrat_file", fileToUpload);
         if (editing.id && (rhApi as any).updateContratFormData) await (rhApi as any).updateContratFormData(editing.id, fd);
         else if (!editing.id && (rhApi as any).createContratFormData) await (rhApi as any).createContratFormData(fd);
@@ -220,21 +221,23 @@ const ContratsPage: React.FC = () => {
     }
   };
 
+  // ------------------- DELETE -------------------
   const askDelete = (id?: string) => { setDeleteId(id || null); setIsDeleteOpen(true); };
   const confirmDelete = async () => {
     if (!deleteId) return;
-    try { 
-      await rhApi.deleteContrat(deleteId); 
-      setIsDeleteOpen(false); 
-      fetchAll(); 
-      toast({ title: "Supprimé" }); 
-    } catch (err: any) { 
-      toast({ title: "Erreur", description: err?.message || "Impossible de supprimer.", variant: "destructive" }); 
+    try {
+      await rhApi.deleteContrat(deleteId);
+      setIsDeleteOpen(false);
+      fetchAll();
+      toast({ title: "Supprimé" });
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err?.message || "Impossible de supprimer.", variant: "destructive" });
     }
   };
 
   if (loading) return <p className="p-8 text-center">Chargement...</p>;
 
+  // ------------------- RENDER -------------------
   return (
     <div className="p-8 space-y-6">
       <div className="flex justify-between items-center gap-4">
@@ -288,7 +291,7 @@ const ContratsPage: React.FC = () => {
             </TableHeader>
             <TableBody>
               {filtered.map(c => (
-                <TableRow key={c.id}>
+                <TableRow key={c.id || Math.random()}>
                   <TableCell>{c.employer_nom || "-"}</TableCell>
                   <TableCell>{c.type_nom || "-"}</TableCell>
                   <TableCell>{c.nature_contrat || "-"}</TableCell>
@@ -302,17 +305,12 @@ const ContratsPage: React.FC = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              <TableRow>
-                <TableCell colSpan={6} className="font-bold text-right">Total Montant :</TableCell>
-                <TableCell className="font-bold">{totalMontant}</TableCell>
-                <TableCell></TableCell>
-              </TableRow>
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* MODAL CREATION/EDIT */}
+      {/* MODAL CREATE / EDIT */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent aria-describedby="modal-description" className="sm:max-w-2xl">
           <DialogHeader>
@@ -321,17 +319,14 @@ const ContratsPage: React.FC = () => {
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            {/* Champs du formulaire */}
             <div>
               <Label>Employé *</Label>
-              <select
-                className="border rounded p-2 w-full"
+              <select className="border rounded p-2 w-full"
                 value={typeof editing?.employer === "object" ? (editing.employer as Employer).id : editing?.employer || ""}
                 onChange={e => {
                   const emp = employers.find(emp => emp.id === e.target.value);
                   setEditing(prev => ({ ...prev, employer: emp || e.target.value }));
-                }}
-              >
+                }}>
                 <option value="">-- Choisir --</option>
                 {employers.map(emp => <option key={emp.id} value={emp.id}>{emp.nom_employer} {emp.prenom_employer}</option>)}
               </select>
@@ -339,14 +334,12 @@ const ContratsPage: React.FC = () => {
 
             <div>
               <Label>Type</Label>
-              <select
-                className="border rounded p-2 w-full"
+              <select className="border rounded p-2 w-full"
                 value={typeof editing?.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing?.type_contrat || ""}
                 onChange={e => {
                   const t = types.find(t => t.id === e.target.value);
                   setEditing(prev => ({ ...prev, type_contrat: t || e.target.value }));
-                }}
-              >
+                }}>
                 <option value="">-- Choisir --</option>
                 {types.map(t => <option key={t.id} value={t.id}>{t.nom_type}</option>)}
               </select>
@@ -354,22 +347,18 @@ const ContratsPage: React.FC = () => {
 
             <div>
               <Label>Nature *</Label>
-              <select
-                className="border rounded p-2 w-full"
+              <select className="border rounded p-2 w-full"
                 value={editing?.nature_contrat || ""}
-                onChange={e => setEditing(prev => ({ ...prev, nature_contrat: e.target.value }))}
-              >
+                onChange={e => setEditing(prev => ({ ...prev, nature_contrat: e.target.value }))}>
                 {NATURE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
 
             <div>
               <Label>Status *</Label>
-              <select
-                className="border rounded p-2 w-full"
+              <select className="border rounded p-2 w-full"
                 value={editing?.status_contrat || ""}
-                onChange={e => setEditing(prev => ({ ...prev, status_contrat: e.target.value }))}
-              >
+                onChange={e => setEditing(prev => ({ ...prev, status_contrat: e.target.value }))}>
                 <option value="actif">Actif</option>
                 <option value="expire">Expiré</option>
                 <option value="resilie">Résilié</option>
@@ -382,7 +371,6 @@ const ContratsPage: React.FC = () => {
               <Label>Date début *</Label>
               <Input type="date" value={editing?.date_debut_contrat || ""} onChange={e => setEditing(prev => ({ ...prev, date_debut_contrat: e.target.value }))} />
             </div>
-
             <div>
               <Label>Date fin</Label>
               <Input type="date" value={editing?.date_fin_contrat || ""} onChange={e => setEditing(prev => ({ ...prev, date_fin_contrat: e.target.value }))} />
@@ -392,7 +380,6 @@ const ContratsPage: React.FC = () => {
               <Label>Salaire</Label>
               <Input type="number" value={editing?.salaire || ""} onChange={e => setEditing(prev => ({ ...prev, salaire: e.target.value }))} />
             </div>
-
             <div>
               <Label>Montant total</Label>
               <Input type="number" value={editing?.montant_total || ""} onChange={e => setEditing(prev => ({ ...prev, montant_total: e.target.value }))} />
@@ -421,7 +408,7 @@ const ContratsPage: React.FC = () => {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
-            <DialogDescription id="delete-description">Voulez-vous vraiment supprimer ce contrat ?</DialogDescription>
+            <DialogDescription>Voulez-vous vraiment supprimer ce contrat ?</DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 mt-4">
             <Button onClick={() => setIsDeleteOpen(false)}>Annuler</Button>
