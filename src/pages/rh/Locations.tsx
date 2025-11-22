@@ -48,16 +48,23 @@ const LocationsPage = () => {
   }, []);
 
   const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      const locs = await rhApi.getLocations();
-      setLocations(locs);
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de charger les locations.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  setIsLoading(true);
+  try {
+    const locs = await rhApi.getLocations();
+    setLocations(locs || []);
+  } catch (err: any) {
+    console.error("Erreur fetching locations:", err);
+    toast({
+      title: "Erreur",
+      description: err.message || "Impossible de charger les locations.",
+      variant: "destructive",
+    });
+    setLocations([]); // éviter undefined
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleOpenModal = (location?: Location) => {
     if (location) {
