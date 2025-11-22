@@ -28,6 +28,7 @@ import TypeConge from "./pages/rh/TypeConge";
 import Conges from "./pages/rh/Conges";
 import TypeContratsPage from "./pages/rh/TypeContratsPage";  
 import ContratsPage from "./pages/rh/ContratsPage";
+import Locations from "./pages/rh/Locations";
 import Categories from "./pages/stock/Categories";
 import Articles from "./pages/stock/Articles";
 import Magasins from "./pages/stock/Magasins";
@@ -92,6 +93,7 @@ const App = () => (
               <Route path="/rh/categories" element={<Categories />} />
               <Route path="/rh/type-contrats" element={<TypeContratsPage />} />
               <Route path="/rh/contrats" element={<ContratsPage />} />
+              <Route path="/rh/locations" element={<Locations />} />
 
               {/* Pages Stock */}
               <Route path="/stock/magasins" element={<Magasins />} />
