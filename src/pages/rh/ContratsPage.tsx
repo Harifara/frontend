@@ -481,6 +481,22 @@ const ContratsPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+  <DialogContent className="sm:max-w-sm">
+    <DialogHeader>
+      <DialogTitle>Confirmer la suppression</DialogTitle>
+      <DialogDescription>
+        Êtes-vous sûr de vouloir supprimer ce contrat ? Cette action est irréversible.
+      </DialogDescription>
+    </DialogHeader>
+    <DialogFooter className="flex gap-2">
+      <Button onClick={() => setIsDeleteOpen(false)}>Annuler</Button>
+      <Button variant="destructive" onClick={confirmDelete}>Supprimer</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
     </div>
   );
 };
