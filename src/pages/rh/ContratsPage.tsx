@@ -234,22 +234,24 @@ const ContratsPage: React.FC = () => {
     return true;
   };
 
-  const generatePDF = (contrat: Contrat) => {
-  const data = {
-    titre: "Contrat de travail",
-    employe: contrat.employer_nom || "-",
-    type: contrat.type_nom || "-",
-    nature: contrat.nature_contrat || "-",
-    status: contrat.status_contrat || "-",
-    dateDebut: contrat.date_debut_contrat || "-",
-    dateFin: contrat.date_fin_contrat || "-",
-    montant: contrat.montant_total || contrat.salaire || "-",
-    description: contrat.description_mission || "-"
-  };
+  const generatePDF = async (contrat: Contrat) => {
+  try {
+    // Préparer un contrat "normalisé" pour le PDF
+    const pdfData = {
+      ...contrat,
+      employer: {
+        full_name: contrat.employer_nom || `${(contrat.employer as Employer)?.nom_employer || ""} ${(contrat.employer as Employer)?.prenom_employer || ""}`.trim()
+      },
+      nature_label: natureLabels[contrat.nature_contrat] || contrat.nature_contrat,
+      status_label: contrat.status_contrat
+    };
 
-  // Ici tu peux mettre la logique PDF
-  console.log("Générer PDF", data);
+    await createContratPDF(pdfData);
+  } catch (err: any) {
+    console.error("Erreur génération PDF", err);
+  }
 };
+
 
   // Envoi (create/update)
   const saveContrat = async () => {
