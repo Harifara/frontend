@@ -2,17 +2,31 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { rhApi } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
-// ------------------- TYPES -------------------
-type Employer = { id: string; nom_employer: string; prenom_employer: string };
-type TypeContrat = { id: string; nom_type: string; duree_max_jours?: number | null };
+// Types
+type Employer = { id: string; nom_employer: string; prenom_employer: string; };
+type TypeContrat = { id: string; nom_type: string; duree_max_jours?: number | null; };
 type Contrat = {
   id?: string;
   employer: string | Employer;
@@ -29,7 +43,7 @@ type Contrat = {
   contrat_file?: string | null;
 };
 
-// ------------------- CONSTANTES -------------------
+// Helpers
 const STATUS_BADGE = (status: string) => {
   switch (status) {
     case "actif": return "bg-green-100 text-green-800";
@@ -42,13 +56,11 @@ const STATUS_BADGE = (status: string) => {
 };
 const NATURE_OPTIONS = ["emploi", "prestation", "mission"];
 
-// ------------------- COMPONENT -------------------
 const ContratsPage: React.FC = () => {
   const [contrats, setContrats] = useState<Contrat[]>([]);
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [types, setTypes] = useState<TypeContrat[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | "all">("all");
   const [filterNature, setFilterNature] = useState<string | "all">("all");
@@ -168,26 +180,33 @@ const ContratsPage: React.FC = () => {
   const saveContrat = async () => {
     if (!editing || !validateBeforeSave()) return;
     try {
-      const payload: any = {
-        status_contrat: editing.status_contrat,
-        date_debut_contrat: editing.date_debut_contrat,
-        date_fin_contrat: editing.date_fin_contrat || null,
-        salaire: editing.salaire,
-        nature_contrat: editing.nature_contrat,
-        montant_total: editing.montant_total,
-        description_mission: editing.description_mission,
-        employer_id: typeof editing.employer === "object" ? (editing.employer as Employer).id : editing.employer,
-        type_contrat_id: editing.type_contrat ? (typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat) : null
-      };
-
-      // ✅ Gestion fichier avec FormData
       if (fileToUpload) {
         const fd = new FormData();
-        Object.entries(payload).forEach(([k, v]) => { if (v != null) fd.append(k, String(v)); });
+        fd.append("status_contrat", editing.status_contrat!);
+        fd.append("date_debut_contrat", editing.date_debut_contrat!);
+        if (editing.date_fin_contrat) fd.append("date_fin_contrat", editing.date_fin_contrat);
+        if (editing.salaire != null) fd.append("salaire", String(editing.salaire));
+        fd.append("nature_contrat", editing.nature_contrat!);
+        if (editing.montant_total != null) fd.append("montant_total", String(editing.montant_total));
+        if (editing.description_mission) fd.append("description_mission", editing.description_mission);
+        fd.append("employer_id", typeof editing.employer === "object" ? (editing.employer as Employer).id : editing.employer);
+        if (editing.type_contrat) fd.append("type_contrat_id", typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat);
         fd.append("contrat_file", fileToUpload);
-        if (editing.id) await rhApi.updateContrat(editing.id, fd);
-        else await rhApi.createContrat(fd);
+
+        if (editing.id) await (rhApi as any).updateContratFormData(editing.id, fd);
+        else await (rhApi as any).createContratFormData(fd);
       } else {
+        const payload: any = {
+          status_contrat: editing.status_contrat,
+          date_debut_contrat: editing.date_debut_contrat,
+          date_fin_contrat: editing.date_fin_contrat || null,
+          salaire: editing.salaire,
+          nature_contrat: editing.nature_contrat,
+          montant_total: editing.montant_total,
+          description_mission: editing.description_mission,
+          employer_id: typeof editing.employer === "object" ? (editing.employer as Employer).id : editing.employer,
+          type_contrat_id: editing.type_contrat ? (typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat) : null
+        };
         if (editing.id) await rhApi.updateContrat(editing.id, payload);
         else await rhApi.createContrat(payload);
       }
@@ -198,7 +217,7 @@ const ContratsPage: React.FC = () => {
       fetchAll();
       toast({ title: "Succès", description: "Contrat sauvegardé." });
     } catch (err: any) {
-      const msg = err?.message || "Erreur serveur";
+      const msg = err?.response?.data ? JSON.stringify(err.response.data) : err?.message || "Erreur serveur";
       toast({ title: "Erreur", description: msg, variant: "destructive" });
     }
   };
@@ -331,7 +350,9 @@ const ContratsPage: React.FC = () => {
             {/* Nature */}
             <div>
               <Label>Nature *</Label>
-              <select className="border rounded p-2 w-full" value={editing?.nature_contrat || ""} onChange={e => setEditing(prev => ({ ...prev, nature_contrat: e.target.value }))}>
+              <select className="border rounded p-2 w-full"
+                value={editing?.nature_contrat || ""}
+                onChange={e => setEditing(prev => ({ ...prev, nature_contrat: e.target.value }))}>
                 {NATURE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
@@ -339,7 +360,9 @@ const ContratsPage: React.FC = () => {
             {/* Status */}
             <div>
               <Label>Status *</Label>
-              <select className="border rounded p-2 w-full" value={editing?.status_contrat || ""} onChange={e => setEditing(prev => ({ ...prev, status_contrat: e.target.value }))}>
+              <select className="border rounded p-2 w-full"
+                value={editing?.status_contrat || ""}
+                onChange={e => setEditing(prev => ({ ...prev, status_contrat: e.target.value }))}>
                 <option value="actif">Actif</option>
                 <option value="expire">Expiré</option>
                 <option value="resilie">Résilié</option>
@@ -358,7 +381,7 @@ const ContratsPage: React.FC = () => {
               <Input type="date" value={editing?.date_fin_contrat || ""} onChange={e => setEditing(prev => ({ ...prev, date_fin_contrat: e.target.value }))} />
             </div>
 
-            {/* Salaire et montant */}
+            {/* Salaire et montant total */}
             <div>
               <Label>Salaire</Label>
               <Input type="number" value={editing?.salaire || ""} onChange={e => setEditing(prev => ({ ...prev, salaire: Number(e.target.value) }))} />
@@ -378,26 +401,24 @@ const ContratsPage: React.FC = () => {
             <div className="md:col-span-2">
               <Label>Fichier contrat</Label>
               <Input type="file" onChange={e => setFileToUpload(e.target.files?.[0] || null)} />
-              {editing?.contrat_file && <p>Fichier actuel: {editing.contrat_file}</p>}
             </div>
           </div>
 
-          <DialogFooter className="mt-4 flex gap-2">
-            <Button onClick={() => { setIsModalOpen(false); setEditing(null); setFileToUpload(null); }}>Annuler</Button>
-            <Button onClick={saveContrat}>{editing?.id ? "Enregistrer" : "Créer"}</Button>
+          <DialogFooter className="mt-4">
+            <Button onClick={saveContrat}>{editing?.id ? "Modifier" : "Créer"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* DIALOG SUPPRESSION */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent className="sm:max-w-sm">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
             <DialogDescription>Voulez-vous vraiment supprimer ce contrat ?</DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex gap-2 mt-4">
-            <Button onClick={() => setIsDeleteOpen(false)}>Annuler</Button>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Annuler</Button>
             <Button variant="destructive" onClick={confirmDelete}>Supprimer</Button>
           </DialogFooter>
         </DialogContent>
