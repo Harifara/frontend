@@ -11,25 +11,36 @@ import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { createPDFDoc } from "@/lib/pdfTemplate";
 
+interface ModePayement {
+  id: string;
+  mode_payement: string;
+}
+
 interface Payement {
   id?: string;
   montant?: number;
   date_payement?: string;
   status?: string;
   reference?: string;
-  mode_payement?: { mode_payement: string };
+  mode_payement?: ModePayement;
+  mode_payement_id?: string;
 }
 
 const PayementsPage = () => {
   const [payements, setPayements] = useState<Payement[]>([]);
+  const [modesPayement, setModesPayement] = useState<ModePayement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPayement, setEditingPayement] = useState<Payement | null>(null);
   const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [form, setForm] = useState<Payement>({ montant: undefined, mode_payement_id: "" });
   const { toast } = useToast();
 
   useEffect(() => {
     fetchData();
+    fetchModes();
   }, []);
 
   const fetchData = async () => {
@@ -42,6 +53,57 @@ const PayementsPage = () => {
       setPayements([]);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchModes = async () => {
+    try {
+      const data = await rhApi.getModePayements();
+      setModesPayement(data || []);
+    } catch (err: any) {
+      console.error(err);
+      setModesPayement([]);
+    }
+  };
+
+  const handleOpenModal = (payement?: Payement) => {
+    if (payement) {
+      setEditingPayement(payement);
+      setForm({
+        montant: payement.montant,
+        mode_payement_id: payement.mode_payement?.id || "",
+      });
+    } else {
+      setEditingPayement(null);
+      setForm({ montant: undefined, mode_payement_id: "" });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingPayement(null);
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!form.montant || !form.mode_payement_id) {
+      toast({ title: "Erreur", description: "Veuillez remplir tous les champs obligatoires.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      if (editingPayement) {
+        await rhApi.updatePayement(editingPayement.id!, form);
+        toast({ title: "Succès", description: "Paiement mis à jour." });
+      } else {
+        await rhApi.createPayement(form);
+        toast({ title: "Succès", description: "Paiement créé." });
+      }
+      handleCloseModal();
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message || "Erreur lors de l'opération.", variant: "destructive" });
     }
   };
 
@@ -64,16 +126,6 @@ const PayementsPage = () => {
     }
   };
 
-  const handleComplete = async (id: string) => {
-    try {
-      await rhApi.completePayement(id);
-      toast({ title: "Succès", description: "Paiement marqué comme complété." });
-      fetchData();
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Erreur lors de la mise à jour.", variant: "destructive" });
-    }
-  };
-
   const filteredPayements = payements.filter(p =>
     p.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.mode_payement?.mode_payement.toLowerCase().includes(searchTerm.toLowerCase())
@@ -81,13 +133,8 @@ const PayementsPage = () => {
 
   // --- Export PDF
   const exportPDF = async () => {
-    const data = filteredPayements.map(p => [
-      p.reference,
-      p.montant,
-      p.status,
-      p.mode_payement?.mode_payement || ""
-    ]);
-    const columns = ["Référence", "Montant", "Status", "Mode de Paiement"];
+    const data = filteredPayements.map(p => [p.reference, p.montant, p.status, p.mode_payement?.mode_payement || ""]);
+    const columns = ["Référence", "Montant", "Statut", "Mode de Paiement"];
     await createPDFDoc("Liste des Paiements", data, columns, "payements.pdf");
   };
 
@@ -97,7 +144,7 @@ const PayementsPage = () => {
       filteredPayements.map(p => ({
         Référence: p.reference,
         Montant: p.montant,
-        Status: p.status,
+        Statut: p.status,
         "Mode de Paiement": p.mode_payement?.mode_payement || ""
       }))
     );
@@ -112,6 +159,7 @@ const PayementsPage = () => {
     <div className="p-8 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Paiements</h1>
+        <Button onClick={() => handleOpenModal()}>Ajouter un Paiement</Button>
       </div>
 
       <div className="flex gap-4">
@@ -135,7 +183,7 @@ const PayementsPage = () => {
               <TableRow>
                 <TableHead className="text-center">Référence</TableHead>
                 <TableHead className="text-center">Montant</TableHead>
-                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-center">Statut</TableHead>
                 <TableHead className="text-center">Mode de Paiement</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
@@ -148,9 +196,7 @@ const PayementsPage = () => {
                   <TableCell className="text-center">{p.status}</TableCell>
                   <TableCell className="text-center">{p.mode_payement?.mode_payement}</TableCell>
                   <TableCell className="text-center space-x-2">
-                    {p.status !== "complete" && (
-                      <Button size="sm" variant="outline" onClick={() => handleComplete(p.id!)}>Compléter</Button>
-                    )}
+                    <Button size="sm" variant="outline" onClick={() => handleOpenModal(p)}>Modifier</Button>
                     <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(p.id!)}>Supprimer</Button>
                   </TableCell>
                 </TableRow>
@@ -163,6 +209,46 @@ const PayementsPage = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Modal Création / Modification */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingPayement ? "Modifier le Paiement" : "Créer un Paiement"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="montant">Montant</Label>
+              <Input
+                id="montant"
+                type="number"
+                value={form.montant || ""}
+                onChange={(e) => setForm({ ...form, montant: parseFloat(e.target.value) })}
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="mode">Mode de Paiement</Label>
+              <select
+                id="mode"
+                value={form.mode_payement_id}
+                onChange={(e) => setForm({ ...form, mode_payement_id: e.target.value })}
+                className="w-full border rounded p-2"
+                required
+              >
+                <option value="">-- Sélectionner un mode --</option>
+                {modesPayement.map((m) => (
+                  <option key={m.id} value={m.id}>{m.mode_payement}</option>
+                ))}
+              </select>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleCloseModal}>Annuler</Button>
+              <Button type="submit">{editingPayement ? "Mettre à jour" : "Créer"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Modal Suppression */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
