@@ -286,14 +286,24 @@ const ContratsPage: React.FC = () => {
   // CONSTRUCTION DU PAYLOAD
   try {
     const payloadObj: any = {
-      status_contrat: editing.status_contrat,
-      date_debut_contrat: editing.date_debut_contrat,
-      date_fin_contrat: editing.date_fin_contrat || null,
-      salaire: editing.salaire !== undefined ? Number(editing.salaire) : 0,
-      nature_contrat: editing.nature_contrat,
-      montant_total: editing.montant_total !== undefined && editing.montant_total !== null ? Number(editing.montant_total) : null,
-      description_mission: editing.nature_contrat !== "emploi" ? editing.description_mission : null
-    };
+    status_contrat: editing.status_contrat,
+    date_debut_contrat: editing.date_debut_contrat,
+    date_fin_contrat: editing.date_fin_contrat || null,
+    salaire: editing.salaire !== undefined ? Number(editing.salaire) : 0,
+    nature_contrat: editing.nature_contrat,
+    montant_total: editing.montant_total != null ? Number(editing.montant_total) : null,
+    description_mission:
+      editing.nature_contrat !== "emploi" ? (editing.description_mission || "") : null,
+    employer_id:
+      typeof editing.employer === "object"
+        ? (editing.employer as Employer).id
+        : editing.employer || null,
+    type_contrat_id:
+      typeof editing.type_contrat === "object"
+        ? (editing.type_contrat as TypeContrat).id
+        : editing.type_contrat || null,
+  };
+
 
     // Employer ID
     if (typeof editing.employer === "object") payloadObj.employer_id = (editing.employer as Employer).id;
