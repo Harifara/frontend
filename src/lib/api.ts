@@ -410,6 +410,32 @@ deleteElectricite: async (id: string) =>
   }),
 
 
+// === MODE DE PAIEMENT ===
+getModePayements: async () =>
+  fetchWithLog(`${API_BASE_URL}/rh/mode-payements/`, { headers: getHeaders(await ensureKongToken()) }),
+
+createModePayement: async (payload: any) =>
+  fetchWithLog(`${API_BASE_URL}/rh/mode-payements/`, {
+    method: "POST",
+    headers: getHeaders(await ensureKongToken()),
+    body: JSON.stringify(payload),
+  }),
+
+updateModePayement: async (id: string, payload: any) =>
+  fetchWithLog(`${API_BASE_URL}/rh/mode-payements/${cleanUUID(id)}/`, {
+    method: "PATCH",
+    headers: getHeaders(await ensureKongToken()),
+    body: JSON.stringify(payload),
+  }),
+
+deleteModePayement: async (id: string) =>
+  fetchWithLog(`${API_BASE_URL}/rh/mode-payements/${cleanUUID(id)}/`, {
+    method: "DELETE",
+    headers: getHeaders(await ensureKongToken()),
+  }),
+
+
+
 };
 
 // ------------------------

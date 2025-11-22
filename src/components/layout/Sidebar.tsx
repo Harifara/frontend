@@ -31,6 +31,7 @@ const navigation = [
   { name: "Contrats", href: "/rh/contrats", icon: FileText, roles: ["admin", "responsable_rh"] }, // ✅ ajout
   { name: "Locations", href: "/rh/locations", icon: MapPin, roles: ["admin", "responsable_rh"] }, // ✅ ajout
   { name: "Electricités", href: "/rh/electricites", icon: MapPin, roles: ["admin", "responsable_rh", "responsable_finance"] }, // ✅ ajout
+  { name: "Mode de payement", href: "/rh/mode-payement", icon: MapPin, roles: ["admin", "responsable_finance"] }, // ✅ ajout
   { name: "Affectations", href: "/rh/affectations", icon: Briefcase, roles: ["admin", "responsable_rh"] }, // ✅ ajout
   { name: "Magasins", href: "/stock/magasins", icon: Warehouse, roles: ["admin", "responsable_stock"] },
   { name: "Type de congés", href: "/rh/type-conges", icon: ClipboardList, roles: ["admin", "responsable_rh"] }, // ✅ ajout
