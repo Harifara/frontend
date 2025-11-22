@@ -219,7 +219,7 @@ const LocationsPage = () => {
                   <TableCell className="text-center">{l.nom}</TableCell>
                   <TableCell className="text-center">{l.type_location}</TableCell>
                   <TableCell className="text-center">{l.ville}</TableCell>
-                  <TableCell className="text-center">{l.montant}</TableCell>
+                  <TableCell className="text-center">{l.montant} Ar</TableCell>
                   <TableCell className="text-center space-x-2">
                     <Button size="sm" variant="outline" onClick={() => handleOpenModal(l)}>Modifier</Button>
                     <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(l.id!)}>Supprimer</Button>
