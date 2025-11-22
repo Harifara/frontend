@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,19 +13,15 @@ import {
   FileText,
   Briefcase,
   LogOut,
-  ChevronDown,
-  ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.jpg";
 
-// Menu principal
+// Navigation dynamique selon le rôle
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin", "responsable_rh", "responsable_stock", "responsable_finance", "magasinier", "coordinateur"] },
   { name: "Utilisateurs", href: "/users", icon: Users, roles: ["admin"] },
   { name: "Logs d'audit", href: "/audit-logs", icon: FileSearch, roles: ["admin"] },
-  
-  // Menu déroulant Localisation
   {
     name: "Localisation",
     icon: Building2,
@@ -40,12 +36,19 @@ const navigation = [
   { name: "Fonctions", href: "/rh/fonctions", icon: FileText, roles: ["admin", "responsable_rh"] },
   { name: "Employés", href: "/rh/employes", icon: Users, roles: ["admin", "responsable_rh"] },
   { name: "Types de contrats", href: "/rh/type-contrats", icon: FileText, roles: ["admin", "responsable_rh"] },
-  { name: "Contrats", href: "/rh/contrats", icon: FileText, roles: ["admin", "responsable_rh"] },
-  { name: "Affectations", href: "/rh/affectations", icon: Briefcase, roles: ["admin", "responsable_rh"] },
-  { name: "Type de congés", href: "/rh/type-conges", icon: ClipboardList, roles: ["admin", "responsable_rh"] },
-  { name: "Congés", href: "/rh/conges", icon: ClipboardList, roles: ["admin", "responsable_rh"] },
+  { name: "Contrats", href: "/rh/contrats", icon: FileText, roles: ["admin", "responsable_rh"] }, // ✅ ajout
+  { name: "Locations", href: "/rh/locations", icon: MapPin, roles: ["admin", "responsable_rh"] }, // ✅ ajout
+  { name: "Electricités", href: "/rh/electricites", icon: MapPin, roles: ["admin", "responsable_rh", "responsable_finance"] }, // ✅ ajout
+  { name: "Mode de payement", href: "/rh/mode-payement", icon: MapPin, roles: ["admin", "responsable_finance"] }, // ✅ ajout
+  { name: "Payements", href: "/rh/payements", icon: MapPin, roles: ["admin", "responsable_finance"] }, // ✅ ajout
+  { name: "Affectations", href: "/rh/affectations", icon: Briefcase, roles: ["admin", "responsable_rh"] }, // ✅ ajout
   { name: "Magasins", href: "/stock/magasins", icon: Warehouse, roles: ["admin", "responsable_stock"] },
-  { name: "Articles", href: "/stock/articles", icon: ClipboardList, roles: ["admin", "responsable_stock", "magasinier"] },
+  { name: "Type de congés", href: "/rh/type-conges", icon: ClipboardList, roles: ["admin", "responsable_rh"] }, // ✅ ajout
+  { name: "Congés", href: "/rh/conges", icon: ClipboardList, roles: ["admin", "responsable_rh"] }, // ✅ ajout
+  { name: "Catégories", href: "/rh/categories", icon: ClipboardList, roles: ["admin", "responsable_stock"] }, // ✅ ajout
+  { name: "Articles", href: "/stock/articles", icon: ClipboardList, roles: ["admin", "responsable_stock", "magasinier"] }, // ✅ ajout
+  { name: "Gestion de stock", href: "/stock/gestion-stock", icon: ClipboardList, roles: ["admin", "responsable_stock", "magasinier"] }, // ✅ ajout
+  { name: "Mouvements de stock", href: "/stock/mouvement-stock", icon: ClipboardList, roles: ["admin", "responsable_stock", "magasinier"] }, // ✅ ajout
 ];
 
 // Fonction pour initiales utilisateur
@@ -57,17 +60,10 @@ const getInitials = (user: any) => {
 export const Sidebar = () => {
   const location = useLocation();
   const { user, logout } = useAuth();
-  const [openDropdowns, setOpenDropdowns] = useState<string[]>([]);
 
   const filteredNavigation = navigation.filter(item =>
     user?.role ? item.roles.includes(user.role) : false
   );
-
-  const toggleDropdown = (name: string) => {
-    setOpenDropdowns(prev =>
-      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
-    );
-  };
 
   return (
     <aside className="fixed inset-y-0 left-0 w-64 bg-sidebar shadow-lg z-50 flex flex-col">
@@ -82,45 +78,6 @@ export const Sidebar = () => {
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
         {filteredNavigation.map(item => {
-          // Si item a des sous-items => menu déroulant
-          if (item.items) {
-            const isOpen = openDropdowns.includes(item.name);
-            return (
-              <div key={item.name} className="space-y-1">
-                <button
-                  onClick={() => toggleDropdown(item.name)}
-                  className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-lg border border-transparent text-sidebar-foreground/70 hover:border-green-600 hover:text-sidebar-foreground transition-all duration-200"
-                >
-                  <item.icon className="w-5 h-5 mr-3 opacity-90" strokeWidth={1.8} />
-                  <span className="flex-1 text-left">{item.name}</span>
-                  {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </button>
-                {isOpen &&
-                  <div className="pl-8 space-y-1">
-                    {item.items.filter(sub => sub.roles.includes(user.role)).map(sub => {
-                      const isActive = location.pathname === sub.href;
-                      return (
-                        <Link
-                          key={sub.name}
-                          to={sub.href}
-                          className={cn(
-                            "flex items-center px-3 py-2 text-sm font-medium rounded-lg border transition-all duration-200 ease-in-out",
-                            isActive
-                              ? "border-green-700 bg-green-50 text-green-800"
-                              : "border-transparent text-sidebar-foreground/70 hover:border-green-600 hover:text-sidebar-foreground"
-                          )}
-                        >
-                          <sub.icon className="w-5 h-5 mr-3 opacity-90" strokeWidth={1.8} />
-                          {sub.name}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                }
-              </div>
-            );
-          }
-
           const isActive = location.pathname === item.href;
           return (
             <Link
