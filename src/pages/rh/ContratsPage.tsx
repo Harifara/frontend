@@ -356,11 +356,16 @@ const ContratsPage: React.FC = () => {
                       "-"}
                   </TableCell>
                   <TableCell>{c.type_nom || (typeof c.type_contrat === "object" ? (c.type_contrat as TypeContrat).nom_type : c.type_contrat) || "-"}</TableCell>
-                  <TableCell>{c.nature_contrat}</TableCell>
+                  <TableCell>{c.nature_contrat || "-"}</TableCell>
                   <TableCell><Badge className={STATUS_BADGE(c.status_contrat)}>{c.status_contrat}</Badge></TableCell>
                   <TableCell>{c.date_debut_contrat}</TableCell>
                   <TableCell>{c.date_fin_contrat || "-"}</TableCell>
-                  <TableCell>{c.montant_total ? `${c.montant_total} Ar` : "-"}</TableCell> {/* <- Affichage montant */}
+                  <TableCell>
+                    {c.montant_total !== null && c.montant_total !== undefined && c.montant_total !== ""
+                      ? new Intl.NumberFormat("fr-FR").format(Number(c.montant_total)) + " Ar"
+                      : "-"}
+                  </TableCell>
+
                   <TableCell className="space-x-2">
                     <Button size="sm" onClick={() => openEdit(c)}>Éditer</Button>
                     <Button size="sm" variant="destructive" onClick={() => askDelete(c.id)}>Supprimer</Button>
