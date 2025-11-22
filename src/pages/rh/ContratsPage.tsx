@@ -342,6 +342,7 @@ const ContratsPage: React.FC = () => {
                 <TableHead>Status</TableHead>
                 <TableHead>Date début</TableHead>
                 <TableHead>Date fin</TableHead>
+                <TableHead>Montant</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -358,6 +359,7 @@ const ContratsPage: React.FC = () => {
                   <TableCell><Badge className={STATUS_BADGE(c.status_contrat)}>{c.status_contrat}</Badge></TableCell>
                   <TableCell>{c.date_debut_contrat}</TableCell>
                   <TableCell>{c.date_fin_contrat || "-"}</TableCell>
+                  <TableCell>{c.montant_total ? `${c.montant_total} Ar` : "-"}</TableCell> {/* <- Affichage montant */}
                   <TableCell className="space-x-2">
                     <Button size="sm" onClick={() => openEdit(c)}>Éditer</Button>
                     <Button size="sm" variant="destructive" onClick={() => askDelete(c.id)}>Supprimer</Button>
