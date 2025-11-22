@@ -81,20 +81,22 @@ const ContratsPage: React.FC = () => {
     setLoading(true);
     try {
       const [cRaw, e, t] = await Promise.all([
-        rhApi.getContrats().catch(err => { console.error(err); return []; }),
-        rhApi.getEmployes().catch(err => { console.error(err); return []; }),
-        rhApi.getTypeContrats().catch(err => { console.error(err); return []; })
+        rhApi.getContrats().catch(() => []),
+        rhApi.getEmployes().catch(() => []),
+        rhApi.getTypeContrats().catch(() => [])
       ]);
 
       const normalized: Contrat[] = (cRaw || []).map((x: any) => {
+        // Normalisation employer
         let employer_nom = "";
         if (typeof x.employer === "object" && x.employer) {
-          employer_nom = `${x.employer.nom_employer || ""} ${x.employer.prenom_employer || ""}`.trim();
+          employer_nom = `${x.employer.nom_employer} ${x.employer.prenom_employer}`.trim();
         } else if (typeof x.employer === "string") {
           const empObj = e.find(emp => emp.id === x.employer);
           employer_nom = empObj ? `${empObj.nom_employer} ${empObj.prenom_employer}` : x.employer;
         }
 
+        // Normalisation type
         let type_nom = "";
         if (typeof x.type_contrat === "object" && x.type_contrat) {
           type_nom = x.type_contrat.nom_type;
@@ -103,17 +105,8 @@ const ContratsPage: React.FC = () => {
           type_nom = typeObj ? typeObj.nom_type : x.type_contrat;
         }
 
-        return {
-          ...x,
-          employer_nom,
-          type_nom,
-          nature_contrat: x.nature_contrat || "-"
-        };
+        return { ...x, employer_nom, type_nom, nature_contrat: x.nature_contrat || "-" };
       });
-
-      console.log("CONTRATS NORMALIZED:", normalized);
-      console.log("EMPLOYERS:", e);
-      console.log("TYPES:", t);
 
       setContrats(normalized);
       setEmployers(e || []);
@@ -166,7 +159,6 @@ const ContratsPage: React.FC = () => {
   const openEdit = (c: Contrat) => {
     const empObj = typeof c.employer === "object" ? c.employer : undefined;
     const typeObj = typeof c.type_contrat === "object" ? c.type_contrat : undefined;
-
     setEditing({
       ...c,
       employer: empObj || c.employer || "",
@@ -189,7 +181,6 @@ const ContratsPage: React.FC = () => {
 
   const saveContrat = async () => {
     if (!editing || !validateBeforeSave()) return;
-
     try {
       const payload: any = {
         status_contrat: editing.status_contrat,
@@ -198,10 +189,10 @@ const ContratsPage: React.FC = () => {
         salaire: editing.salaire,
         nature_contrat: editing.nature_contrat,
         montant_total: editing.montant_total,
-        description_mission: editing.description_mission
+        description_mission: editing.description_mission,
+        employer_id: typeof editing.employer === "object" ? (editing.employer as Employer).id : editing.employer,
+        type_contrat_id: editing.type_contrat ? (typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat) : undefined
       };
-      payload.employer_id = typeof editing.employer === "object" ? (editing.employer as Employer).id : editing.employer;
-      if (editing.type_contrat) payload.type_contrat_id = typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat;
 
       if (fileToUpload) {
         const fd = new FormData();
@@ -239,7 +230,6 @@ const ContratsPage: React.FC = () => {
 
   if (loading) return <p className="p-8 text-center">Chargement...</p>;
 
-  // ------------------- RENDER -------------------
   return (
     <div className="p-8 space-y-6">
       <div className="flex justify-between items-center gap-4">
@@ -321,6 +311,7 @@ const ContratsPage: React.FC = () => {
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {/* Employé */}
             <div>
               <Label>Employé *</Label>
               <select className="border rounded p-2 w-full"
@@ -334,6 +325,7 @@ const ContratsPage: React.FC = () => {
               </select>
             </div>
 
+            {/* Type */}
             <div>
               <Label>Type</Label>
               <select className="border rounded p-2 w-full"
@@ -347,6 +339,7 @@ const ContratsPage: React.FC = () => {
               </select>
             </div>
 
+            {/* Nature */}
             <div>
               <Label>Nature *</Label>
               <select className="border rounded p-2 w-full"
@@ -356,6 +349,7 @@ const ContratsPage: React.FC = () => {
               </select>
             </div>
 
+            {/* Status */}
             <div>
               <Label>Status *</Label>
               <select className="border rounded p-2 w-full"
@@ -369,6 +363,7 @@ const ContratsPage: React.FC = () => {
               </select>
             </div>
 
+            {/* Dates */}
             <div>
               <Label>Date début *</Label>
               <Input type="date" value={editing?.date_debut_contrat || ""} onChange={e => setEditing(prev => ({ ...prev, date_debut_contrat: e.target.value }))} />
@@ -378,23 +373,27 @@ const ContratsPage: React.FC = () => {
               <Input type="date" value={editing?.date_fin_contrat || ""} onChange={e => setEditing(prev => ({ ...prev, date_fin_contrat: e.target.value }))} />
             </div>
 
+            {/* Salaire et montant */}
             <div>
               <Label>Salaire</Label>
-              <Input type="number" value={editing?.salaire || ""} onChange={e => setEditing(prev => ({ ...prev, salaire: e.target.value }))} />
+              <Input type="number" value={editing?.salaire || ""} onChange={e => setEditing(prev => ({ ...prev, salaire: Number(e.target.value) }))} />
             </div>
             <div>
               <Label>Montant total</Label>
-              <Input type="number" value={editing?.montant_total || ""} onChange={e => setEditing(prev => ({ ...prev, montant_total: e.target.value }))} />
+              <Input type="number" value={editing?.montant_total || ""} onChange={e => setEditing(prev => ({ ...prev, montant_total: Number(e.target.value) }))} />
             </div>
 
+            {/* Description */}
             <div className="md:col-span-2">
-              <Label>Description mission</Label>
-              <textarea className="border rounded p-2 w-full" value={editing?.description_mission || ""} onChange={e => setEditing(prev => ({ ...prev, description_mission: e.target.value }))}></textarea>
+              <Label>Description</Label>
+              <textarea className="border rounded p-2 w-full" value={editing?.description_mission || ""} onChange={e => setEditing(prev => ({ ...prev, description_mission: e.target.value }))} />
             </div>
 
+            {/* Fichier */}
             <div className="md:col-span-2">
-              <Label>Contrat (PDF)</Label>
-              <Input type="file" accept="application/pdf" onChange={e => setFileToUpload(e.target.files ? e.target.files[0] : null)} />
+              <Label>Fichier contrat</Label>
+              <Input type="file" onChange={e => setFileToUpload(e.target.files?.[0] || null)} />
+              {editing?.contrat_file && <p>Fichier actuel: {editing.contrat_file}</p>}
             </div>
           </div>
 
