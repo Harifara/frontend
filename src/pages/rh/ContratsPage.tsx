@@ -233,6 +233,19 @@ const ContratsPage: React.FC = () => {
     return true;
   };
 
+  const generatePDF = (contrat: Contrat) => {
+  const data = {
+    titre: "Contrat de travail",
+    employe: contrat.employer_nom || "-",
+    type: contrat.type_nom || "-",
+    nature: contrat.nature_contrat || "-",
+    status: contrat.status_contrat || "-",
+    dateDebut: contrat.date_debut_contrat || "-",
+    dateFin: contrat.date_fin_contrat || "-",
+    montant: contrat.montant_total || contrat.salaire || "-",
+    description: contrat.description_mission || "-"
+  };
+
   // Envoi (create/update)
   const saveContrat = async () => {
     if (!editing) return;
@@ -376,7 +389,11 @@ const ContratsPage: React.FC = () => {
 
                   <TableCell className="space-x-2">
                     <Button size="sm" onClick={() => openEdit(c)}>Éditer</Button>
+                    <Button size="sm" onClick={() => generatePDF(c)}>
+                      PDF
+                    </Button>
                     <Button size="sm" variant="destructive" onClick={() => askDelete(c.id)}>Supprimer</Button>
+                    
                   </TableCell>
                 </TableRow>
               ))}
