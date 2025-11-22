@@ -31,6 +31,7 @@ import ContratsPage from "./pages/rh/ContratsPage";
 import Locations from "./pages/rh/Locations";
 import Electricites from "./pages/rh/Electricites";
 import ModePayement from "./pages/rh/ModePayement";
+import Payements from "./pages/rh/Payements";
 import Categories from "./pages/stock/Categories";
 import Articles from "./pages/stock/Articles";
 import Magasins from "./pages/stock/Magasins";
@@ -98,6 +99,7 @@ const App = () => (
               <Route path="/rh/locations" element={<Locations />} />
               <Route path="/rh/electricites" element={<Electricites />} />
               <Route path="/rh/mode-payement" element={<ModePayement />} />
+              <Route path="/rh/payements" element={<Payements />} />
 
               {/* Pages Stock */}
               <Route path="/stock/magasins" element={<Magasins />} />

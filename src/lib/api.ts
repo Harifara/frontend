@@ -435,6 +435,36 @@ deleteModePayement: async (id: string) =>
   }),
 
 
+  // === PAYEMENTS ===
+getPayements: async () =>
+  fetchWithLog(`${API_BASE_URL}/rh/payements/`, { headers: getHeaders(await ensureKongToken()) }),
+
+createPayement: async (payload: any) =>
+  fetchWithLog(`${API_BASE_URL}/rh/payements/`, {
+    method: "POST",
+    headers: getHeaders(await ensureKongToken()),
+    body: JSON.stringify(payload),
+  }),
+
+updatePayement: async (id: string, payload: any) =>
+  fetchWithLog(`${API_BASE_URL}/rh/payements/${cleanUUID(id)}/`, {
+    method: "PATCH",
+    headers: getHeaders(await ensureKongToken()),
+    body: JSON.stringify(payload),
+  }),
+
+deletePayement: async (id: string) =>
+  fetchWithLog(`${API_BASE_URL}/rh/payements/${cleanUUID(id)}/`, {
+    method: "DELETE",
+    headers: getHeaders(await ensureKongToken()),
+  }),
+
+completePayement: async (id: string) =>
+  fetchWithLog(`${API_BASE_URL}/rh/payements/${cleanUUID(id)}/complete/`, {
+    method: "POST",
+    headers: getHeaders(await ensureKongToken()),
+  }),
+
 
 };
 
