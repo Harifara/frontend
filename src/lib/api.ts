@@ -385,6 +385,31 @@ export const rhApi = {
       headers: getHeaders(await ensureKongToken()),
     }),
 
+  // === ELECTRICITÉ ===
+getElectricites: async () =>
+  fetchWithLog(`${API_BASE_URL}/rh/electricites/`, { headers: getHeaders(await ensureKongToken()) }),
+
+createElectricite: async (payload: any) =>
+  fetchWithLog(`${API_BASE_URL}/rh/electricites/`, {
+    method: "POST",
+    headers: getHeaders(await ensureKongToken()),
+    body: JSON.stringify(payload),
+  }),
+
+updateElectricite: async (id: string, payload: any) =>
+  fetchWithLog(`${API_BASE_URL}/rh/electricites/${cleanUUID(id)}/`, {
+    method: "PATCH",
+    headers: getHeaders(await ensureKongToken()),
+    body: JSON.stringify(payload),
+  }),
+
+deleteElectricite: async (id: string) =>
+  fetchWithLog(`${API_BASE_URL}/rh/electricites/${cleanUUID(id)}/`, {
+    method: "DELETE",
+    headers: getHeaders(await ensureKongToken()),
+  }),
+
+
 };
 
 // ------------------------
