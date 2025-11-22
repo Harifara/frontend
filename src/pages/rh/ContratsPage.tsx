@@ -86,10 +86,23 @@ import { Badge } from "@/components/ui/badge";
        ]);
 
        const normalized: Contrat[] = (c || []).map((x: any) => ({
-         ...x,
-         employer_nom: typeof x.employer === "string" ? x.employer : x.employer?.nom || x.employer,
-         type_nom: x.type_contrat?.nom_type || x.type_nom || (typeof x.type_contrat === "string" ? x.type_contrat : undefined),
-       }));
+        ...x,
+
+        // Correction : afficher nom_employer + prenom_employer
+        employer_nom:
+          typeof x.employer === "string"
+            ? x.employer
+            : x.employer
+            ? `${x.employer.nom_employer || ""} ${x.employer.prenom_employer || ""}`.trim()
+            : "",
+
+        // Correction du nom du type de contrat
+        type_nom:
+          x.type_contrat?.nom_type ||
+          x.type_nom ||
+          (typeof x.type_contrat === "string" ? x.type_contrat : undefined),
+      }));
+
 
        setContrats(normalized);
        setEmployers(e || []);
@@ -273,7 +286,12 @@ import { Badge } from "@/components/ui/badge";
 
          <select value={filterEmployer} onChange={e => setFilterEmployer(e.target.value)} className="border rounded p-2">
            <option value="all">Tous les employés</option>
-           {employers.map(emp => <option key={emp.id} value={emp.id}>{emp.nom}</option>)}
+           {employers.map(emp => (
+            <option key={emp.id} value={emp.id}>
+              {emp.nom_employer} {emp.prenom_employer}
+            </option>
+          ))}
+
          </select>
 
          <select value={filterType} onChange={e => setFilterType(e.target.value)} className="border rounded p-2">
@@ -338,16 +356,22 @@ import { Badge } from "@/components/ui/badge";
              <div>
                <Label>Employé *</Label>
                <select
-                 className="border rounded p-2 w-full"
-                 value={typeof editing?.employer === "object" ? editing.employer.id : editing?.employer || ""}
-                 onChange={e => {
-                   const emp = employers.find(emp => emp.id === e.target.value);
-                   setEditing(prev => ({ ...prev, employer: emp || e.target.value }));
-                 }}
-               >
-                 <option value="">-- Choisir --</option>
-                 {employers.map(emp => <option key={emp.id} value={emp.id}>{emp.nom}</option>)}
-               </select>
+                  className="border rounded p-2 w-full"
+                  value={typeof editing?.employer === "object" ? editing.employer.id : editing?.employer || ""}
+                  onChange={e => {
+                    const emp = employers.find(emp => emp.id === e.target.value);
+                    setEditing(prev => ({ ...prev, employer: emp || e.target.value }));
+                  }}
+                >
+                  <option value="">-- Choisir --</option>
+
+                  {employers.map(emp => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.nom_employer} {emp.prenom_employer}
+                    </option>
+                  ))}
+                </select>
+
              </div>
 
 
