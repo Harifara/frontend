@@ -87,7 +87,6 @@ const ContratsPage: React.FC = () => {
       ]);
 
       const normalized: Contrat[] = (cRaw || []).map((x: any) => {
-        // Normalisation employer
         let employer_nom = "";
         if (typeof x.employer === "object" && x.employer) {
           employer_nom = `${x.employer.nom_employer} ${x.employer.prenom_employer}`.trim();
@@ -96,7 +95,6 @@ const ContratsPage: React.FC = () => {
           employer_nom = empObj ? `${empObj.nom_employer} ${empObj.prenom_employer}` : x.employer;
         }
 
-        // Normalisation type
         let type_nom = "";
         if (typeof x.type_contrat === "object" && x.type_contrat) {
           type_nom = x.type_contrat.nom_type;
@@ -191,21 +189,23 @@ const ContratsPage: React.FC = () => {
         montant_total: editing.montant_total,
         description_mission: editing.description_mission,
         employer_id: typeof editing.employer === "object" ? (editing.employer as Employer).id : editing.employer,
-        type_contrat_id: editing.type_contrat ? (typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat) : undefined
+        type_contrat_id: editing.type_contrat ? (typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat) : null
       };
 
       if (fileToUpload) {
         const fd = new FormData();
         Object.entries(payload).forEach(([k, v]) => { if (v != null) fd.append(k, String(v)); });
         fd.append("contrat_file", fileToUpload);
-        if (editing.id && (rhApi as any).updateContratFormData) await (rhApi as any).updateContratFormData(editing.id, fd);
-        else if (!editing.id && (rhApi as any).createContratFormData) await (rhApi as any).createContratFormData(fd);
+        if (editing.id) await (rhApi as any).updateContratFormData(editing.id, fd);
+        else await (rhApi as any).createContratFormData(fd);
       } else {
         if (editing.id) await rhApi.updateContrat(editing.id, payload);
         else await rhApi.createContrat(payload);
       }
 
       setIsModalOpen(false);
+      setEditing(null);
+      setFileToUpload(null);
       fetchAll();
       toast({ title: "Succès", description: "Contrat sauvegardé." });
     } catch (err: any) {
