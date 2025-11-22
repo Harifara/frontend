@@ -389,9 +389,7 @@ const ContratsPage: React.FC = () => {
 
                   <TableCell className="space-x-2">
                     <Button size="sm" onClick={() => openEdit(c)}>Éditer</Button>
-                    <Button size="sm" onClick={() => generatePDF(c)}>
-                      PDF
-                    </Button>
+                    <Button size="sm" onClick={() => generatePDF(c)}>PDF</Button>    
                     <Button size="sm" variant="destructive" onClick={() => askDelete(c.id)}>Supprimer</Button>
                     
                   </TableCell>
