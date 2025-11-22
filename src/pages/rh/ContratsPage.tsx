@@ -237,52 +237,102 @@ const ContratsPage: React.FC = () => {
 
   // Save create/update
   const saveContrat = async () => {
-    if (!editing) return;
-    if (!validateBeforeSave()) return;
+  if (!editing) return;
 
-    try {
-      const payloadObj: any = {
-        status_contrat: editing.status_contrat,
-        date_debut_contrat: editing.date_debut_contrat,
-        date_fin_contrat: editing.date_fin_contrat || null,
-        salaire: editing.salaire !== undefined ? Number(editing.salaire) : 0,
-        nature_contrat: editing.nature_contrat,
-        montant_total: editing.montant_total !== undefined && editing.montant_total !== null ? Number(editing.montant_total) : null,
-        description_mission: editing.description_mission || null
-      };
+  // VALIDATION FRONT-END
+  if (!editing.employer) {
+    toast({ title: "Erreur", description: "L'employé est obligatoire.", variant: "destructive" });
+    return;
+  }
+  if (!editing.date_debut_contrat) {
+    toast({ title: "Erreur", description: "La date de début est obligatoire.", variant: "destructive" });
+    return;
+  }
+  if (editing.date_fin_contrat && new Date(editing.date_fin_contrat) < new Date(editing.date_debut_contrat)) {
+    toast({ title: "Erreur", description: "La date de fin est antérieure à la date de début.", variant: "destructive" });
+    return;
+  }
 
-      if (typeof editing.employer === "object") payloadObj.employer_id = (editing.employer as Employer).id;
-      else payloadObj.employer_id = editing.employer;
+  if (editing.nature_contrat !== "emploi") {
+    // Type contrat obligatoire pour nature autre que emploi
+    if (!editing.type_contrat) {
+      toast({ title: "Erreur", description: "Le type de contrat est obligatoire pour cette nature.", variant: "destructive" });
+      return;
+    }
+    // Description mission obligatoire pour nature autre que emploi
+    if (!editing.description_mission) {
+      toast({ title: "Erreur", description: "La description de la mission est obligatoire.", variant: "destructive" });
+      return;
+    }
 
-      if (typeof editing.type_contrat === "object") payloadObj.type_contrat_id = (editing.type_contrat as TypeContrat).id;
-      else if (editing.type_contrat) payloadObj.type_contrat_id = editing.type_contrat;
+    // Vérifier la durée max si type_contrat a duree_max_jours
+    const typeId = typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat;
+    const type = types.find(t => String(t.id) === String(typeId));
+    if (type?.duree_max_jours && editing.date_fin_contrat) {
+      const d1 = new Date(editing.date_debut_contrat);
+      const d2 = new Date(editing.date_fin_contrat);
+      const diff = Math.ceil((d2.getTime() - d1.getTime()) / (1000 * 3600 * 24));
+      if (diff > type.duree_max_jours) {
+        toast({
+          title: "Durée trop longue",
+          description: `La durée (${diff} jours) dépasse la limite (${type.duree_max_jours} jours) pour le type ${type.nom_type}.`,
+          variant: "destructive"
+        });
+        return;
+      }
+    }
+  }
 
-      if (fileToUpload) {
-        const fd = new FormData();
-        Object.entries(payloadObj).forEach(([k, v]) => { if (v !== undefined && v !== null) fd.append(k, String(v)); });
-        fd.append("contrat_file", fileToUpload);
+  // CONSTRUCTION DU PAYLOAD
+  try {
+    const payloadObj: any = {
+      status_contrat: editing.status_contrat,
+      date_debut_contrat: editing.date_debut_contrat,
+      date_fin_contrat: editing.date_fin_contrat || null,
+      salaire: editing.salaire !== undefined ? Number(editing.salaire) : 0,
+      nature_contrat: editing.nature_contrat,
+      montant_total: editing.montant_total !== undefined && editing.montant_total !== null ? Number(editing.montant_total) : null,
+      description_mission: editing.nature_contrat !== "emploi" ? editing.description_mission : null
+    };
 
-        if (editing.id && (rhApi as any).updateContratFormData) await (rhApi as any).updateContratFormData(editing.id, fd);
-        else if (!editing.id && (rhApi as any).createContratFormData) await (rhApi as any).createContratFormData(fd);
-        else {
-          if (editing.id) await rhApi.updateContrat(editing.id, payloadObj);
-          else await rhApi.createContrat(payloadObj);
-        }
-      } else {
+    // Employer ID
+    if (typeof editing.employer === "object") payloadObj.employer_id = (editing.employer as Employer).id;
+    else payloadObj.employer_id = editing.employer;
+
+    // Type contrat ID
+    if (typeof editing.type_contrat === "object") payloadObj.type_contrat_id = (editing.type_contrat as TypeContrat).id;
+    else if (editing.type_contrat) payloadObj.type_contrat_id = editing.type_contrat;
+
+    // Gestion fichier PDF
+    if (fileToUpload) {
+      const fd = new FormData();
+      Object.entries(payloadObj).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) fd.append(k, String(v));
+      });
+      fd.append("contrat_file", fileToUpload);
+
+      if (editing.id && (rhApi as any).updateContratFormData) await (rhApi as any).updateContratFormData(editing.id, fd);
+      else if (!editing.id && (rhApi as any).createContratFormData) await (rhApi as any).createContratFormData(fd);
+      else {
         if (editing.id) await rhApi.updateContrat(editing.id, payloadObj);
         else await rhApi.createContrat(payloadObj);
       }
-
-      setIsModalOpen(false);
-      setEditing(null);
-      setFileToUpload(null);
-      fetchAll();
-      toast({ title: "Succès", description: "Contrat sauvegardé." });
-    } catch (err: any) {
-      const msg = err?.response?.data ? JSON.stringify(err.response.data) : err?.message || "Erreur serveur";
-      toast({ title: "Erreur", description: msg, variant: "destructive" });
+    } else {
+      if (editing.id) await rhApi.updateContrat(editing.id, payloadObj);
+      else await rhApi.createContrat(payloadObj);
     }
-  };
+
+    setIsModalOpen(false);
+    setEditing(null);
+    setFileToUpload(null);
+    fetchAll();
+    toast({ title: "Succès", description: "Contrat sauvegardé." });
+  } catch (err: any) {
+    const msg = err?.response?.data ? JSON.stringify(err.response.data) : err?.message || "Erreur serveur";
+    toast({ title: "Erreur", description: msg, variant: "destructive" });
+  }
+};
+
 
   const askDelete = (id?: string) => { setDeleteId(id || null); setIsDeleteOpen(true); };
   const confirmDelete = async () => {
