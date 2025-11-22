@@ -26,12 +26,12 @@ const navigation = [
   { name: "Logs d'audit", href: "/audit-logs", icon: FileSearch, roles: ["admin"] },
   {
     name: "Localisation",
-    icon: Building2,
+    icon: MapPin,
     roles: ["admin", "responsable_rh"],
     items: [
       { name: "Districts", href: "/rh/districts", icon: MapPin, roles: ["admin", "responsable_rh"] },
-      { name: "Communes", href: "/rh/communes", icon: Building2, roles: ["admin", "responsable_rh"] },
-      { name: "Fokontanys", href: "/rh/fokontanys", icon: ClipboardList, roles: ["admin", "responsable_rh"] },
+      { name: "Communes", href: "/rh/communes", icon: MapPin, roles: ["admin", "responsable_rh"] },
+      { name: "Fokontanys", href: "/rh/fokontanys", icon: MapPin, roles: ["admin", "responsable_rh"] },
     ],
   },
   { name: "Fonctions", href: "/rh/fonctions", icon: FileText, roles: ["admin", "responsable_rh"] },
