@@ -358,19 +358,20 @@ import { Badge } from "@/components/ui/badge";
                <select
                   className="border rounded p-2 w-full"
                   value={typeof editing?.employer === "object" ? editing.employer.id : editing?.employer || ""}
-                  onChange={e => {
-                    const emp = employers.find(emp => emp.id === e.target.value);
-                    setEditing(prev => ({ ...prev, employer: emp || e.target.value }));
+                  onChange={(e) => {
+                    const emp = employers.find((emp) => emp.id === e.target.value);
+                    setEditing((prev) => ({ ...prev, employer: emp || e.target.value }));
                   }}
                 >
-                  <option value="">-- Choisir --</option>
+                  <option value="">-- Choisir un employé --</option>
 
-                  {employers.map(emp => (
+                  {employers.map((emp) => (
                     <option key={emp.id} value={emp.id}>
                       {emp.nom_employer} {emp.prenom_employer}
                     </option>
                   ))}
                 </select>
+
 
              </div>
 
