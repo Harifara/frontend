@@ -86,6 +86,24 @@ const ContratsPage: React.FC = () => {
         rhApi.getTypeContrats().catch(err => { console.error(err); return []; })
       ]);
 
+      const contratsFromApi = (c && c.length > 0) ? c : [
+      {
+        id: "1",
+        employer: { id: "emp1", nom_employer: "Jean", prenom_employer: "Dupont" },
+        employer_nom: "Jean Dupont",
+        type_contrat: { id: "type1", nom_type: "CDD" },
+        type_nom: "CDD",
+        nature_contrat: "emploi",
+        status_contrat: "actif",
+        date_debut_contrat: "2025-11-01",
+        date_fin_contrat: "2025-12-01",
+        salaire: 1000,
+        montant_total: 1000,
+        description_mission: "Mission test"
+      }
+    ];
+
+
       const normalized: Contrat[] = (cRaw || []).map((x: any) => {
         // Employer nom
         let employer_nom = "";
