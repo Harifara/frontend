@@ -48,23 +48,18 @@ const LocationsPage = () => {
   }, []);
 
   const fetchData = async () => {
-  setIsLoading(true);
-  try {
-    const locs = await rhApi.getLocations();
-    setLocations(locs || []);
-  } catch (err: any) {
-    console.error("Erreur fetching locations:", err);
-    toast({
-      title: "Erreur",
-      description: err.message || "Impossible de charger les locations.",
-      variant: "destructive",
-    });
-    setLocations([]); // éviter undefined
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+    setIsLoading(true);
+    try {
+      const locs = await rhApi.getLocations();
+      setLocations(locs || []);
+    } catch (err: any) {
+      console.error("Erreur fetching locations:", err);
+      toast({ title: "Erreur", description: err.message || "Impossible de charger les locations.", variant: "destructive" });
+      setLocations([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleOpenModal = (location?: Location) => {
     if (location) {
@@ -91,18 +86,35 @@ const LocationsPage = () => {
     setEditingLocation(null);
   };
 
+  // ⚡ Convertir form JS en FormData pour l'API
+  const buildFormData = (data: Location) => {
+    const formData = new FormData();
+    formData.append("nom", data.nom);
+    formData.append("type_location", data.type_location);
+    if (data.description) formData.append("description", data.description);
+    if (data.adresse) formData.append("adresse", data.adresse);
+    if (data.ville) formData.append("ville", data.ville);
+    if (data.code_postal) formData.append("code_postal", data.code_postal);
+    if (data.montant !== undefined) formData.append("montant", data.montant.toString());
+    if (data.date_echeance) formData.append("date_echeance", data.date_echeance);
+    return formData;
+  };
+
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!form.nom || !form.type_location) {
       toast({ title: "Erreur", description: "Veuillez remplir les champs obligatoires.", variant: "destructive" });
       return;
     }
+
     try {
+      const formData = buildFormData(form);
+
       if (editingLocation) {
-        await rhApi.updateLocation(editingLocation.id!, form);
+        await rhApi.updateLocation(editingLocation.id!, formData);
         toast({ title: "Succès", description: "Location mise à jour." });
       } else {
-        await rhApi.createLocation(form);
+        await rhApi.createLocation(formData);
         toast({ title: "Succès", description: "Location créée." });
       }
       handleCloseModal();
@@ -137,7 +149,6 @@ const LocationsPage = () => {
     (l.ville?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
   );
 
-  // --- Export PDF via template
   const exportPDF = async () => {
     const data = filteredLocations.map(l => [
       l.nom,
@@ -151,7 +162,6 @@ const LocationsPage = () => {
     await createPDFDoc("Liste des Locations", data, columns, "locations.pdf");
   };
 
-  // --- Export Excel
   const exportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
       filteredLocations.map(l => ({
