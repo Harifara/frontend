@@ -24,18 +24,20 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin", "responsable_rh", "responsable_stock", "responsable_finance", "magasinier", "coordinateur"] },
   { name: "Utilisateurs", href: "/users", icon: Users, roles: ["admin"] },
   { name: "Logs d'audit", href: "/audit-logs", icon: FileSearch, roles: ["admin"] },
-  { name: "Districts", href: "/rh/districts", icon: MapPin, roles: ["admin", "responsable_rh"] },
+  
   // Menu déroulant Localisation
   {
     name: "Localisation",
     icon: Building2,
     roles: ["admin", "responsable_rh"],
     items: [
+      { name: "Districts", href: "/rh/districts", icon: MapPin, roles: ["admin", "responsable_rh"] },
       { name: "Communes", href: "/rh/communes", icon: Building2, roles: ["admin", "responsable_rh"] },
       { name: "Fokontanys", href: "/rh/fokontanys", icon: ClipboardList, roles: ["admin", "responsable_rh"] },
-      { name: "Fonctions", href: "/rh/fonctions", icon: FileText, roles: ["admin", "responsable_rh"] },
+      
     ],
   },
+  { name: "Fonctions", href: "/rh/fonctions", icon: FileText, roles: ["admin", "responsable_rh"] },
   { name: "Employés", href: "/rh/employes", icon: Users, roles: ["admin", "responsable_rh"] },
   { name: "Types de contrats", href: "/rh/type-contrats", icon: FileText, roles: ["admin", "responsable_rh"] },
   { name: "Contrats", href: "/rh/contrats", icon: FileText, roles: ["admin", "responsable_rh"] },
