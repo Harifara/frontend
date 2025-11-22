@@ -2,31 +2,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { rhApi } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell
-} from "@/components/ui/table";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
-// Types
-type Employer = { id: string; nom_employer: string; prenom_employer: string; };
-type TypeContrat = { id: string; nom_type: string; duree_max_jours?: number | null; };
+// ------------------- TYPES -------------------
+type Employer = { id: string; nom_employer: string; prenom_employer: string };
+type TypeContrat = { id: string; nom_type: string; duree_max_jours?: number | null };
 type Contrat = {
   id?: string;
   employer: string | Employer;
@@ -43,7 +29,7 @@ type Contrat = {
   contrat_file?: string | null;
 };
 
-// Helpers
+// ------------------- CONSTANTES -------------------
 const STATUS_BADGE = (status: string) => {
   switch (status) {
     case "actif": return "bg-green-100 text-green-800";
@@ -56,11 +42,13 @@ const STATUS_BADGE = (status: string) => {
 };
 const NATURE_OPTIONS = ["emploi", "prestation", "mission"];
 
+// ------------------- COMPONENT -------------------
 const ContratsPage: React.FC = () => {
   const [contrats, setContrats] = useState<Contrat[]>([]);
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [types, setTypes] = useState<TypeContrat[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string | "all">("all");
   const [filterNature, setFilterNature] = useState<string | "all">("all");
@@ -192,12 +180,13 @@ const ContratsPage: React.FC = () => {
         type_contrat_id: editing.type_contrat ? (typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat) : null
       };
 
+      // ✅ Gestion fichier avec FormData
       if (fileToUpload) {
         const fd = new FormData();
         Object.entries(payload).forEach(([k, v]) => { if (v != null) fd.append(k, String(v)); });
         fd.append("contrat_file", fileToUpload);
-        if (editing.id) await (rhApi as any).updateContratFormData(editing.id, fd);
-        else await (rhApi as any).createContratFormData(fd);
+        if (editing.id) await rhApi.updateContrat(editing.id, fd);
+        else await rhApi.createContrat(fd);
       } else {
         if (editing.id) await rhApi.updateContrat(editing.id, payload);
         else await rhApi.createContrat(payload);
@@ -209,7 +198,7 @@ const ContratsPage: React.FC = () => {
       fetchAll();
       toast({ title: "Succès", description: "Contrat sauvegardé." });
     } catch (err: any) {
-      const msg = err?.response?.data ? JSON.stringify(err.response.data) : err?.message || "Erreur serveur";
+      const msg = err?.message || "Erreur serveur";
       toast({ title: "Erreur", description: msg, variant: "destructive" });
     }
   };
@@ -342,9 +331,7 @@ const ContratsPage: React.FC = () => {
             {/* Nature */}
             <div>
               <Label>Nature *</Label>
-              <select className="border rounded p-2 w-full"
-                value={editing?.nature_contrat || ""}
-                onChange={e => setEditing(prev => ({ ...prev, nature_contrat: e.target.value }))}>
+              <select className="border rounded p-2 w-full" value={editing?.nature_contrat || ""} onChange={e => setEditing(prev => ({ ...prev, nature_contrat: e.target.value }))}>
                 {NATURE_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
               </select>
             </div>
@@ -352,9 +339,7 @@ const ContratsPage: React.FC = () => {
             {/* Status */}
             <div>
               <Label>Status *</Label>
-              <select className="border rounded p-2 w-full"
-                value={editing?.status_contrat || ""}
-                onChange={e => setEditing(prev => ({ ...prev, status_contrat: e.target.value }))}>
+              <select className="border rounded p-2 w-full" value={editing?.status_contrat || ""} onChange={e => setEditing(prev => ({ ...prev, status_contrat: e.target.value }))}>
                 <option value="actif">Actif</option>
                 <option value="expire">Expiré</option>
                 <option value="resilie">Résilié</option>
