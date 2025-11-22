@@ -113,6 +113,10 @@ const ContratsPage: React.FC = () => {
         };
       });
 
+      console.log("CONTRATS NORMALIZED:", normalized);
+      console.log("EMPLOYERS:", e);
+      console.log("TYPES:", t);
+
       setContrats(normalized);
       setEmployers(e || []);
       setTypes(t || []);
