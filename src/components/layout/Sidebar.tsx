@@ -36,8 +36,16 @@ const navigation = [
   },
   { name: "Fonctions", href: "/rh/fonctions", icon: FileText, roles: ["admin", "responsable_rh"] },
   { name: "Employés", href: "/rh/employes", icon: Users, roles: ["admin", "responsable_rh"] },
-  { name: "Types de contrats", href: "/rh/type-contrats", icon: FileText, roles: ["admin", "responsable_rh"] },
-  { name: "Contrats", href: "/rh/contrats", icon: FileText, roles: ["admin", "responsable_rh"] },
+  {
+    name: "Contrats",
+    icon: FileText,
+    roles: ["admin", "responsable_rh"],
+    items: [
+      { name: "Types de contrats", href: "/rh/type-contrats", icon: FileText, roles: ["admin", "responsable_rh"] },
+      { name: "Contrats", href: "/rh/contrats", icon: FileText, roles: ["admin", "responsable_rh"] },
+        ],
+  },
+  
   { name: "Locations", href: "/rh/locations", icon: MapPin, roles: ["admin", "responsable_rh"] },
   { name: "Electricités", href: "/rh/electricites", icon: MapPin, roles: ["admin", "responsable_rh", "responsable_finance"] },
   { name: "Mode de payement", href: "/rh/mode-payement", icon: MapPin, roles: ["admin", "responsable_finance"] },
