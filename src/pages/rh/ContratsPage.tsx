@@ -97,7 +97,6 @@ const ContratsPage: React.FC = () => {
         rhApi.getTypeContrats().catch(err => { console.error(err); return []; })
       ]);
 
-      // Normalisation employer_nom et type_nom
       const normalized: Contrat[] = (c || []).map((x: any) => ({
         ...x,
         employer_nom:
@@ -110,7 +109,7 @@ const ContratsPage: React.FC = () => {
           (x.type_contrat && typeof x.type_contrat === "object" && x.type_contrat.nom_type) ||
           x.type_nom ||
           (typeof x.type_contrat === "string" ? x.type_contrat : "-"),
-        nature_contrat: x.nature_contrat || "-"
+        nature_contrat: x.nature_contrat || "-",
       }));
 
       setContrats(normalized);
@@ -141,6 +140,11 @@ const ContratsPage: React.FC = () => {
     });
   }, [contrats, filterStatus, filterNature, filterEmployer, filterType, search]);
 
+  // Calcul du montant total
+  const totalMontant = useMemo(() => {
+    return filtered.reduce((acc, c) => acc + (Number(c.montant_total) || 0), 0);
+  }, [filtered]);
+
   const openCreate = () => {
     setEditing({
       nature_contrat: "emploi",
@@ -168,7 +172,6 @@ const ContratsPage: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  // Validation client
   const validateBeforeSave = () => {
     if (!editing) return false;
     if (!editing.employer) { toast({ title: "Erreur", description: "L'employé est obligatoire.", variant: "destructive" }); return false; }
@@ -220,8 +223,14 @@ const ContratsPage: React.FC = () => {
   const askDelete = (id?: string) => { setDeleteId(id || null); setIsDeleteOpen(true); };
   const confirmDelete = async () => {
     if (!deleteId) return;
-    try { await rhApi.deleteContrat(deleteId); setIsDeleteOpen(false); fetchAll(); toast({ title: "Supprimé" }); } 
-    catch (err: any) { toast({ title: "Erreur", description: err?.message || "Impossible de supprimer.", variant: "destructive" }); }
+    try { 
+      await rhApi.deleteContrat(deleteId); 
+      setIsDeleteOpen(false); 
+      fetchAll(); 
+      toast({ title: "Supprimé" }); 
+    } catch (err: any) { 
+      toast({ title: "Erreur", description: err?.message || "Impossible de supprimer.", variant: "destructive" }); 
+    }
   };
 
   if (loading) return <p className="p-8 text-center">Chargement...</p>;
@@ -286,19 +295,24 @@ const ContratsPage: React.FC = () => {
                   <TableCell><Badge className={STATUS_BADGE(c.status_contrat)}>{c.status_contrat}</Badge></TableCell>
                   <TableCell>{c.date_debut_contrat || "-"}</TableCell>
                   <TableCell>{c.date_fin_contrat || "-"}</TableCell>
-                  <TableCell>{c.montant_total != null ? c.montant_total : "-"}</TableCell> {/* <-- Affichage du montant */}
+                  <TableCell>{c.montant_total != null ? c.montant_total : "-"}</TableCell>
                   <TableCell className="space-x-2">
                     <Button size="sm" onClick={() => openEdit(c)}>Éditer</Button>
                     <Button size="sm" variant="destructive" onClick={() => askDelete(c.id)}>Supprimer</Button>
                   </TableCell>
                 </TableRow>
               ))}
+              <TableRow>
+                <TableCell colSpan={6} className="font-bold text-right">Total Montant :</TableCell>
+                <TableCell className="font-bold">{totalMontant}</TableCell>
+                <TableCell></TableCell>
+              </TableRow>
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* MODAL */}
+      {/* MODAL CREATION/EDIT */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent aria-describedby="modal-description" className="sm:max-w-2xl">
           <DialogHeader>
@@ -307,7 +321,7 @@ const ContratsPage: React.FC = () => {
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            {/* Employé */}
+            {/* Champs du formulaire */}
             <div>
               <Label>Employé *</Label>
               <select
@@ -323,7 +337,6 @@ const ContratsPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Type */}
             <div>
               <Label>Type</Label>
               <select
@@ -339,7 +352,6 @@ const ContratsPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Nature */}
             <div>
               <Label>Nature *</Label>
               <select
@@ -351,7 +363,6 @@ const ContratsPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Status */}
             <div>
               <Label>Status *</Label>
               <select
@@ -367,33 +378,31 @@ const ContratsPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Dates */}
             <div>
               <Label>Date début *</Label>
               <Input type="date" value={editing?.date_debut_contrat || ""} onChange={e => setEditing(prev => ({ ...prev, date_debut_contrat: e.target.value }))} />
             </div>
+
             <div>
               <Label>Date fin</Label>
               <Input type="date" value={editing?.date_fin_contrat || ""} onChange={e => setEditing(prev => ({ ...prev, date_fin_contrat: e.target.value }))} />
             </div>
 
-            {/* Salaire et montant total */}
             <div>
               <Label>Salaire</Label>
               <Input type="number" value={editing?.salaire || ""} onChange={e => setEditing(prev => ({ ...prev, salaire: e.target.value }))} />
             </div>
+
             <div>
               <Label>Montant total</Label>
               <Input type="number" value={editing?.montant_total || ""} onChange={e => setEditing(prev => ({ ...prev, montant_total: e.target.value }))} />
             </div>
 
-            {/* Description */}
             <div className="md:col-span-2">
               <Label>Description mission</Label>
               <textarea className="border rounded p-2 w-full" value={editing?.description_mission || ""} onChange={e => setEditing(prev => ({ ...prev, description_mission: e.target.value }))}></textarea>
             </div>
 
-            {/* Fichier */}
             <div className="md:col-span-2">
               <Label>Contrat (PDF)</Label>
               <Input type="file" accept="application/pdf" onChange={e => setFileToUpload(e.target.files ? e.target.files[0] : null)} />
@@ -412,7 +421,7 @@ const ContratsPage: React.FC = () => {
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
-            <DialogDescription>Voulez-vous vraiment supprimer ce contrat ?</DialogDescription>
+            <DialogDescription id="delete-description">Voulez-vous vraiment supprimer ce contrat ?</DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 mt-4">
             <Button onClick={() => setIsDeleteOpen(false)}>Annuler</Button>
@@ -422,8 +431,6 @@ const ContratsPage: React.FC = () => {
       </Dialog>
 
     </div>
-
-    
   );
 };
 
