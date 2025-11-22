@@ -1,9 +1,4 @@
-// ------------------------
-// Configuration API
-// ------------------------
-// ------------------------
-// Configuration API
-// ------------------------
+import axios from "axios";
 export const API_BASE_URL = "https://api.ecartmada.com/api";
 
 
