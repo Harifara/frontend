@@ -360,6 +360,30 @@ export const rhApi = {
   deleteTypeConge: async (id: string) =>
     fetchWithLog(`${API_BASE_URL}/rh/type-conges/${cleanUUID(id)}/`, { method: "DELETE", headers: getHeaders(await ensureKongToken()) }),
 
+  getLocations: async () =>
+    fetchWithLog(`${API_BASE_URL}/rh/locations/`, {
+      headers: getHeaders(await ensureKongToken()),
+    }),
+
+  createLocation: async (payload: FormData) =>
+    fetchWithLog(`${API_BASE_URL}/rh/locations/`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${await ensureKongToken()}` }, // pas de Content-Type pour FormData
+      body: payload,
+    }),
+
+  updateLocation: async (id: string, payload: FormData) =>
+    fetchWithLog(`${API_BASE_URL}/rh/locations/${cleanUUID(id)}/`, {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${await ensureKongToken()}` }, // pas de Content-Type pour FormData
+      body: payload,
+    }),
+
+  deleteLocation: async (id: string) =>
+    fetchWithLog(`${API_BASE_URL}/rh/locations/${cleanUUID(id)}/`, {
+      method: "DELETE",
+      headers: getHeaders(await ensureKongToken()),
+    }),
 
 };
 
