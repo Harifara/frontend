@@ -273,6 +273,7 @@ const ContratsPage: React.FC = () => {
                 <TableHead>Status</TableHead>
                 <TableHead>Date début</TableHead>
                 <TableHead>Date fin</TableHead>
+                <TableHead>Montant total</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -285,6 +286,7 @@ const ContratsPage: React.FC = () => {
                   <TableCell><Badge className={STATUS_BADGE(c.status_contrat)}>{c.status_contrat}</Badge></TableCell>
                   <TableCell>{c.date_debut_contrat || "-"}</TableCell>
                   <TableCell>{c.date_fin_contrat || "-"}</TableCell>
+                  <TableCell>{c.montant_total != null ? c.montant_total : "-"}</TableCell> {/* <-- Affichage du montant */}
                   <TableCell className="space-x-2">
                     <Button size="sm" onClick={() => openEdit(c)}>Éditer</Button>
                     <Button size="sm" variant="destructive" onClick={() => askDelete(c.id)}>Supprimer</Button>
@@ -404,7 +406,24 @@ const ContratsPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* DIALOG SUPPRESSION */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+            <DialogDescription>Voulez-vous vraiment supprimer ce contrat ?</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 mt-4">
+            <Button onClick={() => setIsDeleteOpen(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={confirmDelete}>Supprimer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
+
+    
   );
 };
 
