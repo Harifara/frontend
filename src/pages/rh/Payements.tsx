@@ -11,16 +11,25 @@ import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { createPDFDoc } from "@/lib/pdfTemplate";
 
-// ======================= INTERFACES =========================
+// -------------------- Interfaces --------------------
 interface ModePayement {
   id: string;
   mode_payement: string;
 }
 
-interface SimpleObject {
+interface SimpleLocation {
   id: string;
   nom?: string;
+}
+
+interface SimpleElectricite {
+  id: string;
   numero_compteur?: string;
+}
+
+interface SimpleContrat {
+  id: string;
+  // ajouter d'autres champs si tu veux l'afficher
 }
 
 interface Payement {
@@ -29,29 +38,33 @@ interface Payement {
   date_payement?: string;
   status?: string;
   reference?: string;
-  mode_payement?: ModePayement;
-  mode_payement_id?: string;
-  location_id?: string;
-  electricite_id?: string;
-  contrat_id?: string;
-  location?: SimpleObject;
-  electricite?: SimpleObject;
-  contrat?: SimpleObject;
+  mode_payement?: ModePayement | null;
+  mode_payement_id?: string | null;
+  location?: SimpleLocation | null;
+  location_id?: string | null;
+  electricite?: SimpleElectricite | null;
+  electricite_id?: string | null;
+  contrat?: SimpleContrat | null;
+  contrat_id?: string | null;
 }
 
-// ======================= COMPONENT =========================
-const PayementsPage = () => {
+// -------------------- Component --------------------
+const PayementsPage: React.FC = () => {
+  const { toast } = useToast();
+
   const [payements, setPayements] = useState<Payement[]>([]);
   const [modesPayement, setModesPayement] = useState<ModePayement[]>([]);
-  const [locations, setLocations] = useState<SimpleObject[]>([]);
-  const [electricites, setElectricites] = useState<SimpleObject[]>([]);
-  const [contrats, setContrats] = useState<SimpleObject[]>([]);
+  const [locations, setLocations] = useState<SimpleLocation[]>([]);
+  const [electricites, setElectricites] = useState<SimpleElectricite[]>([]);
+  const [contrats, setContrats] = useState<SimpleContrat[]>([]);
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingPayement, setEditingPayement] = useState<Payement | null>(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
 
   const [form, setForm] = useState<Payement>({
@@ -62,9 +75,7 @@ const PayementsPage = () => {
     contrat_id: "",
   });
 
-  const { toast } = useToast();
-
-  // ======================= FETCH =========================
+  // -------------------- Fetch all required lists --------------------
   useEffect(() => {
     fetchAll();
   }, []);
@@ -85,28 +96,24 @@ const PayementsPage = () => {
       setLocations(locs || []);
       setElectricites(elecs || []);
       setContrats(conts || []);
-
     } catch (err: any) {
-      toast({
-        title: "Erreur",
-        description: err.message || "Impossible de charger les données.",
-        variant: "destructive",
-      });
+      console.error("fetchAll error", err);
+      toast({ title: "Erreur", description: err.message || "Impossible de charger les données.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ======================= MODAL =========================
-  const handleOpenModal = (payement?: Payement) => {
-    if (payement) {
-      setEditingPayement(payement);
+  // -------------------- Modal open / close --------------------
+  const handleOpenModal = (p?: Payement) => {
+    if (p) {
+      setEditingPayement(p);
       setForm({
-        montant: payement.montant,
-        mode_payement_id: payement.mode_payement?.id || "",
-        location_id: payement.location?.id || "",
-        electricite_id: payement.electricite?.id || "",
-        contrat_id: payement.contrat?.id || "",
+        montant: p.montant,
+        mode_payement_id: p.mode_payement?.id || "",
+        location_id: p.location?.id || "",
+        electricite_id: p.electricite?.id || "",
+        contrat_id: p.contrat?.id || "",
       });
     } else {
       setEditingPayement(null);
@@ -121,127 +128,132 @@ const PayementsPage = () => {
     setIsModalOpen(true);
   };
 
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingPayement(null);
+  };
+
+  // -------------------- Build payload (clean) --------------------
+  const buildPayload = (f: Payement) => {
+    const payload: any = {};
+
+    if (f.montant !== undefined && f.montant !== null && !Number.isNaN(f.montant)) payload.montant = Number(f.montant);
+    if (f.mode_payement_id) payload.mode_payement_id = f.mode_payement_id;
+    // On supporte Location / Electricite / Contrat (choix A)
+    if (f.location_id) payload.location_id = f.location_id;
+    if (f.electricite_id) payload.electricite_id = f.electricite_id;
+    if (f.contrat_id) payload.contrat_id = f.contrat_id;
+
+    return payload;
+  };
+
+  // -------------------- Submit (create / update) --------------------
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
 
+    // Client-side validation : montant + mode + au moins un item (location|electricite|contrat)
     if (!form.montant || !form.mode_payement_id) {
-      toast({
-        title: "Erreur",
-        description: "Veuillez remplir les champs obligatoires.",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: "Montant et mode de paiement sont obligatoires.", variant: "destructive" });
+      return;
+    }
+    if (!form.location_id && !form.electricite_id && !form.contrat_id) {
+      toast({ title: "Erreur", description: "Au moins : location, électricité ou contrat doit être renseigné.", variant: "destructive" });
       return;
     }
 
     try {
-      if (editingPayement) {
-        await rhApi.updatePayement(editingPayement.id!, form);
+      const payload = buildPayload(form);
+
+      if (editingPayement && editingPayement.id) {
+        await rhApi.updatePayement(editingPayement.id, payload);
         toast({ title: "Succès", description: "Paiement mis à jour." });
       } else {
-        await rhApi.createPayement(form);
+        await rhApi.createPayement(payload);
         toast({ title: "Succès", description: "Paiement créé." });
       }
 
-      setIsModalOpen(false);
+      handleCloseModal();
       fetchAll();
     } catch (err: any) {
-      toast({
-        title: "Erreur",
-        description: err.message || "Échec de l'opération.",
-        variant: "destructive",
-      });
+      console.error("handleSubmit error", err);
+      toast({ title: "Erreur", description: err.message || "Échec de l'opération.", variant: "destructive" });
     }
   };
 
-  // ======================= DELETE =========================
+  // -------------------- Delete --------------------
   const handleDelete = async () => {
     if (!selectedIdToDelete) return;
-
     try {
       await rhApi.deletePayement(selectedIdToDelete);
       toast({ title: "Succès", description: "Paiement supprimé." });
       fetchAll();
     } catch (err: any) {
-      toast({
-        title: "Erreur",
-        description: err.message || "Échec de suppression.",
-        variant: "destructive",
-      });
+      console.error("handleDelete error", err);
+      toast({ title: "Erreur", description: err.message || "Échec de suppression.", variant: "destructive" });
+    } finally {
+      setIsDeleteModalOpen(false);
+      setSelectedIdToDelete(null);
     }
-    setIsDeleteModalOpen(false);
   };
 
-  // ======================= FILTER =========================
+  // -------------------- Filtering & export --------------------
   const filteredPayements = payements.filter((p) =>
-    p.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.mode_payement?.mode_payement.toLowerCase().includes(searchTerm.toLowerCase())
+    (p.reference || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.mode_payement?.mode_payement || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.location?.nom || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.electricite?.numero_compteur || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // ======================= EXPORT =========================
   const exportPDF = async () => {
     const data = filteredPayements.map((p) => [
-      p.reference,
-      p.montant,
-      p.status,
+      p.reference || "",
+      p.montant ?? "",
+      p.status || "",
       p.mode_payement?.mode_payement || "",
       p.location?.nom || "",
       p.electricite?.numero_compteur || "",
       p.contrat?.id || "",
     ]);
-
-    const columns = [
-      "Référence",
-      "Montant",
-      "Statut",
-      "Mode de Paiement",
-      "Location",
-      "Électricité",
-      "Contrat",
-    ];
-
+    const columns = ["Référence", "Montant", "Statut", "Mode", "Location", "Électricité", "Contrat"];
     await createPDFDoc("Liste des Paiements", data, columns, "payements.pdf");
   };
 
   const exportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
       filteredPayements.map((p) => ({
-        Référence: p.reference,
-        Montant: p.montant,
-        Statut: p.status,
-        "Mode de Paiement": p.mode_payement?.mode_payement || "",
+        Référence: p.reference || "",
+        Montant: p.montant ?? "",
+        Statut: p.status || "",
+        Mode: p.mode_payement?.mode_payement || "",
         Location: p.location?.nom || "",
         "Électricité": p.electricite?.numero_compteur || "",
         Contrat: p.contrat?.id || "",
       }))
     );
-
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Payments");
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Payements");
     XLSX.writeFile(workbook, "payements.xlsx");
   };
 
-  // ======================= RENDER =========================
+  // -------------------- Render --------------------
   if (isLoading) return <p className="text-center p-8">Chargement...</p>;
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex justify-between">
+      <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Paiements</h1>
         <Button onClick={() => handleOpenModal()}>Ajouter un paiement</Button>
       </div>
 
       <div className="flex gap-4">
         <Input
-          placeholder="Rechercher un paiement…"
+          placeholder="Rechercher par référence / mode / location..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1"
         />
-        <Button variant="outline" onClick={exportPDF}>
-          PDF
-        </Button>
-        <Button variant="outline" onClick={exportExcel}>
-          Excel
-        </Button>
+        <Button variant="outline" onClick={exportPDF}>Exporter PDF</Button>
+        <Button variant="outline" onClick={exportExcel}>Exporter Excel</Button>
       </div>
 
       <Card>
@@ -267,22 +279,20 @@ const PayementsPage = () => {
               {filteredPayements.length ? (
                 filteredPayements.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell className="text-center">{p.reference}</TableCell>
-                    <TableCell className="text-center">{p.montant}</TableCell>
-                    <TableCell className="text-center">{p.status}</TableCell>
-                    <TableCell className="text-center">{p.mode_payement?.mode_payement}</TableCell>
+                    <TableCell className="text-center">{p.reference || "-"}</TableCell>
+                    <TableCell className="text-center">{p.montant ?? "-"}</TableCell>
+                    <TableCell className="text-center">{p.status || "-"}</TableCell>
+                    <TableCell className="text-center">{p.mode_payement?.mode_payement || "-"}</TableCell>
                     <TableCell className="text-center">{p.location?.nom || "-"}</TableCell>
                     <TableCell className="text-center">{p.electricite?.numero_compteur || "-"}</TableCell>
                     <TableCell className="text-center">{p.contrat?.id || "-"}</TableCell>
                     <TableCell className="text-center space-x-2">
-                      <Button size="sm" variant="outline" onClick={() => handleOpenModal(p)}>
-                        Modifier
-                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleOpenModal(p)}>Modifier</Button>
                       <Button
                         size="sm"
                         variant="destructive"
                         onClick={() => {
-                          setSelectedIdToDelete(p.id!);
+                          setSelectedIdToDelete(p.id || null);
                           setIsDeleteModalOpen(true);
                         }}
                       >
@@ -293,9 +303,7 @@ const PayementsPage = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-6">
-                    Aucun résultat.
-                  </TableCell>
+                  <TableCell colSpan={8} className="text-center py-6">Aucun paiement trouvé.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -303,126 +311,97 @@ const PayementsPage = () => {
         </CardContent>
       </Card>
 
-      {/* ======================= MODAL AJOUT/EDIT ======================= */}
+      {/* ---------------- Modal create/edit ---------------- */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>
-              {editingPayement ? "Modifier le Paiement" : "Créer un Paiement"}
-            </DialogTitle>
+            <DialogTitle>{editingPayement ? "Modifier le Paiement" : "Créer un Paiement"}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label>Montant</Label>
+              <Label htmlFor="montant">Montant</Label>
               <Input
+                id="montant"
                 type="number"
-                value={form.montant || ""}
-                onChange={(e) =>
-                  setForm({ ...form, montant: parseFloat(e.target.value) })
-                }
+                value={form.montant !== undefined ? String(form.montant) : ""}
+                onChange={(e) => setForm({ ...form, montant: e.target.value ? Number(e.target.value) : undefined })}
                 required
               />
             </div>
 
             <div>
-              <Label>Mode de Paiement</Label>
+              <Label htmlFor="mode">Mode de paiement</Label>
               <select
+                id="mode"
                 className="w-full border rounded p-2"
-                value={form.mode_payement_id}
-                onChange={(e) =>
-                  setForm({ ...form, mode_payement_id: e.target.value })
-                }
+                value={form.mode_payement_id || ""}
+                onChange={(e) => setForm({ ...form, mode_payement_id: e.target.value })}
                 required
               >
-                <option value="">-- Sélectionner --</option>
-                {modesPayement.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.mode_payement}
-                  </option>
-                ))}
+                <option value="">-- Sélectionner un mode --</option>
+                {modesPayement.map((m) => <option key={m.id} value={m.id}>{m.mode_payement}</option>)}
               </select>
             </div>
 
             <div>
-              <Label>Location</Label>
+              <Label htmlFor="location">Location (optionnel)</Label>
               <select
+                id="location"
                 className="w-full border rounded p-2"
-                value={form.location_id}
-                onChange={(e) =>
-                  setForm({ ...form, location_id: e.target.value })
-                }
+                value={form.location_id || ""}
+                onChange={(e) => setForm({ ...form, location_id: e.target.value })}
               >
                 <option value="">-- Aucune --</option>
-                {locations.map((loc) => (
-                  <option key={loc.id} value={loc.id}>
-                    {loc.nom}
-                  </option>
-                ))}
+                {locations.map((l) => <option key={l.id} value={l.id}>{l.nom}</option>)}
               </select>
             </div>
 
             <div>
-              <Label>Électricité</Label>
+              <Label htmlFor="electricite">Électricité (optionnel)</Label>
               <select
+                id="electricite"
                 className="w-full border rounded p-2"
-                value={form.electricite_id}
-                onChange={(e) =>
-                  setForm({ ...form, electricite_id: e.target.value })
-                }
+                value={form.electricite_id || ""}
+                onChange={(e) => setForm({ ...form, electricite_id: e.target.value })}
               >
                 <option value="">-- Aucune --</option>
-                {electricites.map((el) => (
-                  <option key={el.id} value={el.id}>
-                    {el.numero_compteur}
-                  </option>
-                ))}
+                {electricites.map((el) => <option key={el.id} value={el.id}>{el.numero_compteur}</option>)}
               </select>
             </div>
 
             <div>
-              <Label>Contrat</Label>
+              <Label htmlFor="contrat">Contrat (optionnel)</Label>
               <select
+                id="contrat"
                 className="w-full border rounded p-2"
-                value={form.contrat_id}
-                onChange={(e) =>
-                  setForm({ ...form, contrat_id: e.target.value })
-                }
+                value={form.contrat_id || ""}
+                onChange={(e) => setForm({ ...form, contrat_id: e.target.value })}
               >
                 <option value="">-- Aucun --</option>
-                {contrats.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.id}
-                  </option>
-                ))}
+                {contrats.map((c) => <option key={c.id} value={c.id}>{c.id}</option>)}
               </select>
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>
-                Annuler
-              </Button>
+              <Button type="button" variant="outline" onClick={handleCloseModal}>Annuler</Button>
               <Button type="submit">{editingPayement ? "Enregistrer" : "Créer"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* ======================= MODAL DELETE ======================= */}
+      {/* ---------------- Delete modal ---------------- */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-[420px]">
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
           </DialogHeader>
-          <p>Cette action est définitive.</p>
+          <p>Cette action est irréversible. Voulez-vous continuer ?</p>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-              Annuler
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Supprimer
-            </Button>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
