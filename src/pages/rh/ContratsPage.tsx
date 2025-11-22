@@ -85,10 +85,8 @@ const ContratsPage: React.FC = () => {
         rhApi.getEmployes().catch(err => { console.error(err); return []; }),
         rhApi.getTypeContrats().catch(err => { console.error(err); return []; })
       ]);
-      
 
       const normalized: Contrat[] = (cRaw || []).map((x: any) => {
-        // Employer nom
         let employer_nom = "";
         if (typeof x.employer === "object" && x.employer) {
           employer_nom = `${x.employer.nom_employer || ""} ${x.employer.prenom_employer || ""}`.trim();
@@ -97,7 +95,6 @@ const ContratsPage: React.FC = () => {
           employer_nom = empObj ? `${empObj.nom_employer} ${empObj.prenom_employer}` : x.employer;
         }
 
-        // Type nom
         let type_nom = "";
         if (typeof x.type_contrat === "object" && x.type_contrat) {
           type_nom = x.type_contrat.nom_type;
@@ -421,7 +418,6 @@ const ContratsPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
     </div>
   );
 };
