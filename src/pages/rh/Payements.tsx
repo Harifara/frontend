@@ -280,15 +280,23 @@ const Payements = () => {
             <div>
               <Label>Mode de paiement</Label>
               <Select
-                value={form.mode_payement?.id ?? "none"}
-                onValueChange={(val) => setForm({ ...form, mode_payement: modes.find(m => m.id === val) })}
+                value={form.mode_payement?.id || ""}
+                onValueChange={(val) =>
+                  setForm({
+                    ...form,
+                    mode_payement: modes.find((m) => m.id === val) || undefined,
+                  })
+                }
               >
                 <SelectTrigger><SelectValue placeholder="Choisir un mode" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none" disabled hidden>Choisir un mode</SelectItem>
-                  {modes.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                  <SelectItem value="">Aucun</SelectItem>
+                  {modes.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+
             </div>
 
             <div>
@@ -308,29 +316,45 @@ const Payements = () => {
             <div>
               <Label>Électricité</Label>
               <Select
-                value={form.electricite?.id ?? "none"}
-                onValueChange={(val) => setForm({ ...form, electricite: electricites.find(e => e.id === val) })}
+                value={form.electricite?.id || ""}
+                onValueChange={(val) =>
+                  setForm({
+                    ...form,
+                    electricite: electricites.find((e) => e.id === val) || undefined,
+                  })
+                }
               >
                 <SelectTrigger><SelectValue placeholder="Choisir une électricité" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none" disabled hidden>Choisir une électricité</SelectItem>
-                  {electricites.map(e => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}
+                  <SelectItem value="">Aucun</SelectItem>
+                  {electricites.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+
             </div>
 
             <div>
               <Label>Contrat</Label>
               <Select
-                value={form.contrat?.id ?? "none"}
-                onValueChange={(val) => setForm({ ...form, contrat: contrats.find(c => c.id === val) })}
+                value={form.contrat?.id || ""}
+                onValueChange={(val) =>
+                  setForm({
+                    ...form,
+                    contrat: contrats.find((c) => c.id === val) || undefined,
+                  })
+                }
               >
                 <SelectTrigger><SelectValue placeholder="Choisir un contrat" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none" disabled hidden>Choisir un contrat</SelectItem>
-                  {contrats.map(c => <SelectItem key={c.id} value={c.id}>{c.reference}</SelectItem>)}
+                  <SelectItem value="">Aucun</SelectItem>
+                  {contrats.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.reference}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+
             </div>
 
             <DialogFooter>
