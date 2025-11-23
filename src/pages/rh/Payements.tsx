@@ -140,13 +140,26 @@ const Payements = () => {
   };
 
   const calculateMontant = () => {
-    let total = 0;
-    if (form.location?.id) total += Number((form.location as any).montant || 0);
-    if (form.electricite?.id) total += Number((form.electricite as any).montant || 0);
-    if (form.contrat?.id) total += Number(form.contrat.salaire || 0);
-    if (form.paiement_type === "avance") total *= 0.3; // 30% d’avance
-    return total;
-  };
+  let total = 0;
+
+  // Ajouter montants
+  if (form.location?.id) total += Number((form.location as any).montant || 0);
+  if (form.electricite?.id) total += Number((form.electricite as any).montant || 0);
+  if (form.contrat?.id) total += Number(form.contrat.salaire || 0);
+
+  // Déterminer pourcentage à appliquer
+  let pourcentage = form.pourcentage ?? 100; // par défaut 100%
+  
+  // Si type "avance" et pourcentage non défini, appliquer 30%
+  if (form.paiement_type === "avance" && form.pourcentage == null) {
+    pourcentage = 30;
+  }
+
+  // Calculer le montant final
+  const montantFinal = total * (pourcentage / 100);
+
+  return Number(montantFinal.toFixed(2)); // arrondi à 2 décimales
+};
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
