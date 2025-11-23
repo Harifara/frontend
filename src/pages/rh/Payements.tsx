@@ -12,7 +12,12 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import * as XLSX from "xlsx";
 import { createPDFDoc } from "@/lib/pdfTemplate";
 
-interface ModePayement { id: string; nom?: string; name?: string; label?: string; }
+interface ModePayement {
+  id: string;
+  mode_payement: string;
+  description?: string;
+}
+
 interface Location { id: string; nom?: string; name?: string; label?: string; }
 interface Electricite { id: string; nom?: string; name?: string; label?: string; }
 interface Contrat { id: string; reference?: string; ref?: string; }
@@ -169,7 +174,7 @@ const Payements = () => {
     const data = filteredPayements.map(p => [
       p.montant ?? "-",
       p.status,
-      p.mode_payement?.nom ?? p.mode_payement?.name ?? "-",
+      p.mode_payement?.mode_payement ?? "-",
       p.location?.nom ?? p.location?.name ?? "-",
       p.electricite?.nom ?? p.electricite?.name ?? "-",
       p.contrat?.reference ?? "-",
@@ -233,7 +238,10 @@ const Payements = () => {
                 <TableRow key={p.id}>
                   <TableCell className="text-center">{p.montant ?? "-"}</TableCell>
                   <TableCell className="text-center">{p.status}</TableCell>
-                  <TableCell className="text-center">{p.mode_payement?.nom ?? p.mode_payement?.name ?? "-"}</TableCell>
+                  <TableCell className="text-center">
+                    {p.mode_payement?.mode_payement ?? "-"}
+                  </TableCell>
+
                   <TableCell className="text-center">{p.location?.nom ?? p.location?.name ?? "-"}</TableCell>
                   <TableCell className="text-center">{p.electricite?.nom ?? p.electricite?.name ?? "-"}</TableCell>
                   <TableCell className="text-center">{p.contrat?.reference ?? "-"}</TableCell>
@@ -311,7 +319,7 @@ const Payements = () => {
                   <SelectItem value="null">Aucun</SelectItem>
                   {modes.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
-                      {m.nom ?? m.name ?? m.label ?? ("Mode " + m.id)}
+                      {m.mode_payement}
                     </SelectItem>
                   ))}
                 </SelectContent>
