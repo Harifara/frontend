@@ -50,7 +50,7 @@ const navigation = [
   { name: "Electricités", href: "/rh/electricites", icon: MapPin, roles: ["admin", "responsable_rh", "responsable_finance"] },
   { name: "Mode de payement", href: "/rh/mode-payement", icon: MapPin, roles: ["admin", "responsable_finance"] },
   { name: "Payements", href: "/rh/payements", icon: MapPin, roles: ["admin", "responsable_finance"] },
-  { name: "TypeAchat", href: "/rh/type-achats", icon: ClipboardList, roles: ["admin", "responsable_finance"] },
+  { name: "TypeAchat", href: "/rh/TypeAchat", icon: ClipboardList, roles: ["admin", "responsable_finance"] },
   { name: "Affectations", href: "/rh/affectations", icon: Briefcase, roles: ["admin", "responsable_rh"] },
   { name: "Magasins", href: "/stock/magasins", icon: Warehouse, roles: ["admin", "responsable_stock"] },
   { name: "Type de congés", href: "/rh/type-conges", icon: ClipboardList, roles: ["admin", "responsable_rh"] },
