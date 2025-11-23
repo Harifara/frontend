@@ -29,8 +29,7 @@ interface Electricite {
 
 interface Contrat {
   id: string;
-  reference?: string;
-  ref?: string;
+  employer_nom?: string;
   salaire?: number;                    // ← ajouté selon ton backend
 }
 
@@ -192,7 +191,7 @@ const Payements = () => {
       p.location?.nom ?? p.location?.name ?? "-",
       p.electricite? `${p.electricite.numero_compteur} (${p.electricite.fournisseur})` : "-",
 
-      p.contrat?.reference ?? "-",
+      p.contrat?.employer_nom ?? "-",
     ]);
     const columns = ["Montant", "Status", "Mode", "Location", "Électricité", "Contrat"];
     await createPDFDoc("Liste des Paiements", data, columns, "payements.pdf");
@@ -206,7 +205,7 @@ const Payements = () => {
         Mode: p.mode_payement?.nom ?? p.mode_payement?.name ?? "-",
         Location: p.location?.nom ?? p.location?.name ?? "-",
         Electricite: p.electricite?.nom ?? p.electricite?.name ?? "-",
-        Contrat: p.contrat?.reference ?? "-",
+        Contrat: p.contrat?.employer_nom ?? "-",
       }))
     );
     const workbook = XLSX.utils.book_new();
@@ -245,7 +244,7 @@ const Payements = () => {
                 <TableHead className="text-center">Mode</TableHead>
                 <TableHead className="text-center">Location</TableHead>
                 <TableHead className="text-center">Électricité</TableHead>
-                <TableHead className="text-center">Contrat</TableHead>
+                <TableHead className="text-center">Salaire</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -267,7 +266,7 @@ const Payements = () => {
 
                   <TableCell className="text-center">
                     {p.contrat
-                      ? `${p.contrat.reference || p.contrat.ref} - ${p.contrat.salaire?.toLocaleString()} Ar`
+                      ? `${p.contrat.employer_nom } - ${p.contrat.salaire?.toLocaleString()} Ar`
                       : "-"}
                   </TableCell>
 
@@ -409,16 +408,16 @@ const Payements = () => {
 
 
             <div>
-              <Label>Contrat</Label>
+              <Label>Salaire</Label>
               <Select
-                value={form.contrat?.id ?? "null"}
+                value={form.contrat?.employer_nom ?? "null"}
                 onValueChange={(val) =>
                   setForm({
                     ...form,
                     contrat:
                       val === "null"
                         ? undefined
-                        : contrats.find((c) => c.id === val),
+                        : contrats.find((c) => c.employer_nom === val),
                   })
                 }
               >
@@ -431,7 +430,7 @@ const Payements = () => {
 
                   {contrats.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.reference || c.ref} — {c.salaire?.toLocaleString()} Ar
+                      {c.employer_nom } — {c.salaire?.toLocaleString()} Ar
                     </SelectItem>
                   ))}
                 </SelectContent>
