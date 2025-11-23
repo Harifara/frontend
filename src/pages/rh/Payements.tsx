@@ -228,36 +228,68 @@ const PayementsPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Modals */}
+      {/* Modal Création / Modification */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
             <DialogTitle>{editingPayement ? "Modifier le Paiement" : "Créer un Paiement"}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div><Label htmlFor="montant">Montant</Label>
-              <Input id="montant" type="number" value={form.montant ?? ""} onChange={(e) => setForm({ ...form, montant: e.target.value ? Number(e.target.value) : undefined })} required />
+            <div>
+              <Label htmlFor="montant">Montant</Label>
+              <Input
+                id="montant"
+                type="number"
+                value={form.montant ?? ""}
+                onChange={(e) => setForm({ ...form, montant: e.target.value ? Number(e.target.value) : undefined })}
+                required
+              />
             </div>
-            <div><Label htmlFor="mode">Mode de paiement</Label>
-              <select id="mode" className="w-full border rounded p-2" value={form.mode_payement_id || ""} onChange={(e) => setForm({ ...form, mode_payement_id: e.target.value })} required>
+            <div>
+              <Label htmlFor="mode">Mode de paiement</Label>
+              <select
+                id="mode"
+                className="w-full border rounded p-2"
+                value={form.mode_payement_id || ""}
+                onChange={(e) => setForm({ ...form, mode_payement_id: e.target.value })}
+                required
+              >
                 <option value="">-- Sélectionner un mode --</option>
                 {modesPayement.map((m) => <option key={m.id} value={m.id}>{m.mode_payement}</option>)}
               </select>
             </div>
-            <div><Label htmlFor="location">Location (optionnel)</Label>
-              <select id="location" className="w-full border rounded p-2" value={form.location_id || ""} onChange={(e) => setForm({ ...form, location_id: e.target.value })}>
+            <div>
+              <Label htmlFor="location">Location (optionnel)</Label>
+              <select
+                id="location"
+                className="w-full border rounded p-2"
+                value={form.location_id || ""}
+                onChange={(e) => setForm({ ...form, location_id: e.target.value })}
+              >
                 <option value="">-- Aucune --</option>
                 {locations.map((l) => <option key={l.id} value={l.id}>{l.nom}</option>)}
               </select>
             </div>
-            <div><Label htmlFor="electricite">Électricité (optionnel)</Label>
-              <select id="electricite" className="w-full border rounded p-2" value={form.electricite_id || ""} onChange={(e) => setForm({ ...form, electricite_id: e.target.value })}>
+            <div>
+              <Label htmlFor="electricite">Électricité (optionnel)</Label>
+              <select
+                id="electricite"
+                className="w-full border rounded p-2"
+                value={form.electricite_id || ""}
+                onChange={(e) => setForm({ ...form, electricite_id: e.target.value })}
+              >
                 <option value="">-- Aucune --</option>
                 {electricites.map((el) => <option key={el.id} value={el.id}>{el.numero_compteur}</option>)}
               </select>
             </div>
-            <div><Label htmlFor="contrat">Contrat (optionnel)</Label>
-              <select id="contrat" className="w-full border rounded p-2" value={form.contrat_id || ""} onChange={(e) => setForm({ ...form, contrat_id: e.target.value })}>
+            <div>
+              <Label htmlFor="contrat">Contrat (optionnel)</Label>
+              <select
+                id="contrat"
+                className="w-full border rounded p-2"
+                value={form.contrat_id || ""}
+                onChange={(e) => setForm({ ...form, contrat_id: e.target.value })}
+              >
                 <option value="">-- Aucun --</option>
                 {contrats.map((c) => <option key={c.id} value={c.id}>{c.id}</option>)}
               </select>
@@ -270,10 +302,11 @@ const PayementsPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Modal Suppression */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[420px]">
           <DialogHeader><DialogTitle>Confirmer la suppression</DialogTitle></DialogHeader>
-          <p>Cette action est irréversible. Voulez-vous continuer ?</p>
+          <p className="py-2">Cette action est irréversible. Voulez-vous continuer ?</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Annuler</Button>
             <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
