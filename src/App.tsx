@@ -32,7 +32,7 @@ import Locations from "./pages/rh/Locations";
 import Electricites from "./pages/rh/Electricites";
 import ModePayement from "./pages/rh/ModePayement";
 import Payements from "./pages/rh/Payements";
-import TypeAchats from "./pages/rh/TypeAchats";
+import TypeAchat from "./pages/rh/TypeAchat";
 import Categories from "./pages/stock/Categories";
 import Articles from "./pages/stock/Articles";
 import Magasins from "./pages/stock/Magasins";
@@ -101,7 +101,7 @@ const App = () => (
               <Route path="/rh/electricites" element={<Electricites />} />
               <Route path="/rh/mode-payement" element={<ModePayement />} />
               <Route path="/rh/payements" element={<Payements />} />
-              <Route path="/rh/type-achats" element={<TypeAchats />} />
+              <Route path="/rh/type-achat" element={<TypeAchat />} />
 
               {/* Pages Stock */}
               <Route path="/stock/magasins" element={<Magasins />} />
