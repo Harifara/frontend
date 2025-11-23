@@ -20,11 +20,12 @@ interface ModePayement {
 
 interface Location { id: string; nom?: string; name?: string; label?: string; }
 interface Electricite {
-  id: string;
-  nom?: string;
-  name?: string;
-  label?: string;
+  id?: string;
+  numero_compteur: string;
+  fournisseur: string;
+  location?: Location;
 }
+
 
 interface Contrat { id: string; reference?: string; ref?: string; }
 
@@ -182,7 +183,8 @@ const Payements = () => {
       p.status,
       p.mode_payement?.mode_payement ?? "-",
       p.location?.nom ?? p.location?.name ?? "-",
-      p.electricite?.nom || p.electricite?.name || p.electricite?.label || "-",
+      p.electricite? `${p.electricite.numero_compteur} (${p.electricite.fournisseur})` : "-",
+
       p.contrat?.reference ?? "-",
     ]);
     const columns = ["Montant", "Status", "Mode", "Location", "Électricité", "Contrat"];
@@ -250,8 +252,9 @@ const Payements = () => {
 
                   <TableCell className="text-center">{p.location?.nom ?? p.location?.name ?? "-"}</TableCell>
                   <TableCell className="text-center">
-                    {p.electricite?.nom || p.electricite?.name || p.electricite?.label || "-"}
+                    {p.electricite?.numero_compteur ?? "-"} ({p.electricite?.fournisseur ?? ""})
                   </TableCell>
+
 
                   <TableCell className="text-center">{p.contrat?.reference ?? "-"}</TableCell>
                   <TableCell className="text-center space-x-2">
@@ -366,30 +369,27 @@ const Payements = () => {
             <div>
               <Label>Électricité</Label>
               <Select
-                value={form.electricite?.id ?? "null"} // Toujours "null" si rien n'est sélectionné
-                onValueChange={(val) => {
+                value={form.electricite?.id ?? "null"}
+                onValueChange={(val) =>
                   setForm({
                     ...form,
-                    electricite:
-                      val === "null" ? undefined : electricites.find((e) => e.id === val),
-                  });
-                }}
+                    electricite: val === "null" ? undefined : electricites.find((e) => e.id === val),
+                  })
+                }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Choisir une électricité" />
+                  <SelectValue placeholder="Choisir un compteur" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="null">Aucune</SelectItem>
                   {electricites.map((e) => (
-                    <SelectItem
-                      key={e.id}
-                      value={e.id || `id-${Math.random()}`} // Toujours un value non vide
-                    >
-                      {e.nom ?? e.name ?? e.label ?? `Électricité ${e.id}`}
+                    <SelectItem key={e.id} value={e.id!}>
+                      {e.numero_compteur} ({e.fournisseur})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+
             </div>
 
 
