@@ -51,7 +51,7 @@ type Contrat = {
   contrat_file?: string | null;
 };
 
-// Helper pour badge
+// Badge couleur
 const STATUS_BADGE = (status: string) => {
   switch (status) {
     case "actif": return "bg-green-100 text-green-800";
@@ -115,7 +115,7 @@ const ContratsPage: React.FC = () => {
     });
   }, [contrats, filterStatus, filterNature, filterEmployer, filterType, search]);
 
-  // Modal création
+  // Modal création/édition
   const openCreate = () => {
     setEditing({ nature_contrat: "emploi", status_contrat: "actif", date_debut_contrat: new Date().toISOString().slice(0, 10), date_fin_contrat: null, salaire: null, montant_total: null, description_mission: "", employer: null, type_contrat: null });
     setFileToUpload(null);
@@ -282,11 +282,10 @@ const ContratsPage: React.FC = () => {
         <DialogContent aria-describedby="modal-description" className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{editing?.id ? "Modifier un contrat" : "Créer un contrat"}</DialogTitle>
-            <DialogDescription id="modal-description">Remplissez les informations du contrat pour créer ou modifier.</DialogDescription>
+            <DialogDescription id="modal-description">Remplissez les informations du contrat.</DialogDescription>
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-            {/* Employé */}
             <div>
               <Label>Employé</Label>
               <select
@@ -299,7 +298,6 @@ const ContratsPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Type contrat */}
             <div>
               <Label>Type de contrat</Label>
               <select
@@ -312,7 +310,6 @@ const ContratsPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Nature */}
             <div>
               <Label>Nature</Label>
               <select
@@ -324,7 +321,6 @@ const ContratsPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Status */}
             <div>
               <Label>Status</Label>
               <select className="border rounded p-2 w-full" value={editing?.status_contrat ?? "actif"} onChange={e => setEditing(prev => ({ ...prev, status_contrat: e.target.value }))}>
@@ -336,15 +332,15 @@ const ContratsPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Dates */}
             <div><Label>Date début</Label><Input type="date" value={editing?.date_debut_contrat ?? ""} onChange={e => setEditing(prev => ({ ...prev, date_debut_contrat: e.target.value }))} /></div>
             <div><Label>Date fin</Label><Input type="date" value={editing?.date_fin_contrat ?? ""} onChange={e => setEditing(prev => ({ ...prev, date_fin_contrat: e.target.value }))} /></div>
 
-            {/* Salaire / Montant / Description */}
             {editing?.nature_contrat === "emploi" && (<div><Label>Salaire</Label><Input type="number" value={editing?.salaire ?? ""} onChange={e => setEditing(prev => ({ ...prev, salaire: e.target.value }))} /></div>)}
-            {editing?.nature_contrat !== "emploi" && (<><div><Label>Montant total</Label><Input type="number" value={editing?.montant_total ?? ""} onChange={e => setEditing(prev => ({ ...prev, montant_total: e.target.value }))} /></div><div className="col-span-2"><Label>Description mission</Label><Input type="text" value={editing?.description_mission ?? ""} onChange={e => setEditing(prev => ({ ...prev, description_mission: e.target.value }))} /></div></>)}
+            {editing?.nature_contrat !== "emploi" && (<>
+              <div><Label>Montant total</Label><Input type="number" value={editing?.montant_total ?? ""} onChange={e => setEditing(prev => ({ ...prev, montant_total: e.target.value }))} /></div>
+              <div className="col-span-2"><Label>Description mission</Label><Input type="text" value={editing?.description_mission ?? ""} onChange={e => setEditing(prev => ({ ...prev, description_mission: e.target.value }))} /></div>
+            </>)}
 
-            {/* Fichier contrat */}
             <div className="col-span-2">
               <Label>Contrat (PDF)</Label>
               <Input type="file" accept="application/pdf" onChange={e => setFileToUpload(e.target.files?.[0] ?? null)} />
