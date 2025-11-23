@@ -43,6 +43,7 @@ interface Payement {
   location?: Location;
   electricite?: Electricite;
   contrat?: Contrat;
+  pourcentage?: number;                // ← ICI !
 }
 
 
@@ -68,6 +69,7 @@ const Payements = () => {
     location: undefined,
     electricite: undefined,
     contrat: undefined,
+    pourcentage: undefined,
   });
 
   useEffect(() => { fetchData(); }, []);
@@ -104,6 +106,7 @@ const Payements = () => {
         electricite: payement.electricite || undefined,
         contrat: payement.contrat || undefined,
         paiement_type: payement.paiement_type || "total",
+        pourcentage: payement.pourcentage || undefined,
       });
     } else {
       setEditingPayement(null);
@@ -115,6 +118,7 @@ const Payements = () => {
         location: undefined,
         electricite: undefined,
         contrat: undefined,
+        pourcentage: undefined,
       });
     }
     setIsModalOpen(true);
@@ -131,6 +135,7 @@ const Payements = () => {
       location: undefined,
       electricite: undefined,
       contrat: undefined,
+      pourcentage: undefined,
     });
   };
 
@@ -160,6 +165,7 @@ const Payements = () => {
       location_id: form.location?.id || null,
       electricite_id: form.electricite?.id || null,
       contrat_id: form.contrat?.id || null,
+      pourcentage: form.pourcentage,
     };
 
       if (editingPayement) {
@@ -230,7 +236,7 @@ const Payements = () => {
         Location: p.location?.nom ?? p.location?.name ?? "-",
         Electricite: p.electricite?.nom ?? p.electricite?.name ?? "-",
         Contrat: p.contrat?.employer_nom ?? "-",
-        
+
       }))
     );
     const workbook = XLSX.utils.book_new();
@@ -330,6 +336,17 @@ const Payements = () => {
                           </SelectContent>
                         </Select>
                       </div>
+            <div>
+              <Label>Pourcentage à payer (%)</Label>
+              <Input
+                type="number"
+                value={form.pourcentage ?? 100}
+                onChange={(e) => setForm({ ...form, pourcentage: Number(e.target.value) })}
+                min={1}
+                max={100}
+              />
+            </div>
+
             <div>
               <Label>Status</Label>
               <Select
