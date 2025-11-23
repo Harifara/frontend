@@ -11,27 +11,11 @@ import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { createPDFDoc } from "@/lib/pdfTemplate";
 
-// -------------------- Interfaces --------------------
-interface ModePayement {
-  id: string;
-  mode_payement: string;
-}
-
-interface SimpleLocation {
-  id: string;
-  nom?: string;
-}
-
-interface SimpleElectricite {
-  id: string;
-  numero_compteur?: string;
-}
-
-interface SimpleContrat {
-  id: string;
-  // ajouter d'autres champs si tu veux l'afficher
-}
-
+// Interfaces
+interface ModePayement { id: string; mode_payement: string; }
+interface SimpleLocation { id: string; nom?: string; }
+interface SimpleElectricite { id: string; numero_compteur?: string; }
+interface SimpleContrat { id: string; }
 interface Payement {
   id?: string;
   montant?: number;
@@ -48,25 +32,20 @@ interface Payement {
   contrat_id?: string | null;
 }
 
-// -------------------- Component --------------------
+// Component
 const PayementsPage: React.FC = () => {
   const { toast } = useToast();
-
   const [payements, setPayements] = useState<Payement[]>([]);
   const [modesPayement, setModesPayement] = useState<ModePayement[]>([]);
   const [locations, setLocations] = useState<SimpleLocation[]>([]);
   const [electricites, setElectricites] = useState<SimpleElectricite[]>([]);
   const [contrats, setContrats] = useState<SimpleContrat[]>([]);
-
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [searchTerm, setSearchTerm] = useState<string>("");
-
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPayement, setEditingPayement] = useState<Payement | null>(null);
-
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
-
   const [form, setForm] = useState<Payement>({
     montant: undefined,
     mode_payement_id: "",
@@ -75,10 +54,7 @@ const PayementsPage: React.FC = () => {
     contrat_id: "",
   });
 
-  // -------------------- Fetch all required lists --------------------
-  useEffect(() => {
-    fetchAll();
-  }, []);
+  useEffect(() => { fetchAll(); }, []);
 
   const fetchAll = async () => {
     setIsLoading(true);
@@ -90,21 +66,16 @@ const PayementsPage: React.FC = () => {
         rhApi.getElectricites(),
         rhApi.getContrats(),
       ]);
-
       setPayements(payments || []);
       setModesPayement(modes || []);
       setLocations(locs || []);
       setElectricites(elecs || []);
       setContrats(conts || []);
     } catch (err: any) {
-      console.error("fetchAll error", err);
       toast({ title: "Erreur", description: err.message || "Impossible de charger les données.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
+    } finally { setIsLoading(false); }
   };
 
-  // -------------------- Modal open / close --------------------
   const handleOpenModal = (p?: Payement) => {
     if (p) {
       setEditingPayement(p);
@@ -117,41 +88,25 @@ const PayementsPage: React.FC = () => {
       });
     } else {
       setEditingPayement(null);
-      setForm({
-        montant: undefined,
-        mode_payement_id: "",
-        location_id: "",
-        electricite_id: "",
-        contrat_id: "",
-      });
+      setForm({ montant: undefined, mode_payement_id: "", location_id: "", electricite_id: "", contrat_id: "" });
     }
     setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingPayement(null);
-  };
+  const handleCloseModal = () => { setIsModalOpen(false); setEditingPayement(null); };
 
-  // -------------------- Build payload (clean) --------------------
   const buildPayload = (f: Payement) => {
     const payload: any = {};
-
-    if (f.montant !== undefined && f.montant !== null && !Number.isNaN(f.montant)) payload.montant = Number(f.montant);
+    if (f.montant != null && !Number.isNaN(f.montant)) payload.montant = f.montant;
     if (f.mode_payement_id) payload.mode_payement_id = f.mode_payement_id;
-    // On supporte Location / Electricite / Contrat (choix A)
     if (f.location_id) payload.location_id = f.location_id;
     if (f.electricite_id) payload.electricite_id = f.electricite_id;
     if (f.contrat_id) payload.contrat_id = f.contrat_id;
-
     return payload;
   };
 
-  // -------------------- Submit (create / update) --------------------
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-
-    // Client-side validation : montant + mode + au moins un item (location|electricite|contrat)
     if (!form.montant || !form.mode_payement_id) {
       toast({ title: "Erreur", description: "Montant et mode de paiement sont obligatoires.", variant: "destructive" });
       return;
@@ -160,27 +115,22 @@ const PayementsPage: React.FC = () => {
       toast({ title: "Erreur", description: "Au moins : location, électricité ou contrat doit être renseigné.", variant: "destructive" });
       return;
     }
-
     try {
       const payload = buildPayload(form);
-
-      if (editingPayement && editingPayement.id) {
+      if (editingPayement?.id) {
         await rhApi.updatePayement(editingPayement.id, payload);
         toast({ title: "Succès", description: "Paiement mis à jour." });
       } else {
         await rhApi.createPayement(payload);
         toast({ title: "Succès", description: "Paiement créé." });
       }
-
       handleCloseModal();
       fetchAll();
     } catch (err: any) {
-      console.error("handleSubmit error", err);
       toast({ title: "Erreur", description: err.message || "Échec de l'opération.", variant: "destructive" });
     }
   };
 
-  // -------------------- Delete --------------------
   const handleDelete = async () => {
     if (!selectedIdToDelete) return;
     try {
@@ -188,15 +138,10 @@ const PayementsPage: React.FC = () => {
       toast({ title: "Succès", description: "Paiement supprimé." });
       fetchAll();
     } catch (err: any) {
-      console.error("handleDelete error", err);
       toast({ title: "Erreur", description: err.message || "Échec de suppression.", variant: "destructive" });
-    } finally {
-      setIsDeleteModalOpen(false);
-      setSelectedIdToDelete(null);
-    }
+    } finally { setIsDeleteModalOpen(false); setSelectedIdToDelete(null); }
   };
 
-  // -------------------- Filtering & export --------------------
   const filteredPayements = payements.filter((p) =>
     (p.reference || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
     (p.mode_payement?.mode_payement || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -206,13 +151,9 @@ const PayementsPage: React.FC = () => {
 
   const exportPDF = async () => {
     const data = filteredPayements.map((p) => [
-      p.reference || "",
-      p.montant ?? "",
-      p.status || "",
-      p.mode_payement?.mode_payement || "",
-      p.location?.nom || "",
-      p.electricite?.numero_compteur || "",
-      p.contrat?.id || "",
+      p.reference || "", p.montant ?? "", p.status || "",
+      p.mode_payement?.mode_payement || "", p.location?.nom || "",
+      p.electricite?.numero_compteur || "", p.contrat?.id || ""
     ]);
     const columns = ["Référence", "Montant", "Statut", "Mode", "Location", "Électricité", "Contrat"];
     await createPDFDoc("Liste des Paiements", data, columns, "payements.pdf");
@@ -235,7 +176,6 @@ const PayementsPage: React.FC = () => {
     XLSX.writeFile(workbook, "payements.xlsx");
   };
 
-  // -------------------- Render --------------------
   if (isLoading) return <p className="text-center p-8">Chargement...</p>;
 
   return (
@@ -257,132 +197,71 @@ const PayementsPage: React.FC = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Liste des Paiements</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Liste des Paiements</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-center">Référence</TableHead>
-                <TableHead className="text-center">Montant</TableHead>
-                <TableHead className="text-center">Statut</TableHead>
-                <TableHead className="text-center">Mode</TableHead>
-                <TableHead className="text-center">Location</TableHead>
-                <TableHead className="text-center">Électricité</TableHead>
-                <TableHead className="text-center">Contrat</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
+                {["Référence","Montant","Statut","Mode","Location","Électricité","Contrat","Actions"].map((h) =>
+                  <TableHead key={h} className="text-center">{h}</TableHead>
+                )}
               </TableRow>
             </TableHeader>
-
             <TableBody>
-              {filteredPayements.length ? (
-                filteredPayements.map((p) => (
-                  <TableRow key={p.id}>
-                    <TableCell className="text-center">{p.reference || "-"}</TableCell>
-                    <TableCell className="text-center">{p.montant ?? "-"}</TableCell>
-                    <TableCell className="text-center">{p.status || "-"}</TableCell>
-                    <TableCell className="text-center">{p.mode_payement?.mode_payement || "-"}</TableCell>
-                    <TableCell className="text-center">{p.location?.nom || "-"}</TableCell>
-                    <TableCell className="text-center">{p.electricite?.numero_compteur || "-"}</TableCell>
-                    <TableCell className="text-center">{p.contrat?.id || "-"}</TableCell>
-                    <TableCell className="text-center space-x-2">
-                      <Button size="sm" variant="outline" onClick={() => handleOpenModal(p)}>Modifier</Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => {
-                          setSelectedIdToDelete(p.id || null);
-                          setIsDeleteModalOpen(true);
-                        }}
-                      >
-                        Supprimer
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-6">Aucun paiement trouvé.</TableCell>
+              {filteredPayements.length ? filteredPayements.map((p) => (
+                <TableRow key={p.id}>
+                  <TableCell className="text-center">{p.reference || "-"}</TableCell>
+                  <TableCell className="text-center">{p.montant ?? "-"}</TableCell>
+                  <TableCell className="text-center">{p.status || "-"}</TableCell>
+                  <TableCell className="text-center">{p.mode_payement?.mode_payement || "-"}</TableCell>
+                  <TableCell className="text-center">{p.location?.nom || "-"}</TableCell>
+                  <TableCell className="text-center">{p.electricite?.numero_compteur || "-"}</TableCell>
+                  <TableCell className="text-center">{p.contrat?.id || "-"}</TableCell>
+                  <TableCell className="text-center space-x-2">
+                    <Button size="sm" variant="outline" onClick={() => handleOpenModal(p)}>Modifier</Button>
+                    <Button size="sm" variant="destructive" onClick={() => { setSelectedIdToDelete(p.id || null); setIsDeleteModalOpen(true); }}>Supprimer</Button>
+                  </TableCell>
                 </TableRow>
-              )}
+              )) : <TableRow><TableCell colSpan={8} className="text-center py-6">Aucun paiement trouvé.</TableCell></TableRow>}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* ---------------- Modal create/edit ---------------- */}
+      {/* Modals */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
             <DialogTitle>{editingPayement ? "Modifier le Paiement" : "Créer un Paiement"}</DialogTitle>
           </DialogHeader>
-
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="montant">Montant</Label>
-              <Input
-                id="montant"
-                type="number"
-                value={form.montant !== undefined ? String(form.montant) : ""}
-                onChange={(e) => setForm({ ...form, montant: e.target.value ? Number(e.target.value) : undefined })}
-                required
-              />
+            <div><Label htmlFor="montant">Montant</Label>
+              <Input id="montant" type="number" value={form.montant ?? ""} onChange={(e) => setForm({ ...form, montant: e.target.value ? Number(e.target.value) : undefined })} required />
             </div>
-
-            <div>
-              <Label htmlFor="mode">Mode de paiement</Label>
-              <select
-                id="mode"
-                className="w-full border rounded p-2"
-                value={form.mode_payement_id || ""}
-                onChange={(e) => setForm({ ...form, mode_payement_id: e.target.value })}
-                required
-              >
+            <div><Label htmlFor="mode">Mode de paiement</Label>
+              <select id="mode" className="w-full border rounded p-2" value={form.mode_payement_id || ""} onChange={(e) => setForm({ ...form, mode_payement_id: e.target.value })} required>
                 <option value="">-- Sélectionner un mode --</option>
                 {modesPayement.map((m) => <option key={m.id} value={m.id}>{m.mode_payement}</option>)}
               </select>
             </div>
-
-            <div>
-              <Label htmlFor="location">Location (optionnel)</Label>
-              <select
-                id="location"
-                className="w-full border rounded p-2"
-                value={form.location_id || ""}
-                onChange={(e) => setForm({ ...form, location_id: e.target.value })}
-              >
+            <div><Label htmlFor="location">Location (optionnel)</Label>
+              <select id="location" className="w-full border rounded p-2" value={form.location_id || ""} onChange={(e) => setForm({ ...form, location_id: e.target.value })}>
                 <option value="">-- Aucune --</option>
                 {locations.map((l) => <option key={l.id} value={l.id}>{l.nom}</option>)}
               </select>
             </div>
-
-            <div>
-              <Label htmlFor="electricite">Électricité (optionnel)</Label>
-              <select
-                id="electricite"
-                className="w-full border rounded p-2"
-                value={form.electricite_id || ""}
-                onChange={(e) => setForm({ ...form, electricite_id: e.target.value })}
-              >
+            <div><Label htmlFor="electricite">Électricité (optionnel)</Label>
+              <select id="electricite" className="w-full border rounded p-2" value={form.electricite_id || ""} onChange={(e) => setForm({ ...form, electricite_id: e.target.value })}>
                 <option value="">-- Aucune --</option>
                 {electricites.map((el) => <option key={el.id} value={el.id}>{el.numero_compteur}</option>)}
               </select>
             </div>
-
-            <div>
-              <Label htmlFor="contrat">Contrat (optionnel)</Label>
-              <select
-                id="contrat"
-                className="w-full border rounded p-2"
-                value={form.contrat_id || ""}
-                onChange={(e) => setForm({ ...form, contrat_id: e.target.value })}
-              >
+            <div><Label htmlFor="contrat">Contrat (optionnel)</Label>
+              <select id="contrat" className="w-full border rounded p-2" value={form.contrat_id || ""} onChange={(e) => setForm({ ...form, contrat_id: e.target.value })}>
                 <option value="">-- Aucun --</option>
                 {contrats.map((c) => <option key={c.id} value={c.id}>{c.id}</option>)}
               </select>
             </div>
-
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseModal}>Annuler</Button>
               <Button type="submit">{editingPayement ? "Enregistrer" : "Créer"}</Button>
@@ -391,14 +270,10 @@ const PayementsPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ---------------- Delete modal ---------------- */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[420px]">
-          <DialogHeader>
-            <DialogTitle>Confirmer la suppression</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Confirmer la suppression</DialogTitle></DialogHeader>
           <p>Cette action est irréversible. Voulez-vous continuer ?</p>
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Annuler</Button>
             <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
