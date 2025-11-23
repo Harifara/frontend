@@ -297,9 +297,10 @@ const Payements = () => {
 
                   <TableCell className="text-center">
                     {p.contrat
-                      ? `${p.contrat.employer_nom } - ${p.contrat.salaire?.toLocaleString()} Ar`
+                      ? `${p.contrat.employer_nom ?? p.contrat.nom} - ${p.contrat.salaire?.toLocaleString()} Ar`
                       : "-"}
                   </TableCell>
+
 
 
                   <TableCell className="text-center space-x-2">
@@ -467,7 +468,7 @@ const Payements = () => {
                   <SelectItem value="null">Aucun</SelectItem>
                   {contrats.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.employer_nom} — {c.salaire?.toLocaleString()} Ar
+                      {c.employer_nom ?? c.nom} — {c.salaire?.toLocaleString()} Ar
                     </SelectItem>
                   ))}
                 </SelectContent>
