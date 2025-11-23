@@ -347,9 +347,10 @@ const ContratsPage: React.FC = () => {
                   <Label>Montant total</Label>
                   <Input
                     type="number"
-                    value={editing.montant_total ?? ""}
-                    onChange={e => setEditing(prev => prev ? { ...prev, montant_total: Number(e.target.value) } : null)}
+                    value={editing.salaire ?? ""}
+                    onChange={e => setEditing(prev => prev ? { ...prev, salaire: e.target.value ? Number(e.target.value) : null } : null)}
                   />
+
                 </div>
                 <div>
                   <Label>Description de la mission</Label>
