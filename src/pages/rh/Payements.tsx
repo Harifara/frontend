@@ -67,17 +67,11 @@ const PayementsPage: React.FC = () => {
         rhApi.getContrats(),
       ]);
 
-      // Si l'API renvoie { results: [...] } au lieu d'un tableau direct
-      const modesData = (modes as any).results ?? modes ?? [];
-      const locsData = (locs as any).results ?? locs ?? [];
-      const elecsData = (elecs as any).results ?? elecs ?? [];
-      const contsData = (conts as any).results ?? conts ?? [];
-
       setPayements((payments as any)?.results ?? payments ?? []);
-      setModesPayement(modesData);
-      setLocations(locsData);
-      setElectricites(elecsData);
-      setContrats(contsData);
+      setModesPayement((modes as any)?.results ?? modes ?? []);
+      setLocations((locs as any)?.results ?? locs ?? []);
+      setElectricites((elecs as any)?.results ?? elecs ?? []);
+      setContrats((conts as any)?.results ?? conts ?? []);
 
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Impossible de charger les données.", variant: "destructive" });
@@ -91,10 +85,10 @@ const PayementsPage: React.FC = () => {
       setEditingPayement(p);
       setForm({
         montant: p.montant,
-        mode_payement_id: p.mode_payement?.id || "",
-        location_id: p.location?.id || "",
-        electricite_id: p.electricite?.id || "",
-        contrat_id: p.contrat?.id || "",
+        mode_payement_id: p.mode_payement?.id ?? "",
+        location_id: p.location?.id ?? "",
+        electricite_id: p.electricite?.id ?? "",
+        contrat_id: p.contrat?.id ?? "",
       });
     } else {
       setEditingPayement(null);
