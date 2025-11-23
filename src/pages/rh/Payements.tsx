@@ -1,3 +1,4 @@
+// src/pages/rh/Payements.tsx
 import React, { useEffect, useState } from "react";
 import { rhApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -65,14 +66,24 @@ const PayementsPage: React.FC = () => {
         rhApi.getElectricites(),
         rhApi.getContrats(),
       ]);
-      setPayements(payments || []);
-      setModesPayement(modes || []);
-      setLocations(locs || []);
-      setElectricites(elecs || []);
-      setContrats(conts || []);
+
+      // Si l'API renvoie { results: [...] } au lieu d'un tableau direct
+      const modesData = (modes as any).results ?? modes ?? [];
+      const locsData = (locs as any).results ?? locs ?? [];
+      const elecsData = (elecs as any).results ?? elecs ?? [];
+      const contsData = (conts as any).results ?? conts ?? [];
+
+      setPayements((payments as any)?.results ?? payments ?? []);
+      setModesPayement(modesData);
+      setLocations(locsData);
+      setElectricites(elecsData);
+      setContrats(contsData);
+
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Impossible de charger les données.", variant: "destructive" });
-    } finally { setIsLoading(false); }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOpenModal = (p?: Payement) => {
@@ -138,7 +149,10 @@ const PayementsPage: React.FC = () => {
       fetchAll();
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Échec de suppression.", variant: "destructive" });
-    } finally { setIsDeleteModalOpen(false); setSelectedIdToDelete(null); }
+    } finally {
+      setIsDeleteModalOpen(false);
+      setSelectedIdToDelete(null);
+    }
   };
 
   const filteredPayements = payements.filter((p) =>
