@@ -286,7 +286,6 @@ const ContratsPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* MODAL CREATE/EDIT */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>
