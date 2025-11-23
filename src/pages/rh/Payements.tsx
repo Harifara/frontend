@@ -25,10 +25,6 @@ interface Payement {
   location?: Location;
   electricite?: Electricite;
   contrat?: Contrat;
-  mode_payement_id?: string;
-  location_id?: string;
-  electricite_id?: string;
-  contrat_id?: string;
 }
 
 const Payements = () => {
@@ -67,28 +63,32 @@ const Payements = () => {
         rhApi.getContrats(),
       ]);
 
-      // Mapper IDs vers objets complets
-      const mappedPayements = p.map((pay: any) => ({
-        ...pay,
-        mode_payement: m.find(mm => mm.id === pay.mode_payement_id) || undefined,
-        location: l.find(ll => ll.id === pay.location_id) || undefined,
-        electricite: e.find(ee => ee.id === pay.electricite_id) || undefined,
-        contrat: c.find(cc => cc.id === pay.contrat_id) || undefined,
-      }));
-
-      setPayements(mappedPayements);
       setModes(m);
       setLocations(l);
       setElectricites(e);
       setContrats(c);
+
+      // Les objets liés sont déjà inclus par le serializer
+      setPayements(p);
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Impossible de charger les paiements.", variant: "destructive" });
     } finally { setIsLoading(false); }
   };
 
   const handleOpenModal = (payement?: Payement) => {
-    if (payement) { setEditingPayement(payement); setForm(payement); }
-    else { setEditingPayement(null); setForm({ montant: undefined, status: "en_attente", mode_payement: undefined, location: undefined, electricite: undefined, contrat: undefined }); }
+    if (payement) {
+      setEditingPayement(payement);
+      setForm({
+        ...payement,
+        mode_payement: payement.mode_payement || undefined,
+        location: payement.location || undefined,
+        electricite: payement.electricite || undefined,
+        contrat: payement.contrat || undefined,
+      });
+    } else {
+      setEditingPayement(null);
+      setForm({ montant: undefined, status: "en_attente", mode_payement: undefined, location: undefined, electricite: undefined, contrat: undefined });
+    }
     setIsModalOpen(true);
   };
 
@@ -96,7 +96,6 @@ const Payements = () => {
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-
     if (!form.location && !form.electricite && !form.contrat) {
       toast({ title: "Erreur", description: "Veuillez sélectionner au moins Location, Électricité ou Contrat.", variant: "destructive" });
       return;
@@ -130,9 +129,14 @@ const Payements = () => {
   const handleOpenDeleteModal = (id: string) => { setSelectedIdToDelete(id); setIsDeleteModalOpen(true); };
   const handleDelete = async () => {
     if (!selectedIdToDelete) return;
-    try { setIsDeleteModalOpen(false); await rhApi.deletePayement(selectedIdToDelete); toast({ title: "Succès", description: "Paiement supprimé." }); fetchData(); }
-    catch (err: any) { toast({ title: "Erreur", description: err.message || "Erreur lors de la suppression.", variant: "destructive" }); }
-    finally { setSelectedIdToDelete(null); }
+    try {
+      setIsDeleteModalOpen(false);
+      await rhApi.deletePayement(selectedIdToDelete);
+      toast({ title: "Succès", description: "Paiement supprimé." });
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message || "Erreur lors de la suppression.", variant: "destructive" });
+    } finally { setSelectedIdToDelete(null); }
   };
 
   const filteredPayements = payements.filter(p =>
