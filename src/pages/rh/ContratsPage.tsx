@@ -65,6 +65,9 @@ const STATUS_BADGE = (status: string) => {
   }
 };
 
+// Helper pour éviter l'erreur null.id
+const getId = (obj: any) => (obj && typeof obj === "object" ? obj.id : obj ?? "");
+
 const ContratsPage: React.FC = () => {
   const [contrats, setContrats] = useState<Contrat[]>([]);
   const [employers, setEmployers] = useState<Employer[]>([]);
@@ -115,8 +118,8 @@ const ContratsPage: React.FC = () => {
     return contrats.filter(c => {
       if (filterStatus !== "all" && c.status_contrat !== filterStatus) return false;
       if (filterNature !== "all" && c.nature_contrat !== filterNature) return false;
-      if (filterEmployer !== "all" && String((c.employer as Employer)?.id ?? c.employer) !== filterEmployer) return false;
-      if (filterType !== "all" && String((c.type_contrat as TypeContrat)?.id ?? c.type_contrat) !== filterType) return false;
+      if (filterEmployer !== "all" && String(getId(c.employer)) !== filterEmployer) return false;
+      if (filterType !== "all" && String(getId(c.type_contrat)) !== filterType) return false;
       if (search) {
         const s = search.toLowerCase();
         const combined = `${c.employer_nom ?? ""} ${(c.employer as Employer)?.prenom_employer ?? ""} ${c.type_nom ?? ""} ${c.nature_contrat ?? ""} ${c.status_contrat ?? ""}`.toLowerCase();
@@ -204,8 +207,8 @@ const ContratsPage: React.FC = () => {
         montant_total: editing.nature_contrat !== "emploi" && editing.montant_total !== "" ? Number(editing.montant_total) : null,
         description_mission: editing.nature_contrat !== "emploi" ? (editing.description_mission || "") : null,
         duree_jours: null,
-        employer_id: typeof editing.employer === "object" ? (editing.employer as Employer).id : editing.employer || null,
-        type_contrat_id: typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat || null
+        employer_id: getId(editing.employer),
+        type_contrat_id: getId(editing.type_contrat)
       };
       if (editing.date_debut_contrat && editing.date_fin_contrat) {
         const d1 = new Date(editing.date_debut_contrat);
@@ -331,10 +334,14 @@ const ContratsPage: React.FC = () => {
             <div className="space-y-4 mt-2">
               <div>
                 <Label>Employé</Label>
-                <select value={typeof editing.employer === "object" ? (editing.employer as Employer).id : editing.employer || ""} onChange={e => {
-                  const emp = employers.find(em => em.id === e.target.value) || null;
-                  setEditing(prev => prev ? ({ ...prev, employer: emp }) : null);
-                }} className="border rounded p-2 w-full">
+                <select
+                  value={getId(editing.employer)}
+                  onChange={e => {
+                    const emp = employers.find(em => em.id === e.target.value) || null;
+                    setEditing(prev => prev ? ({ ...prev, employer: emp }) : null);
+                  }}
+                  className="border rounded p-2 w-full"
+                >
                   <option value="">-- Sélectionner un employé --</option>
                   {employers.map(emp => <option key={emp.id} value={emp.id}>{emp.nom_employer} {emp.prenom_employer}</option>)}
                 </select>
@@ -342,7 +349,11 @@ const ContratsPage: React.FC = () => {
 
               <div>
                 <Label>Nature du contrat</Label>
-                <select value={editing.nature_contrat} onChange={e => setEditing(prev => prev ? ({ ...prev, nature_contrat: e.target.value }) : null)} className="border rounded p-2 w-full">
+                <select
+                  value={editing.nature_contrat}
+                  onChange={e => setEditing(prev => prev ? ({ ...prev, nature_contrat: e.target.value }) : null)}
+                  className="border rounded p-2 w-full"
+                >
                   {NATURE_OPTIONS.map(n => <option key={n} value={n}>{natureLabels[n]}</option>)}
                 </select>
               </div>
@@ -362,17 +373,25 @@ const ContratsPage: React.FC = () => {
                 <>
                   <div>
                     <Label>Type de contrat</Label>
-                    <select value={typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat || ""} onChange={e => {
-                      const type = types.find(t => t.id === e.target.value) || null;
-                      setEditing(prev => prev ? ({ ...prev, type_contrat: type }) : null);
-                    }} className="border rounded p-2 w-full">
+                    <select
+                      value={getId(editing.type_contrat)}
+                      onChange={e => {
+                        const type = types.find(t => t.id === e.target.value) || null;
+                        setEditing(prev => prev ? ({ ...prev, type_contrat: type }) : null);
+                      }}
+                      className="border rounded p-2 w-full"
+                    >
                       <option value="">-- Sélectionner un type --</option>
                       {types.map(t => <option key={t.id} value={t.id}>{t.nom_type}</option>)}
                     </select>
                   </div>
                   <div>
                     <Label>Description de la mission</Label>
-                    <textarea className="border rounded p-2 w-full" value={editing.description_mission ?? ""} onChange={e => setEditing(prev => prev ? ({ ...prev, description_mission: e.target.value }) : null)} />
+                    <textarea
+                      className="border rounded p-2 w-full"
+                      value={editing.description_mission ?? ""}
+                      onChange={e => setEditing(prev => prev ? ({ ...prev, description_mission: e.target.value }) : null)}
+                    />
                   </div>
                   <div>
                     <Label>Montant total</Label>
