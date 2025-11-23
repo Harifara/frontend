@@ -166,68 +166,37 @@ const ContratsPage: React.FC = () => {
 
   // Save create/update
   const saveContrat = async () => {
-  if (!editing || !validateBeforeSave()) return;
+    if (!editing || !validateBeforeSave()) return;
 
-  try {
-    // Préparer payload strictement typé
-    const payloadObj: any = {
-      status_contrat: editing.status_contrat,
-      date_debut_contrat: editing.date_debut_contrat,
-      date_fin_contrat: editing.date_fin_contrat || null,
-      nature_contrat: editing.nature_contrat,
-      employer_id: typeof editing.employer === "object" ? (editing.employer as Employer).id : editing.employer,
-      type_contrat_id: typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat || null,
-      salaire: null,
-      montant_total: null,
-      description_mission: null,
-      duree_jours: editing.date_debut_contrat && editing.date_fin_contrat
-        ? Math.ceil((new Date(editing.date_fin_contrat).getTime() - new Date(editing.date_debut_contrat).getTime()) / (1000 * 3600 * 24))
-        : null,
-    };
+    try {
+      const payloadObj: any = {
+        status_contrat: editing.status_contrat,
+        date_debut_contrat: editing.date_debut_contrat,
+        date_fin_contrat: editing.date_fin_contrat || null,
+        nature_contrat: editing.nature_contrat,
+        salaire: editing.nature_contrat === "emploi" && editing.salaire != null && editing.salaire !== "" ? Number(editing.salaire) : null,
+        montant_total: editing.nature_contrat !== "emploi" && editing.montant_total != null && editing.montant_total !== "" ? Number(editing.montant_total) : null,
+        description_mission: editing.nature_contrat !== "emploi" ? (editing.description_mission || "") : null,
+        duree_jours: editing.date_debut_contrat && editing.date_fin_contrat ? Math.ceil((new Date(editing.date_fin_contrat).getTime() - new Date(editing.date_debut_contrat).getTime()) / (1000 * 3600 * 24)) : null,
+        employer_id: typeof editing.employer === "object" ? (editing.employer as Employer).id : editing.employer || null,
+        type_contrat_id: typeof editing.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing.type_contrat || null,
+      };
 
-    // Remplir salaire ou montant selon la nature
-    if (editing.nature_contrat === "emploi" && editing.salaire != null && editing.salaire !== "") {
-      payloadObj.salaire = Number(editing.salaire);
-    } else if (editing.nature_contrat !== "emploi") {
-      if (editing.montant_total != null && editing.montant_total !== "") {
-        payloadObj.montant_total = Number(editing.montant_total);
-      }
-      if (editing.description_mission && editing.description_mission.trim() !== "") {
-        payloadObj.description_mission = editing.description_mission.trim();
-      }
-    }
-
-    // Gestion upload fichier
-    if (fileToUpload) {
-      const fd = new FormData();
-      Object.entries(payloadObj).forEach(([k, v]) => {
-        if (v !== undefined && v !== null) fd.append(k, String(v));
-      });
-      fd.append("contrat_file", fileToUpload);
-      if (editing.id) {
-        await (rhApi as any).updateContratFormData(editing.id, fd);
+      if (fileToUpload) {
+        const fd = new FormData();
+        Object.entries(payloadObj).forEach(([k, v]) => { if (v !== undefined && v !== null) fd.append(k, String(v)); });
+        fd.append("contrat_file", fileToUpload);
+        if (editing.id) await (rhApi as any).updateContratFormData(editing.id, fd);
+        else await (rhApi as any).createContratFormData(fd);
       } else {
-        await (rhApi as any).createContratFormData(fd);
+        if (editing.id) await rhApi.updateContrat(editing.id, payloadObj);
+        else await rhApi.createContrat(payloadObj);
       }
-    } else {
-      if (editing.id) {
-        await rhApi.updateContrat(editing.id, payloadObj);
-      } else {
-        await rhApi.createContrat(payloadObj);
-      }
-    }
 
-    setIsModalOpen(false);
-    setEditing(null);
-    setFileToUpload(null);
-    fetchAll();
-    toast({ title: "Succès", description: "Contrat sauvegardé." });
-
-  } catch (err: any) {
-    toast({ title: "Erreur", description: err?.response?.data?.detail || err?.message || "Erreur serveur", variant: "destructive" });
-  }
-};
-
+      setIsModalOpen(false); setEditing(null); setFileToUpload(null); fetchAll();
+      toast({ title: "Succès", description: "Contrat sauvegardé." });
+    } catch (err: any) { toast({ title: "Erreur", description: err?.message || "Erreur serveur", variant: "destructive" }); }
+  };
 
   const askDelete = (id?: string) => { setDeleteId(id || null); setIsDeleteOpen(true); };
   const confirmDelete = async () => { 
