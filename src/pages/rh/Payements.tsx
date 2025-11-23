@@ -27,7 +27,12 @@ interface Electricite {
 }
 
 
-interface Contrat { id: string; reference?: string; ref?: string; }
+interface Contrat {
+  id: string;
+  reference?: string;
+  ref?: string;
+  salaire?: number;                    // ← ajouté selon ton backend
+}
 
 interface Payement {
   id?: string;
@@ -257,8 +262,11 @@ const Payements = () => {
 
 
                   <TableCell className="text-center">
-                    {p.contrat?.reference || p.contrat?.ref || "-"}
+                    {p.contrat
+                      ? `${p.contrat.reference || p.contrat.ref} - ${p.contrat.salaire?.toLocaleString()} Ar`
+                      : "-"}
                   </TableCell>
+
 
                   <TableCell className="text-center space-x-2">
                     <Button size="sm" variant="outline" onClick={() => handleOpenModal(p)}>Modifier</Button>
@@ -396,8 +404,6 @@ const Payements = () => {
             </div>
 
 
-            {/* Contrat */}
-            {/* Contrat */}
             <div>
               <Label>Contrat</Label>
               <Select
@@ -405,21 +411,30 @@ const Payements = () => {
                 onValueChange={(val) =>
                   setForm({
                     ...form,
-                    contrat: val === "null" ? undefined : contrats.find(c => c.id === val)
+                    contrat:
+                      val === "null"
+                        ? undefined
+                        : contrats.find((c) => c.id === val),
                   })
                 }
               >
-                <SelectTrigger><SelectValue placeholder="Choisir un contrat" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir un contrat" />
+                </SelectTrigger>
+
                 <SelectContent>
                   <SelectItem value="null">Aucun</SelectItem>
-                  {contrats.map(c => (
+
+                  {contrats.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.reference || c.ref || `Contrat ${c.id}`}
+                      {c.reference || c.ref} — {c.salaire?.toLocaleString()} Ar
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
+
 
 
 
