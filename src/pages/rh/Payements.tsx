@@ -26,23 +26,25 @@ interface Electricite {
   location?: Location;
 }
 
+
 interface Contrat {
   id: string;
   employer_nom?: string;
-  salaire?: number;
+  salaire?: number;                    // ← ajouté selon ton backend
 }
 
 interface Payement {
   id?: string;
-  reference?: string;
+  reference?: string; 
+  paiement_type?: "total" | "avance";  // ← ICI !
   montant?: number;
-  paiement_type?: "total" | "avance";
   status: string;
   mode_payement?: ModePayement;
   location?: Location;
   electricite?: Electricite;
   contrat?: Contrat;
 }
+
 
 const Payements = () => {
   const [payements, setPayements] = useState<Payement[]>([]);
@@ -59,9 +61,9 @@ const Payements = () => {
   const { toast } = useToast();
 
   const [form, setForm] = useState<Payement>({
+    paiement_type: "total",
     montant: 0,
     status: "en_attente",
-    paiement_type: "total",
     mode_payement: undefined,
     location: undefined,
     electricite: undefined,
@@ -80,10 +82,12 @@ const Payements = () => {
         rhApi.getElectricites(),
         rhApi.getContrats(),
       ]);
+
       setModes(m);
       setLocations(l);
       setElectricites(e);
       setContrats(c);
+
       setPayements(p);
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Impossible de charger les paiements.", variant: "destructive" });
@@ -104,9 +108,9 @@ const Payements = () => {
     } else {
       setEditingPayement(null);
       setForm({
+        paiement_type: "total",
         montant: 0,
         status: "en_attente",
-        paiement_type: "total",
         mode_payement: undefined,
         location: undefined,
         electricite: undefined,
@@ -120,9 +124,9 @@ const Payements = () => {
     setIsModalOpen(false);
     setEditingPayement(null);
     setForm({
+      paiement_type: "total",
       montant: 0,
       status: "en_attente",
-      paiement_type: "total",
       mode_payement: undefined,
       location: undefined,
       electricite: undefined,
@@ -147,7 +151,8 @@ const Payements = () => {
       return;
     }
 
-    const payload = {
+    try {
+      const payload = {
       montant: form.montant && form.montant > 0 ? form.montant : calculateMontant(),
       status: form.status,
       paiement_type: form.paiement_type,
@@ -157,7 +162,6 @@ const Payements = () => {
       contrat_id: form.contrat?.id || null,
     };
 
-    try {
       if (editingPayement) {
         await rhApi.updatePayement(editingPayement.id!, payload);
         toast({ title: "Succès", description: "Paiement mis à jour." });
@@ -165,6 +169,7 @@ const Payements = () => {
         await rhApi.createPayement(payload);
         toast({ title: "Succès", description: "Paiement créé." });
       }
+
       handleCloseModal();
       fetchData();
     } catch (err: any) {
@@ -174,9 +179,11 @@ const Payements = () => {
 
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const handleOpenDetailModal = (payement: Payement) => {
-    setEditingPayement(payement);
-    setIsDetailModalOpen(true);
-  };
+      setEditingPayement(payement);
+      setIsDetailModalOpen(true);
+    };
+
+
 
   const handleOpenDeleteModal = (id: string) => { setSelectedIdToDelete(id); setIsDeleteModalOpen(true); };
   const handleDelete = async () => {
@@ -194,32 +201,33 @@ const Payements = () => {
   const filteredPayements = payements.filter(p =>
     (p.montant?.toString().includes(searchTerm) ?? false) ||
     (p.status.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (p.mode_payement?.mode_payement?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+    (p.mode_payement?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+     p.mode_payement?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+     false)
   );
 
   const exportPDF = async () => {
     const data = filteredPayements.map(p => [
-      p.reference ?? "-",
       p.montant ?? "-",
       p.status,
       p.mode_payement?.mode_payement ?? "-",
       p.location?.nom ?? p.location?.name ?? "-",
-      p.electricite ? `${p.electricite.numero_compteur} (${p.electricite.fournisseur})` : "-",
+      p.electricite? `${p.electricite.numero_compteur} (${p.electricite.fournisseur})` : "-",
+
       p.contrat?.employer_nom ?? "-",
     ]);
-    const columns = ["Référence", "Montant", "Status", "Mode", "Location", "Électricité", "Contrat"];
+    const columns = ["Référence", "Montant", "Status", "Mode", "Location", "Électricité", "Contrat", "Salaire", "Type de Paiement"];
     await createPDFDoc("Liste des Paiements", data, columns, "payements.pdf");
   };
 
   const exportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
       filteredPayements.map(p => ({
-        Référence: p.reference ?? "-",
         Montant: p.montant ?? "-",
         Status: p.status,
-        Mode: p.mode_payement?.mode_payement ?? "-",
+        Mode: p.mode_payement?.nom ?? p.mode_payement?.name ?? "-",
         Location: p.location?.nom ?? p.location?.name ?? "-",
-        Electricite: p.electricite?.numero_compteur ?? "-",
+        Electricite: p.electricite?.nom ?? p.electricite?.name ?? "-",
         Contrat: p.contrat?.employer_nom ?? "-",
       }))
     );
@@ -238,12 +246,15 @@ const Payements = () => {
       </div>
 
       <div className="flex gap-4">
-        <Input placeholder="Rechercher..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="flex-1" />
+        <Input placeholder="Rechercher..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1"
+        />
         <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
         <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
       </div>
 
-      {/* Table des paiements */}
       <Card>
         <CardHeader><CardTitle>Liste des Paiements</CardTitle></CardHeader>
         <CardContent>
@@ -256,20 +267,33 @@ const Payements = () => {
                 <TableHead className="text-center">Mode</TableHead>
                 <TableHead className="text-center">Location</TableHead>
                 <TableHead className="text-center">Électricité</TableHead>
-                <TableHead className="text-center">Contrat</TableHead>
+                <TableHead className="text-center">Salaire</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredPayements.length ? filteredPayements.map(p => (
                 <TableRow key={p.id}>
-                  <TableCell className="text-center">{p.reference ?? "-"}</TableCell>
+                  <TableCell className="text-center">{p.reference}</TableCell>
                   <TableCell className="text-center">{p.montant ?? "-"}</TableCell>
                   <TableCell className="text-center">{p.status}</TableCell>
-                  <TableCell className="text-center">{p.mode_payement?.mode_payement ?? "-"}</TableCell>
+                  <TableCell className="text-center">
+                    {p.mode_payement?.mode_payement ?? "-"}
+                  </TableCell>
+
                   <TableCell className="text-center">{p.location?.nom ?? p.location?.name ?? "-"}</TableCell>
-                  <TableCell className="text-center">{p.electricite ? `${p.electricite.numero_compteur} (${p.electricite.fournisseur})` : "-"}</TableCell>
-                  <TableCell className="text-center">{p.contrat ? `${p.contrat.employer_nom} - ${p.contrat.salaire?.toLocaleString()} Ar` : "-"}</TableCell>
+                  <TableCell className="text-center">
+                    {p.electricite?.numero_compteur ?? "-"} ({p.electricite?.fournisseur ?? ""})
+                  </TableCell>
+
+
+                  <TableCell className="text-center">
+                    {p.contrat
+                      ? `${p.contrat.employer_nom } - ${p.contrat.salaire?.toLocaleString()} Ar`
+                      : "-"}
+                  </TableCell>
+
+
                   <TableCell className="text-center space-x-2">
                     <Button size="sm" variant="default" onClick={() => handleOpenDetailModal(p)}>Détails</Button>
                     <Button size="sm" variant="outline" onClick={() => handleOpenModal(p)}>Modifier</Button>
@@ -278,7 +302,7 @@ const Payements = () => {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-6">Aucun paiement trouvé.</TableCell>
+                  <TableCell colSpan={7} className="text-center py-6">Aucun paiement trouvé.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -286,7 +310,7 @@ const Payements = () => {
         </CardContent>
       </Card>
 
-      {/* Modals Ajout/Édition */}
+      {/* Modal Ajout/Modification ------------------------------------------------ */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -294,28 +318,22 @@ const Payements = () => {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Paiement type */}
-            <div>
-              <Label>Type de paiement</Label>
-              <Select value={form.paiement_type ?? "total"} onValueChange={(val) => setForm({ ...form, paiement_type: val as "total" | "avance" })}>
-                <SelectTrigger><SelectValue placeholder="Choisir le type" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="total">Paiement total</SelectItem>
-                  <SelectItem value="avance">Avance / Tranche</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Montant calculé */}
-            <div>
-              <Label>Montant</Label>
-              <Input type="number" value={form.montant ?? calculateMontant()} onChange={(e) => setForm({ ...form, montant: Number(e.target.value) })} />
-            </div>
-
-            {/* Status */}
+                      <div>
+                        <Label>Type de paiement</Label>
+                        <Select value={form.paiement_type ?? "total"} onValueChange={(val) => setForm({ ...form, paiement_type: val as "total" | "avance" })}>
+                          <SelectTrigger><SelectValue placeholder="Choisir le type" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="total">Paiement total</SelectItem>
+                            <SelectItem value="avance">Avance / Tranche</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
             <div>
               <Label>Status</Label>
-              <Select value={form.status} onValueChange={(val) => setForm({ ...form, status: val })}>
+              <Select
+                value={form.status}
+                onValueChange={(val) => setForm({ ...form, status: val })}
+              >
                 <SelectTrigger><SelectValue placeholder="Choisir le status" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="en_attente">En attente</SelectItem>
@@ -325,6 +343,8 @@ const Payements = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Mode de paiement */}
             <div>
               <Label>Mode de paiement</Label>
               <Select
@@ -436,15 +456,22 @@ const Payements = () => {
 
             </div>
 
+
+
+
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseModal}>Annuler</Button>
               <Button type="submit">{editingPayement ? "Mettre à jour" : "Créer"}</Button>
             </DialogFooter>
+
+
+
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Modal Suppression */}
+      {/* Modal Suppression ----------------------------------------------------- */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader><DialogTitle>Confirmer la suppression</DialogTitle></DialogHeader>
@@ -456,27 +483,30 @@ const Payements = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Détails */}
+
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Détails du paiement</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2">
-            <p><strong>Référence :</strong> {editingPayement?.reference}</p>
-            <p><strong>Montant :</strong> {editingPayement?.montant ?? "-"}</p>
-            <p><strong>Status :</strong> {editingPayement?.status}</p>
-            <p><strong>Type de paiement :</strong> {editingPayement?.paiement_type ?? "total"}</p>
-            <p><strong>Mode :</strong> {editingPayement?.mode_payement?.mode_payement ?? "-"}</p>
-            <p><strong>Location :</strong> {editingPayement?.location?.nom ?? editingPayement?.location?.name ?? "-"}</p>
-            <p><strong>Électricité :</strong> {editingPayement?.electricite?.numero_compteur ?? "-"} ({editingPayement?.electricite?.fournisseur ?? ""})</p>
-            <p><strong>Contrat :</strong> {editingPayement?.contrat ? `${editingPayement.contrat.employer_nom} - ${editingPayement.contrat.salaire?.toLocaleString()} Ar` : "-"}</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>Fermer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+  <DialogContent className="sm:max-w-[500px]">
+    <DialogHeader>
+      <DialogTitle>Détails du paiement</DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-2">
+      <p><strong>Référence :</strong> {editingPayement?.reference}</p>
+      <p><strong>Montant :</strong> {editingPayement?.montant ?? "-"}</p>
+      <p><strong>Status :</strong> {editingPayement?.status}</p>
+      <p><strong>Mode de paiement :</strong> {editingPayement?.mode_payement?.mode_payement ?? "-"}</p>
+      <p><strong>Location :</strong> {editingPayement?.location?.nom ?? editingPayement?.location?.name ?? "-"}</p>
+      <p><strong>Électricité :</strong> {editingPayement?.electricite?.numero_compteur ?? "-"} ({editingPayement?.electricite?.fournisseur ?? ""})</p>
+      <p><strong>Salaire :</strong> {editingPayement?.contrat ? `${editingPayement.contrat.employer_nom} - ${editingPayement.contrat.salaire?.toLocaleString()} Ar` : "-"}</p>
+    </div>
+
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>Fermer</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+
     </div>
   );
 };
