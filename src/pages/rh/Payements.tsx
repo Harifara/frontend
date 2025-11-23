@@ -12,10 +12,10 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import * as XLSX from "xlsx";
 import { createPDFDoc } from "@/lib/pdfTemplate";
 
-interface ModePayement { id: string; nom: string; }
-interface Location { id: string; nom: string; }
-interface Electricite { id: string; nom: string; }
-interface Contrat { id: string; reference: string; }
+interface ModePayement { id: string; nom?: string; name?: string; label?: string; }
+interface Location { id: string; nom?: string; name?: string; label?: string; }
+interface Electricite { id: string; nom?: string; name?: string; label?: string; }
+interface Contrat { id: string; reference?: string; ref?: string; }
 
 interface Payement {
   id?: string;
@@ -160,16 +160,18 @@ const Payements = () => {
   const filteredPayements = payements.filter(p =>
     (p.montant?.toString().includes(searchTerm) ?? false) ||
     (p.status.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (p.mode_payement?.nom.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
+    (p.mode_payement?.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+     p.mode_payement?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+     false)
   );
 
   const exportPDF = async () => {
     const data = filteredPayements.map(p => [
       p.montant ?? "-",
       p.status,
-      p.mode_payement?.nom ?? "-",
-      p.location?.nom ?? "-",
-      p.electricite?.nom ?? "-",
+      p.mode_payement?.nom ?? p.mode_payement?.name ?? "-",
+      p.location?.nom ?? p.location?.name ?? "-",
+      p.electricite?.nom ?? p.electricite?.name ?? "-",
       p.contrat?.reference ?? "-",
     ]);
     const columns = ["Montant", "Status", "Mode", "Location", "Électricité", "Contrat"];
@@ -181,9 +183,9 @@ const Payements = () => {
       filteredPayements.map(p => ({
         Montant: p.montant ?? "-",
         Status: p.status,
-        Mode: p.mode_payement?.nom ?? "-",
-        Location: p.location?.nom ?? "-",
-        Electricite: p.electricite?.nom ?? "-",
+        Mode: p.mode_payement?.nom ?? p.mode_payement?.name ?? "-",
+        Location: p.location?.nom ?? p.location?.name ?? "-",
+        Electricite: p.electricite?.nom ?? p.electricite?.name ?? "-",
         Contrat: p.contrat?.reference ?? "-",
       }))
     );
@@ -202,7 +204,11 @@ const Payements = () => {
       </div>
 
       <div className="flex gap-4">
-        <Input placeholder="Rechercher par montant, status ou mode..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="flex-1" />
+        <Input placeholder="Rechercher..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="flex-1"
+        />
         <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
         <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
       </div>
@@ -227,9 +233,9 @@ const Payements = () => {
                 <TableRow key={p.id}>
                   <TableCell className="text-center">{p.montant ?? "-"}</TableCell>
                   <TableCell className="text-center">{p.status}</TableCell>
-                  <TableCell className="text-center">{p.mode_payement?.nom ?? "-"}</TableCell>
-                  <TableCell className="text-center">{p.location?.nom ?? "-"}</TableCell>
-                  <TableCell className="text-center">{p.electricite?.nom ?? "-"}</TableCell>
+                  <TableCell className="text-center">{p.mode_payement?.nom ?? p.mode_payement?.name ?? "-"}</TableCell>
+                  <TableCell className="text-center">{p.location?.nom ?? p.location?.name ?? "-"}</TableCell>
+                  <TableCell className="text-center">{p.electricite?.nom ?? p.electricite?.name ?? "-"}</TableCell>
                   <TableCell className="text-center">{p.contrat?.reference ?? "-"}</TableCell>
                   <TableCell className="text-center space-x-2">
                     <Button size="sm" variant="outline" onClick={() => handleOpenModal(p)}>Modifier</Button>
@@ -246,144 +252,160 @@ const Payements = () => {
         </CardContent>
       </Card>
 
-      {/* Modal Ajout/Modification */}
-      {/* Modal Ajout/Modification */}
-<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-  <DialogContent className="sm:max-w-[500px]">
-    <DialogHeader>
-      <DialogTitle>{editingPayement ? "Modifier le paiement" : "Créer un paiement"}</DialogTitle>
-    </DialogHeader>
+      {/* Modal Ajout/Modification ------------------------------------------------ */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editingPayement ? "Modifier le paiement" : "Créer un paiement"}</DialogTitle>
+          </DialogHeader>
 
-    <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
 
-      {/* Montant */}
-      <div>
-        <Label htmlFor="montant">Montant</Label>
-        <Input
-          id="montant"
-          type="number"
-          step="0.01"
-          value={form.montant ?? ""}
-          onChange={(e) => setForm({ ...form, montant: parseFloat(e.target.value) || 0 })}
-        />
-      </div>
+            {/* Montant */}
+            <div>
+              <Label htmlFor="montant">Montant</Label>
+              <Input
+                id="montant"
+                type="number"
+                step="0.01"
+                value={form.montant ?? ""}
+                onChange={(e) => setForm({ ...form, montant: parseFloat(e.target.value) || 0 })}
+              />
+            </div>
 
-      {/* Status */}
-      <div>
-        <Label>Status</Label>
-        <Select
-          value={form.status}
-          onValueChange={(val) => setForm({ ...form, status: val })}
-        >
-          <SelectTrigger><SelectValue placeholder="Choisir le status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="en_attente">En attente</SelectItem>
-            <SelectItem value="complete">Complété</SelectItem>
-            <SelectItem value="echoue">Échoué</SelectItem>
-            <SelectItem value="annule">Annulé</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+            {/* Status */}
+            <div>
+              <Label>Status</Label>
+              <Select
+                value={form.status}
+                onValueChange={(val) => setForm({ ...form, status: val })}
+              >
+                <SelectTrigger><SelectValue placeholder="Choisir le status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="en_attente">En attente</SelectItem>
+                  <SelectItem value="complete">Complété</SelectItem>
+                  <SelectItem value="echoue">Échoué</SelectItem>
+                  <SelectItem value="annule">Annulé</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-      {/* Mode de paiement */}
-      <div>
-        <Label>Mode de paiement</Label>
-        <Select
-          value={form.mode_payement?.id ?? "null"}
-          onValueChange={(val) =>
-            setForm({
-              ...form,
-              mode_payement: val === "null" ? undefined : modes.find((m) => m.id === val),
-            })
-          }
-        >
-          <SelectTrigger><SelectValue placeholder="Choisir un mode" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="null">Aucun</SelectItem>
-            {modes.map((m) => (
-              <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+            {/* Mode de paiement */}
+            <div>
+              <Label>Mode de paiement</Label>
+              <Select
+                value={form.mode_payement?.id ?? "null"}
+                onValueChange={(val) =>
+                  setForm({
+                    ...form,
+                    mode_payement: val === "null"
+                      ? undefined
+                      : modes.find((m) => m.id === val),
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir un mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="null">Aucun</SelectItem>
+                  {modes.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.nom ?? m.name ?? m.label ?? ("Mode " + m.id)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-      {/* Location */}
-      <div>
-        <Label>Location</Label>
-        <Select
-          value={form.location?.id ?? "null"}
-          onValueChange={(val) =>
-            setForm({
-              ...form,
-              location: val === "null" ? undefined : locations.find((l) => l.id === val),
-            })
-          }
-        >
-          <SelectTrigger><SelectValue placeholder="Choisir une location" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="null">Aucune</SelectItem>
-            {locations.map((l) => (
-              <SelectItem key={l.id} value={l.id}>{l.nom}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+            {/* Location */}
+            <div>
+              <Label>Location</Label>
+              <Select
+                value={form.location?.id ?? "null"}
+                onValueChange={(val) =>
+                  setForm({
+                    ...form,
+                    location: val === "null"
+                      ? undefined
+                      : locations.find((l) => l.id === val),
+                  })
+                }
+              >
+                <SelectTrigger><SelectValue placeholder="Choisir une location" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="null">Aucune</SelectItem>
+                  {locations.map((l) => (
+                    <SelectItem key={l.id} value={l.id}>
+                      {l.nom ?? l.name ?? l.label ?? ("Location " + l.id)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-      {/* Électricité */}
-      <div>
-        <Label>Électricité</Label>
-        <Select
-          value={form.electricite?.id ?? "null"}
-          onValueChange={(val) =>
-            setForm({
-              ...form,
-              electricite: val === "null" ? undefined : electricites.find((e) => e.id === val),
-            })
-          }
-        >
-          <SelectTrigger><SelectValue placeholder="Choisir une électricité" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="null">Aucune</SelectItem>
-            {electricites.map((e) => (
-              <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+            {/* Électricité */}
+            <div>
+              <Label>Électricité</Label>
+              <Select
+                value={form.electricite?.id ?? "null"}
+                onValueChange={(val) =>
+                  setForm({
+                    ...form,
+                    electricite: val === "null"
+                      ? undefined
+                      : electricites.find((e) => e.id === val),
+                  })
+                }
+              >
+                <SelectTrigger><SelectValue placeholder="Choisir une électricité" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="null">Aucune</SelectItem>
+                  {electricites.map((e) => (
+                    <SelectItem key={e.id} value={e.id}>
+                      {e.nom ?? e.name ?? e.label ?? ("Electricité " + e.id)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-      {/* Contrat */}
-      <div>
-        <Label>Contrat</Label>
-        <Select
-          value={form.contrat?.id ?? "null"}
-          onValueChange={(val) =>
-            setForm({
-              ...form,
-              contrat: val === "null" ? undefined : contrats.find((c) => c.id === val),
-            })
-          }
-        >
-          <SelectTrigger><SelectValue placeholder="Choisir un contrat" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="null">Aucun</SelectItem>
-            {contrats.map((c) => (
-              <SelectItem key={c.id} value={c.id}>{c.reference}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+            {/* Contrat */}
+            <div>
+              <Label>Contrat</Label>
+              <Select
+                value={form.contrat?.id ?? "null"}
+                onValueChange={(val) =>
+                  setForm({
+                    ...form,
+                    contrat: val === "null"
+                      ? undefined
+                      : contrats.find((c) => c.id === val),
+                  })
+                }
+              >
+                <SelectTrigger><SelectValue placeholder="Choisir un contrat" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="null">Aucun</SelectItem>
+                  {contrats.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.reference ?? c.ref ?? ("Contrat " + c.id)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={handleCloseModal}>Annuler</Button>
-        <Button type="submit">{editingPayement ? "Mettre à jour" : "Créer"}</Button>
-      </DialogFooter>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={handleCloseModal}>Annuler</Button>
+              <Button type="submit">{editingPayement ? "Mettre à jour" : "Créer"}</Button>
+            </DialogFooter>
 
-    </form>
-  </DialogContent>
-</Dialog>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-
-      {/* Modal Suppression */}
+      {/* Modal Suppression ----------------------------------------------------- */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader><DialogTitle>Confirmer la suppression</DialogTitle></DialogHeader>
@@ -394,6 +416,7 @@ const Payements = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };
