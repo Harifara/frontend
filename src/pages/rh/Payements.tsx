@@ -394,30 +394,34 @@ const Payements = () => {
 
 
             {/* Contrat */}
+            {/* Contrat */}
             <div>
               <Label>Contrat</Label>
               <Select
-                value={form.contrat?.id ?? "null"}
+                value={form.contrat?.id ?? ""}
                 onValueChange={(val) =>
                   setForm({
                     ...form,
-                    contrat: val === "null"
+                    contrat: val === ""
                       ? undefined
                       : contrats.find((c) => c.id === val),
                   })
                 }
               >
-                <SelectTrigger><SelectValue placeholder="Choisir un contrat" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir un contrat" />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="null">Aucun</SelectItem>
+                  <SelectItem value="">Aucun</SelectItem>
                   {contrats.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.reference ?? c.ref ?? ("Contrat " + c.id)}
+                      {c.reference || c.ref || `Contrat ${c.id}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseModal}>Annuler</Button>
