@@ -297,31 +297,41 @@ const ContratsPage: React.FC = () => {
             <div>
               <Label>Employé</Label>
               <select
-                  className="border p-2 w-full"
-                  value={editing?.employer && typeof editing.employer === "object" ? editing.employer.id : editing?.employer || ""}
-                  onChange={e => {
-                    const emp = employers.find(emp => emp.id === e.target.value);
-                    setEditing(editing => editing ? { ...editing, employer: emp || null } : null);
-                  }}
-                >
-                  <option value="">-- Choisir un employé --</option>
-                  {employers.map(emp => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.nom_employer} {emp.prenom_employer}
-                    </option>
-                  ))}
-                </select>
+                className="border p-2 w-full"
+                value={editing?.employer && typeof editing.employer === "object" ? editing.employer.id : editing?.employer || ""}
+                onChange={e => {
+                  const emp = employers.find(emp => emp.id === e.target.value) || null;
+                  setEditing(editing => editing ? { ...editing, employer: emp } : null);
+                }}
+              >
+                <option value="">-- Choisir un employé --</option>
+                {employers.map(emp => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.nom_employer} {emp.prenom_employer}
+                  </option>
+                ))}
+              </select>
+
 
             </div>
             <div>
               <Label>Type de contrat</Label>
-              <select className="border p-2 w-full" value={typeof editing?.type_contrat === "object" ? editing?.type_contrat.id : editing?.type_contrat || ""} onChange={e => {
-                const t = types.find(t => t.id === e.target.value);
-                setEditing(editing => editing ? { ...editing, type_contrat: t || null } : null);
-              }}>
+              <select
+                className="border p-2 w-full"
+                value={editing?.type_contrat && typeof editing.type_contrat === "object" ? editing.type_contrat.id : editing?.type_contrat || ""}
+                onChange={e => {
+                  const t = types.find(t => t.id === e.target.value) || null;
+                  setEditing(editing => editing ? { ...editing, type_contrat: t } : null);
+                }}
+              >
                 <option value="">-- Choisir un type --</option>
-                {types.map(t => <option key={t.id} value={t.id}>{t.nom_type}</option>)}
+                {types.map(t => (
+                  <option key={t.id} value={t.id}>
+                    {t.nom_type}
+                  </option>
+                ))}
               </select>
+
             </div>
             <div>
               <Label>Nature du contrat</Label>
