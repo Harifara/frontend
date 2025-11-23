@@ -491,6 +491,57 @@ deleteTypeAchat: async (id: string) =>
     headers: getHeaders(await ensureKongToken()),
   }),
 
+// === ACHATS ===
+getAchats: async () =>
+  fetchWithLog(`${API_BASE_URL}/rh/achats/`, {
+    headers: getHeaders(await ensureKongToken()),
+  }),
+
+getAchat: async (id: string) =>
+  fetchWithLog(`${API_BASE_URL}/rh/achats/${cleanUUID(id)}/`, {
+    headers: getHeaders(await ensureKongToken()),
+  }),
+
+createAchat: async (payload: any) =>
+  fetchWithLog(`${API_BASE_URL}/rh/achats/`, {
+    method: "POST",
+    headers: getHeaders(await ensureKongToken()),
+    body: JSON.stringify(payload),
+  }),
+
+updateAchat: async (id: string, payload: any) =>
+  fetchWithLog(`${API_BASE_URL}/rh/achats/${cleanUUID(id)}/`, {
+    method: "PATCH",
+    headers: getHeaders(await ensureKongToken()),
+    body: JSON.stringify(payload),
+  }),
+
+deleteAchat: async (id: string) =>
+  fetchWithLog(`${API_BASE_URL}/rh/achats/${cleanUUID(id)}/`, {
+    method: "DELETE",
+    headers: getHeaders(await ensureKongToken()),
+  }),
+
+// === VALIDATION ACHAT (WorkFlow) ===
+approveAchat: async (id: string) =>
+  fetchWithLog(`${API_BASE_URL}/rh/achats/${cleanUUID(id)}/approve/`, {
+    method: "POST",
+    headers: getHeaders(await ensureKongToken()),
+  }),
+
+rejectAchat: async (id: string) =>
+  fetchWithLog(`${API_BASE_URL}/rh/achats/${cleanUUID(id)}/reject/`, {
+    method: "POST",
+    headers: getHeaders(await ensureKongToken()),
+  }),
+
+completeAchat: async (id: string) =>
+  fetchWithLog(`${API_BASE_URL}/rh/achats/${cleanUUID(id)}/complete/`, {
+    method: "POST",
+    headers: getHeaders(await ensureKongToken()),
+  }),
+
+
 
 };
 
