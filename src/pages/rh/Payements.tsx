@@ -42,7 +42,7 @@ const Payements = () => {
   const { toast } = useToast();
 
   const [form, setForm] = useState<Payement>({
-    montant: undefined,
+    montant: 0,
     status: "en_attente",
     mode_payement: undefined,
     location: undefined,
@@ -68,7 +68,6 @@ const Payements = () => {
       setElectricites(e);
       setContrats(c);
 
-      // Les objets liés sont déjà inclus par le serializer
       setPayements(p);
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Impossible de charger les paiements.", variant: "destructive" });
@@ -87,15 +86,34 @@ const Payements = () => {
       });
     } else {
       setEditingPayement(null);
-      setForm({ montant: undefined, status: "en_attente", mode_payement: undefined, location: undefined, electricite: undefined, contrat: undefined });
+      setForm({
+        montant: 0,
+        status: "en_attente",
+        mode_payement: undefined,
+        location: undefined,
+        electricite: undefined,
+        contrat: undefined,
+      });
     }
     setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => { setIsModalOpen(false); setEditingPayement(null); };
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingPayement(null);
+    setForm({
+      montant: 0,
+      status: "en_attente",
+      mode_payement: undefined,
+      location: undefined,
+      electricite: undefined,
+      contrat: undefined,
+    });
+  };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
+
     if (!form.location && !form.electricite && !form.contrat) {
       toast({ title: "Erreur", description: "Veuillez sélectionner au moins Location, Électricité ou Contrat.", variant: "destructive" });
       return;
@@ -103,12 +121,12 @@ const Payements = () => {
 
     try {
       const payload = {
-        montant: form.montant ?? null,
+        montant: form.montant,
         status: form.status,
-        mode_payement_id: form.mode_payement?.id ?? null,
-        location_id: form.location?.id ?? null,
-        electricite_id: form.electricite?.id ?? null,
-        contrat_id: form.contrat?.id ?? null,
+        mode_payement_id: form.mode_payement?.id || null,
+        location_id: form.location?.id || null,
+        electricite_id: form.electricite?.id || null,
+        contrat_id: form.contrat?.id || null,
       };
 
       if (editingPayement) {
@@ -237,7 +255,13 @@ const Payements = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="montant">Montant</Label>
-              <Input id="montant" type="number" step="0.01" value={form.montant ?? ""} onChange={(e) => setForm({ ...form, montant: parseFloat(e.target.value) || undefined })} />
+              <Input
+                id="montant"
+                type="number"
+                step="0.01"
+                value={form.montant ?? ""}
+                onChange={(e) => setForm({ ...form, montant: parseFloat(e.target.value) || 0 })}
+              />
             </div>
 
             <div>
@@ -255,33 +279,57 @@ const Payements = () => {
 
             <div>
               <Label>Mode de paiement</Label>
-              <Select value={form.mode_payement?.id ?? ""} onValueChange={(val) => setForm({ ...form, mode_payement: modes.find(m => m.id === val) })}>
+              <Select
+                value={form.mode_payement?.id ?? "none"}
+                onValueChange={(val) => setForm({ ...form, mode_payement: modes.find(m => m.id === val) })}
+              >
                 <SelectTrigger><SelectValue placeholder="Choisir un mode" /></SelectTrigger>
-                <SelectContent>{modes.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  <SelectItem value="none" disabled hidden>Choisir un mode</SelectItem>
+                  {modes.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
 
             <div>
               <Label>Location</Label>
-              <Select value={form.location?.id ?? ""} onValueChange={(val) => setForm({ ...form, location: locations.find(l => l.id === val) })}>
+              <Select
+                value={form.location?.id ?? "none"}
+                onValueChange={(val) => setForm({ ...form, location: locations.find(l => l.id === val) })}
+              >
                 <SelectTrigger><SelectValue placeholder="Choisir une location" /></SelectTrigger>
-                <SelectContent>{locations.map(l => <SelectItem key={l.id} value={l.id}>{l.nom}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  <SelectItem value="none" disabled hidden>Choisir une location</SelectItem>
+                  {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.nom}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
 
             <div>
               <Label>Électricité</Label>
-              <Select value={form.electricite?.id ?? ""} onValueChange={(val) => setForm({ ...form, electricite: electricites.find(e => e.id === val) })}>
+              <Select
+                value={form.electricite?.id ?? "none"}
+                onValueChange={(val) => setForm({ ...form, electricite: electricites.find(e => e.id === val) })}
+              >
                 <SelectTrigger><SelectValue placeholder="Choisir une électricité" /></SelectTrigger>
-                <SelectContent>{electricites.map(e => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  <SelectItem value="none" disabled hidden>Choisir une électricité</SelectItem>
+                  {electricites.map(e => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
 
             <div>
               <Label>Contrat</Label>
-              <Select value={form.contrat?.id ?? ""} onValueChange={(val) => setForm({ ...form, contrat: contrats.find(c => c.id === val) })}>
+              <Select
+                value={form.contrat?.id ?? "none"}
+                onValueChange={(val) => setForm({ ...form, contrat: contrats.find(c => c.id === val) })}
+              >
                 <SelectTrigger><SelectValue placeholder="Choisir un contrat" /></SelectTrigger>
-                <SelectContent>{contrats.map(c => <SelectItem key={c.id} value={c.id}>{c.reference}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  <SelectItem value="none" disabled hidden>Choisir un contrat</SelectItem>
+                  {contrats.map(c => <SelectItem key={c.id} value={c.id}>{c.reference}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
 
