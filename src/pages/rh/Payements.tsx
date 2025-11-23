@@ -36,6 +36,7 @@ interface Contrat {
 
 interface Payement {
   id?: string;
+  reference?: string;   // ← ICI !
   montant?: number;
   status: string;
   mode_payement?: ModePayement;
@@ -43,6 +44,7 @@ interface Payement {
   electricite?: Electricite;
   contrat?: Contrat;
 }
+
 
 const Payements = () => {
   const [payements, setPayements] = useState<Payement[]>([]);
@@ -237,6 +239,7 @@ const Payements = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="text-center">Référence</TableHead>
                 <TableHead className="text-center">Montant</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-center">Mode</TableHead>
@@ -249,6 +252,7 @@ const Payements = () => {
             <TableBody>
               {filteredPayements.length ? filteredPayements.map(p => (
                 <TableRow key={p.id}>
+                  <TableCell className="text-center">{p.reference}</TableCell>
                   <TableCell className="text-center">{p.montant ?? "-"}</TableCell>
                   <TableCell className="text-center">{p.status}</TableCell>
                   <TableCell className="text-center">
