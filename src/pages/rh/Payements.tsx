@@ -19,7 +19,13 @@ interface ModePayement {
 }
 
 interface Location { id: string; nom?: string; name?: string; label?: string; }
-interface Electricite { id: string; nom?: string; name?: string; label?: string; }
+interface Electricite {
+  id: string;
+  nom?: string;
+  name?: string;
+  label?: string;
+}
+
 interface Contrat { id: string; reference?: string; ref?: string; }
 
 interface Payement {
