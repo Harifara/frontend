@@ -465,6 +465,32 @@ completePayement: async (id: string) =>
     headers: getHeaders(await ensureKongToken()),
   }),
 
+  // === TYPE D'ACHAT ===
+getTypeAchats: async () =>
+  fetchWithLog(`${API_BASE_URL}/rh/type-achats/`, {
+    headers: getHeaders(await ensureKongToken()),
+  }),
+
+createTypeAchat: async (payload: any) =>
+  fetchWithLog(`${API_BASE_URL}/rh/type-achats/`, {
+    method: "POST",
+    headers: getHeaders(await ensureKongToken()),
+    body: JSON.stringify(payload),
+  }),
+
+updateTypeAchat: async (id: string, payload: any) =>
+  fetchWithLog(`${API_BASE_URL}/rh/type-achats/${cleanUUID(id)}/`, {
+    method: "PATCH",
+    headers: getHeaders(await ensureKongToken()),
+    body: JSON.stringify(payload),
+  }),
+
+deleteTypeAchat: async (id: string) =>
+  fetchWithLog(`${API_BASE_URL}/rh/type-achats/${cleanUUID(id)}/`, {
+    method: "DELETE",
+    headers: getHeaders(await ensureKongToken()),
+  }),
+
 
 };
 
