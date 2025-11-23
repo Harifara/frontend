@@ -1,26 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { rhApi } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import {
-  Table,
-  TableHeader,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableCell
-} from "@/components/ui/table";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { createContratPDF } from "@/lib/pdfContrat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
@@ -84,11 +70,7 @@ const ContratsPage: React.FC = () => {
   const fetchAll = async () => {
     setLoading(true);
     try {
-      const [c, e, t] = await Promise.all([
-        rhApi.getContrats(),
-        rhApi.getEmployes(),
-        rhApi.getTypeContrats()
-      ]);
+      const [c, e, t] = await Promise.all([rhApi.getContrats(), rhApi.getEmployes(), rhApi.getTypeContrats()]);
       const normalized: Contrat[] = (c || []).map((x: any) => ({
         ...x,
         employer_nom: typeof x.employer === "string"
