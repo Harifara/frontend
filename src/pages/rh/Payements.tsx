@@ -365,7 +365,7 @@ const Payements = () => {
             <div>
               <Label>Électricité</Label>
               <Select
-                value={form.electricite?.id || ""}
+                value={form.electricite?.id ?? ""}
                 onValueChange={(val) =>
                   setForm({
                     ...form,
@@ -382,11 +382,12 @@ const Payements = () => {
                   <SelectItem value="">Aucune</SelectItem>
                   {electricites.map((e) => (
                     <SelectItem key={e.id} value={e.id}>
-                      {e.nom || e.name || e.label || `Électricité ${e.id}`}
+                      {e.nom ?? e.name ?? e.label ?? `Électricité ${e.id}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+
             </div>
 
 
