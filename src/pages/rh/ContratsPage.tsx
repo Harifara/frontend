@@ -296,7 +296,7 @@ const ContratsPage: React.FC = () => {
               <Label>Employé</Label>
               <select className="border rounded p-2 w-full" value={typeof editing?.employer === "object" ? (editing.employer as Employer).id : editing?.employer ?? ""} onChange={e => {
                 const emp = employers.find(emp => emp.id === e.target.value);
-                setEditing(editing => editing ? { ...editing, employer: emp ?? e.target.value } : null);
+                setEditing(prev => prev ? { ...prev, employer: emp ?? e.target.value } : null);
               }}>
                 <option value="">Sélectionner</option>
                 {employers.map(emp => <option key={emp.id} value={emp.id}>{emp.nom_employer} {emp.prenom_employer}</option>)}
@@ -305,7 +305,7 @@ const ContratsPage: React.FC = () => {
 
             <div>
               <Label>Nature</Label>
-              <select className="border rounded p-2 w-full" value={editing?.nature_contrat ?? "emploi"} onChange={e => setEditing(editing => editing ? { ...editing, nature_contrat: e.target.value } : null)}>
+              <select className="border rounded p-2 w-full" value={editing?.nature_contrat ?? "emploi"} onChange={e => setEditing(prev => prev ? { ...prev, nature_contrat: e.target.value } : null)}>
                 {NATURE_OPTIONS.map(n => <option key={n} value={n}>{natureLabels[n]}</option>)}
               </select>
             </div>
@@ -314,7 +314,7 @@ const ContratsPage: React.FC = () => {
               <Label>Type contrat</Label>
               <select className="border rounded p-2 w-full" value={typeof editing?.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing?.type_contrat ?? ""} onChange={e => {
                 const t = types.find(t => t.id === e.target.value);
-                setEditing(editing => editing ? { ...editing, type_contrat: t ?? e.target.value } : null);
+                setEditing(prev => prev ? { ...prev, type_contrat: t ?? e.target.value } : null);
               }}>
                 <option value="">Sélectionner</option>
                 {types.map(t => <option key={t.id} value={t.id}>{t.nom_type}</option>)}
@@ -323,28 +323,28 @@ const ContratsPage: React.FC = () => {
 
             <div>
               <Label>Date début</Label>
-              <Input type="date" value={editing?.date_debut_contrat ?? ""} onChange={e => setEditing(editing => editing ? { ...editing, date_debut_contrat: e.target.value } : null)} />
+              <Input type="date" value={editing?.date_debut_contrat ?? ""} onChange={e => setEditing(prev => prev ? { ...prev, date_debut_contrat: e.target.value } : null)} />
             </div>
 
             <div>
               <Label>Date fin</Label>
-              <Input type="date" value={editing?.date_fin_contrat ?? ""} onChange={e => setEditing(editing => editing ? { ...editing, date_fin_contrat: e.target.value } : null)} />
+              <Input type="date" value={editing?.date_fin_contrat ?? ""} onChange={e => setEditing(prev => prev ? { ...prev, date_fin_contrat: e.target.value } : null)} />
             </div>
 
             {editing?.nature_contrat === "emploi" ? (
               <div>
                 <Label>Salaire</Label>
-                <Input type="number" value={editing.salaire ?? ""} onChange={e => setEditing(editing => editing ? { ...editing, salaire: Number(e.target.value) } : null)} />
+                <Input type="number" value={editing?.salaire ?? ""} onChange={e => setEditing(prev => prev ? { ...prev, salaire: Number(e.target.value) } : null)} />
               </div>
             ) : (
               <>
                 <div>
                   <Label>Montant total</Label>
-                  <Input type="number" value={editing.montant_total ?? ""} onChange={e => setEditing(editing => editing ? { ...editing, montant_total: Number(e.target.value) } : null)} />
+                  <Input type="number" value={editing?.montant_total ?? ""} onChange={e => setEditing(prev => prev ? { ...prev, montant_total: Number(e.target.value) } : null)} />
                 </div>
                 <div>
                   <Label>Description mission</Label>
-                  <textarea className="border rounded p-2 w-full" value={editing.description_mission ?? ""} onChange={e => setEditing(editing => editing ? { ...editing, description_mission: e.target.value } : null)} />
+                  <textarea className="border rounded p-2 w-full" value={editing?.description_mission ?? ""} onChange={e => setEditing(prev => prev ? { ...prev, description_mission: e.target.value } : null)} />
                 </div>
               </>
             )}
