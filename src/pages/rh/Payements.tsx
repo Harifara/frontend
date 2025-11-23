@@ -256,7 +256,10 @@ const Payements = () => {
                   </TableCell>
 
 
-                  <TableCell className="text-center">{p.contrat?.reference ?? "-"}</TableCell>
+                  <TableCell className="text-center">
+                    {p.contrat?.reference || p.contrat?.ref || "-"}
+                  </TableCell>
+
                   <TableCell className="text-center space-x-2">
                     <Button size="sm" variant="outline" onClick={() => handleOpenModal(p)}>Modifier</Button>
                     <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(p.id!)}>Supprimer</Button>
@@ -398,22 +401,18 @@ const Payements = () => {
             <div>
               <Label>Contrat</Label>
               <Select
-                value={form.contrat?.id ?? ""}
+                value={form.contrat?.id ?? "null"}
                 onValueChange={(val) =>
                   setForm({
                     ...form,
-                    contrat: val === ""
-                      ? undefined
-                      : contrats.find((c) => c.id === val),
+                    contrat: val === "null" ? undefined : contrats.find(c => c.id === val)
                   })
                 }
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir un contrat" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Choisir un contrat" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucun</SelectItem>
-                  {contrats.map((c) => (
+                  <SelectItem value="null">Aucun</SelectItem>
+                  {contrats.map(c => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.reference || c.ref || `Contrat ${c.id}`}
                     </SelectItem>
@@ -421,6 +420,7 @@ const Payements = () => {
                 </SelectContent>
               </Select>
             </div>
+
 
 
             <DialogFooter>
