@@ -247,123 +247,141 @@ const Payements = () => {
       </Card>
 
       {/* Modal Ajout/Modification */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{editingPayement ? "Modifier le paiement" : "Créer un paiement"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="montant">Montant</Label>
-              <Input
-                id="montant"
-                type="number"
-                step="0.01"
-                value={form.montant ?? ""}
-                onChange={(e) => setForm({ ...form, montant: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
+      {/* Modal Ajout/Modification */}
+<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+  <DialogContent className="sm:max-w-[500px]">
+    <DialogHeader>
+      <DialogTitle>{editingPayement ? "Modifier le paiement" : "Créer un paiement"}</DialogTitle>
+    </DialogHeader>
 
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select value={form.status} onValueChange={(val) => setForm({ ...form, status: val })}>
-                <SelectTrigger><SelectValue placeholder="Choisir le status" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en_attente">En attente</SelectItem>
-                  <SelectItem value="complete">Complété</SelectItem>
-                  <SelectItem value="echoue">Échoué</SelectItem>
-                  <SelectItem value="annule">Annulé</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
 
-            <div>
-              <Label>Mode de paiement</Label>
-              <Select
-                value={form.mode_payement?.id || ""}
-                onValueChange={(val) =>
-                  setForm({
-                    ...form,
-                    mode_payement: modes.find((m) => m.id === val) || undefined,
-                  })
-                }
-              >
-                <SelectTrigger><SelectValue placeholder="Choisir un mode" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Aucun</SelectItem>
-                  {modes.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      {/* Montant */}
+      <div>
+        <Label htmlFor="montant">Montant</Label>
+        <Input
+          id="montant"
+          type="number"
+          step="0.01"
+          value={form.montant ?? ""}
+          onChange={(e) => setForm({ ...form, montant: parseFloat(e.target.value) || 0 })}
+        />
+      </div>
 
-            </div>
+      {/* Status */}
+      <div>
+        <Label>Status</Label>
+        <Select
+          value={form.status}
+          onValueChange={(val) => setForm({ ...form, status: val })}
+        >
+          <SelectTrigger><SelectValue placeholder="Choisir le status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="en_attente">En attente</SelectItem>
+            <SelectItem value="complete">Complété</SelectItem>
+            <SelectItem value="echoue">Échoué</SelectItem>
+            <SelectItem value="annule">Annulé</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
 
-            <div>
-              <Label>Location</Label>
-              <Select
-                value={form.location?.id ?? "none"}
-                onValueChange={(val) => setForm({ ...form, location: locations.find(l => l.id === val) })}
-              >
-                <SelectTrigger><SelectValue placeholder="Choisir une location" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none" disabled hidden>Choisir une location</SelectItem>
-                  {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.nom}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+      {/* Mode de paiement */}
+      <div>
+        <Label>Mode de paiement</Label>
+        <Select
+          value={form.mode_payement?.id ?? "null"}
+          onValueChange={(val) =>
+            setForm({
+              ...form,
+              mode_payement: val === "null" ? undefined : modes.find((m) => m.id === val),
+            })
+          }
+        >
+          <SelectTrigger><SelectValue placeholder="Choisir un mode" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="null">Aucun</SelectItem>
+            {modes.map((m) => (
+              <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-            <div>
-              <Label>Électricité</Label>
-              <Select
-                value={form.electricite?.id || ""}
-                onValueChange={(val) =>
-                  setForm({
-                    ...form,
-                    electricite: electricites.find((e) => e.id === val) || undefined,
-                  })
-                }
-              >
-                <SelectTrigger><SelectValue placeholder="Choisir une électricité" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Aucun</SelectItem>
-                  {electricites.map((e) => (
-                    <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      {/* Location */}
+      <div>
+        <Label>Location</Label>
+        <Select
+          value={form.location?.id ?? "null"}
+          onValueChange={(val) =>
+            setForm({
+              ...form,
+              location: val === "null" ? undefined : locations.find((l) => l.id === val),
+            })
+          }
+        >
+          <SelectTrigger><SelectValue placeholder="Choisir une location" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="null">Aucune</SelectItem>
+            {locations.map((l) => (
+              <SelectItem key={l.id} value={l.id}>{l.nom}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-            </div>
+      {/* Électricité */}
+      <div>
+        <Label>Électricité</Label>
+        <Select
+          value={form.electricite?.id ?? "null"}
+          onValueChange={(val) =>
+            setForm({
+              ...form,
+              electricite: val === "null" ? undefined : electricites.find((e) => e.id === val),
+            })
+          }
+        >
+          <SelectTrigger><SelectValue placeholder="Choisir une électricité" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="null">Aucune</SelectItem>
+            {electricites.map((e) => (
+              <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-            <div>
-              <Label>Contrat</Label>
-              <Select
-                value={form.contrat?.id || ""}
-                onValueChange={(val) =>
-                  setForm({
-                    ...form,
-                    contrat: contrats.find((c) => c.id === val) || undefined,
-                  })
-                }
-              >
-                <SelectTrigger><SelectValue placeholder="Choisir un contrat" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Aucun</SelectItem>
-                  {contrats.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.reference}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+      {/* Contrat */}
+      <div>
+        <Label>Contrat</Label>
+        <Select
+          value={form.contrat?.id ?? "null"}
+          onValueChange={(val) =>
+            setForm({
+              ...form,
+              contrat: val === "null" ? undefined : contrats.find((c) => c.id === val),
+            })
+          }
+        >
+          <SelectTrigger><SelectValue placeholder="Choisir un contrat" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="null">Aucun</SelectItem>
+            {contrats.map((c) => (
+              <SelectItem key={c.id} value={c.id}>{c.reference}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-            </div>
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={handleCloseModal}>Annuler</Button>
+        <Button type="submit">{editingPayement ? "Mettre à jour" : "Créer"}</Button>
+      </DialogFooter>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseModal}>Annuler</Button>
-              <Button type="submit">{editingPayement ? "Mettre à jour" : "Créer"}</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+    </form>
+  </DialogContent>
+</Dialog>
+
 
       {/* Modal Suppression */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
