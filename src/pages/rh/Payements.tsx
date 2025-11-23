@@ -176,7 +176,7 @@ const Payements = () => {
       p.status,
       p.mode_payement?.mode_payement ?? "-",
       p.location?.nom ?? p.location?.name ?? "-",
-      p.electricite?.nom ?? p.electricite?.name ?? "-",
+      p.electricite?.nom || p.electricite?.name || p.electricite?.label || "-",
       p.contrat?.reference ?? "-",
     ]);
     const columns = ["Montant", "Status", "Mode", "Location", "Électricité", "Contrat"];
@@ -243,7 +243,10 @@ const Payements = () => {
                   </TableCell>
 
                   <TableCell className="text-center">{p.location?.nom ?? p.location?.name ?? "-"}</TableCell>
-                  <TableCell className="text-center">{p.electricite?.nom ?? p.electricite?.name ?? "-"}</TableCell>
+                  <TableCell className="text-center">
+                    {p.electricite?.nom || p.electricite?.name || p.electricite?.label || "-"}
+                  </TableCell>
+
                   <TableCell className="text-center">{p.contrat?.reference ?? "-"}</TableCell>
                   <TableCell className="text-center space-x-2">
                     <Button size="sm" variant="outline" onClick={() => handleOpenModal(p)}>Modifier</Button>
@@ -356,27 +359,30 @@ const Payements = () => {
             <div>
               <Label>Électricité</Label>
               <Select
-                value={form.electricite?.id ?? "null"}
+                value={form.electricite?.id || ""}
                 onValueChange={(val) =>
                   setForm({
                     ...form,
-                    electricite: val === "null"
-                      ? undefined
-                      : electricites.find((e) => e.id === val),
+                    electricite: val
+                      ? electricites.find((e) => e.id === val)
+                      : undefined,
                   })
                 }
               >
-                <SelectTrigger><SelectValue placeholder="Choisir une électricité" /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir une électricité" />
+                </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="null">Aucune</SelectItem>
+                  <SelectItem value="">Aucune</SelectItem>
                   {electricites.map((e) => (
                     <SelectItem key={e.id} value={e.id}>
-                      {e.nom ?? e.name ?? e.label ?? ("Electricité " + e.id)}
+                      {e.nom || e.name || e.label || `Électricité ${e.id}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
+
 
             {/* Contrat */}
             <div>
