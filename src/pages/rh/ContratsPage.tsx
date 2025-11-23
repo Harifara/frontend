@@ -304,9 +304,7 @@ const ContratsPage: React.FC = () => {
                     <TableCell>{c.date_debut_contrat}</TableCell>
                     <TableCell>{c.date_fin_contrat || "-"}</TableCell>
                     <TableCell>
-                      {c.nature_contrat === "emploi"
-                        ? (c.salaire != null && c.salaire !== "" ? new Intl.NumberFormat("fr-FR").format(Number(c.salaire)) + " Ar" : "-")
-                        : (c.montant_total != null && c.montant_total !== "" ? new Intl.NumberFormat("fr-FR").format(Number(c.montant_total)) + " Ar" : "-")}
+                      {c.salaire != null && c.salaire !== "" ? new Intl.NumberFormat("fr-FR").format(Number(c.salaire)) + " Ar" : "-"}
                     </TableCell>
                     <TableCell className="space-x-2">
                       <Button size="sm" onClick={() => openEdit(c)}>Éditer</Button>
