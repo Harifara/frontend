@@ -12,28 +12,49 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import * as XLSX from "xlsx";
 import { createPDFDoc } from "@/lib/pdfTemplate";
 
+interface ModePayement {
+  id: string;
+  nom: string;
+}
+
+interface Location {
+  id: string;
+  nom: string;
+}
+
+interface Electricite {
+  id: string;
+  nom: string;
+}
+
+interface Contrat {
+  id: string;
+  reference: string;
+}
+
 interface Payement {
   id?: string;
   montant?: number;
   status: string;
-  mode_payement?: { id: string; nom: string };
-  location?: { id: string; nom: string };
-  electricite?: { id: string; nom: string };
-  contrat?: { id: string; reference: string };
+  mode_payement?: ModePayement;
+  location?: Location;
+  electricite?: Electricite;
+  contrat?: Contrat;
 }
 
 const Payements = () => {
   const [payements, setPayements] = useState<Payement[]>([]);
-  const [modes, setModes] = useState<{ id: string; nom: string }[]>([]);
-  const [locations, setLocations] = useState<{ id: string; nom: string }[]>([]);
-  const [electricites, setElectricites] = useState<{ id: string; nom: string }[]>([]);
-  const [contrats, setContrats] = useState<{ id: string; reference: string }[]>([]);
+  const [modes, setModes] = useState<ModePayement[]>([]);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [electricites, setElectricites] = useState<Electricite[]>([]);
+  const [contrats, setContrats] = useState<Contrat[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingPayement, setEditingPayement] = useState<Payement | null>(null);
   const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
+
   const [form, setForm] = useState<Payement>({
     montant: undefined,
     status: "en_attente",
@@ -106,10 +127,10 @@ const Payements = () => {
       const payload: any = {
         montant: form.montant ?? null,
         status: form.status,
-        mode_payement_id: form.mode_payement?.id,
-        location_id: form.location?.id,
-        electricite_id: form.electricite?.id,
-        contrat_id: form.contrat?.id,
+        mode_payement_id: form.mode_payement?.id ?? null,
+        location_id: form.location?.id ?? null,
+        electricite_id: form.electricite?.id ?? null,
+        contrat_id: form.contrat?.id ?? null,
       };
 
       if (editingPayement) {
@@ -119,6 +140,7 @@ const Payements = () => {
         await rhApi.createPayement(payload);
         toast({ title: "Succès", description: "Paiement créé." });
       }
+
       handleCloseModal();
       fetchData();
     } catch (err: any) {
@@ -158,7 +180,7 @@ const Payements = () => {
       p.mode_payement?.nom ?? "-",
       p.location?.nom ?? "-",
       p.electricite?.nom ?? "-",
-      p.contrat?.reference ?? "-"
+      p.contrat?.reference ?? "-",
     ]);
     const columns = ["Montant", "Status", "Mode", "Location", "Électricité", "Contrat"];
     await createPDFDoc("Liste des Paiements", data, columns, "payements.pdf");
@@ -278,7 +300,7 @@ const Payements = () => {
               <Label>Mode de paiement</Label>
               <Select value={form.mode_payement?.id ?? ""} onValueChange={(val) => {
                 const selected = modes.find(m => m.id === val);
-                if (selected) setForm({ ...form, mode_payement: selected });
+                setForm({ ...form, mode_payement: selected });
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir un mode" />
@@ -293,7 +315,7 @@ const Payements = () => {
               <Label>Location</Label>
               <Select value={form.location?.id ?? ""} onValueChange={(val) => {
                 const selected = locations.find(l => l.id === val);
-                if (selected) setForm({ ...form, location: selected });
+                setForm({ ...form, location: selected });
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir une location" />
@@ -308,7 +330,7 @@ const Payements = () => {
               <Label>Électricité</Label>
               <Select value={form.electricite?.id ?? ""} onValueChange={(val) => {
                 const selected = electricites.find(e => e.id === val);
-                if (selected) setForm({ ...form, electricite: selected });
+                setForm({ ...form, electricite: selected });
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir une électricité" />
@@ -323,7 +345,7 @@ const Payements = () => {
               <Label>Contrat</Label>
               <Select value={form.contrat?.id ?? ""} onValueChange={(val) => {
                 const selected = contrats.find(c => c.id === val);
-                if (selected) setForm({ ...form, contrat: selected });
+                setForm({ ...form, contrat: selected });
               }}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir un contrat" />
