@@ -12,25 +12,10 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import * as XLSX from "xlsx";
 import { createPDFDoc } from "@/lib/pdfTemplate";
 
-interface ModePayement {
-  id: string;
-  nom: string;
-}
-
-interface Location {
-  id: string;
-  nom: string;
-}
-
-interface Electricite {
-  id: string;
-  nom: string;
-}
-
-interface Contrat {
-  id: string;
-  reference: string;
-}
+interface ModePayement { id: string; nom: string; }
+interface Location { id: string; nom: string; }
+interface Electricite { id: string; nom: string; }
+interface Contrat { id: string; reference: string; }
 
 interface Payement {
   id?: string;
@@ -40,6 +25,10 @@ interface Payement {
   location?: Location;
   electricite?: Electricite;
   contrat?: Contrat;
+  mode_payement_id?: string;
+  location_id?: string;
+  electricite_id?: string;
+  contrat_id?: string;
 }
 
 const Payements = () => {
@@ -54,6 +43,7 @@ const Payements = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingPayement, setEditingPayement] = useState<Payement | null>(null);
   const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const [form, setForm] = useState<Payement>({
     montant: undefined,
@@ -64,11 +54,7 @@ const Payements = () => {
     contrat: undefined,
   });
 
-  const { toast } = useToast();
-
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -80,40 +66,33 @@ const Payements = () => {
         rhApi.getElectricites(),
         rhApi.getContrats(),
       ]);
-      setPayements(p);
+
+      // Mapper IDs vers objets complets
+      const mappedPayements = p.map((pay: any) => ({
+        ...pay,
+        mode_payement: m.find(mm => mm.id === pay.mode_payement_id) || undefined,
+        location: l.find(ll => ll.id === pay.location_id) || undefined,
+        electricite: e.find(ee => ee.id === pay.electricite_id) || undefined,
+        contrat: c.find(cc => cc.id === pay.contrat_id) || undefined,
+      }));
+
+      setPayements(mappedPayements);
       setModes(m);
       setLocations(l);
       setElectricites(e);
       setContrats(c);
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Impossible de charger les paiements.", variant: "destructive" });
-    } finally {
-      setIsLoading(false);
-    }
+    } finally { setIsLoading(false); }
   };
 
   const handleOpenModal = (payement?: Payement) => {
-    if (payement) {
-      setEditingPayement(payement);
-      setForm(payement);
-    } else {
-      setEditingPayement(null);
-      setForm({
-        montant: undefined,
-        status: "en_attente",
-        mode_payement: undefined,
-        location: undefined,
-        electricite: undefined,
-        contrat: undefined,
-      });
-    }
+    if (payement) { setEditingPayement(payement); setForm(payement); }
+    else { setEditingPayement(null); setForm({ montant: undefined, status: "en_attente", mode_payement: undefined, location: undefined, electricite: undefined, contrat: undefined }); }
     setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingPayement(null);
-  };
+  const handleCloseModal = () => { setIsModalOpen(false); setEditingPayement(null); };
 
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -124,7 +103,7 @@ const Payements = () => {
     }
 
     try {
-      const payload: any = {
+      const payload = {
         montant: form.montant ?? null,
         status: form.status,
         mode_payement_id: form.mode_payement?.id ?? null,
@@ -148,23 +127,12 @@ const Payements = () => {
     }
   };
 
-  const handleOpenDeleteModal = (id: string) => {
-    setSelectedIdToDelete(id);
-    setIsDeleteModalOpen(true);
-  };
-
+  const handleOpenDeleteModal = (id: string) => { setSelectedIdToDelete(id); setIsDeleteModalOpen(true); };
   const handleDelete = async () => {
     if (!selectedIdToDelete) return;
-    try {
-      setIsDeleteModalOpen(false);
-      await rhApi.deletePayement(selectedIdToDelete);
-      toast({ title: "Succès", description: "Paiement supprimé." });
-      fetchData();
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Erreur lors de la suppression.", variant: "destructive" });
-    } finally {
-      setSelectedIdToDelete(null);
-    }
+    try { setIsDeleteModalOpen(false); await rhApi.deletePayement(selectedIdToDelete); toast({ title: "Succès", description: "Paiement supprimé." }); fetchData(); }
+    catch (err: any) { toast({ title: "Erreur", description: err.message || "Erreur lors de la suppression.", variant: "destructive" }); }
+    finally { setSelectedIdToDelete(null); }
   };
 
   const filteredPayements = payements.filter(p =>
@@ -212,20 +180,13 @@ const Payements = () => {
       </div>
 
       <div className="flex gap-4">
-        <Input
-          placeholder="Rechercher par montant, status ou mode..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1"
-        />
+        <Input placeholder="Rechercher par montant, status ou mode..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="flex-1" />
         <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
         <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Liste des Paiements</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Liste des Paiements</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
@@ -272,21 +233,13 @@ const Payements = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label htmlFor="montant">Montant</Label>
-              <Input
-                id="montant"
-                type="number"
-                step="0.01"
-                value={form.montant ?? ""}
-                onChange={(e) => setForm({ ...form, montant: parseFloat(e.target.value) || undefined })}
-              />
+              <Input id="montant" type="number" step="0.01" value={form.montant ?? ""} onChange={(e) => setForm({ ...form, montant: parseFloat(e.target.value) || undefined })} />
             </div>
 
             <div>
               <Label htmlFor="status">Status</Label>
               <Select value={form.status} onValueChange={(val) => setForm({ ...form, status: val })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir le status" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Choisir le status" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="en_attente">En attente</SelectItem>
                   <SelectItem value="complete">Complété</SelectItem>
@@ -298,61 +251,33 @@ const Payements = () => {
 
             <div>
               <Label>Mode de paiement</Label>
-              <Select value={form.mode_payement?.id ?? ""} onValueChange={(val) => {
-                const selected = modes.find(m => m.id === val);
-                setForm({ ...form, mode_payement: selected });
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir un mode" />
-                </SelectTrigger>
-                <SelectContent>
-                  {modes.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
-                </SelectContent>
+              <Select value={form.mode_payement?.id ?? ""} onValueChange={(val) => setForm({ ...form, mode_payement: modes.find(m => m.id === val) })}>
+                <SelectTrigger><SelectValue placeholder="Choisir un mode" /></SelectTrigger>
+                <SelectContent>{modes.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
             <div>
               <Label>Location</Label>
-              <Select value={form.location?.id ?? ""} onValueChange={(val) => {
-                const selected = locations.find(l => l.id === val);
-                setForm({ ...form, location: selected });
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir une location" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map(l => <SelectItem key={l.id} value={l.id}>{l.nom}</SelectItem>)}
-                </SelectContent>
+              <Select value={form.location?.id ?? ""} onValueChange={(val) => setForm({ ...form, location: locations.find(l => l.id === val) })}>
+                <SelectTrigger><SelectValue placeholder="Choisir une location" /></SelectTrigger>
+                <SelectContent>{locations.map(l => <SelectItem key={l.id} value={l.id}>{l.nom}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
             <div>
               <Label>Électricité</Label>
-              <Select value={form.electricite?.id ?? ""} onValueChange={(val) => {
-                const selected = electricites.find(e => e.id === val);
-                setForm({ ...form, electricite: selected });
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir une électricité" />
-                </SelectTrigger>
-                <SelectContent>
-                  {electricites.map(e => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}
-                </SelectContent>
+              <Select value={form.electricite?.id ?? ""} onValueChange={(val) => setForm({ ...form, electricite: electricites.find(e => e.id === val) })}>
+                <SelectTrigger><SelectValue placeholder="Choisir une électricité" /></SelectTrigger>
+                <SelectContent>{electricites.map(e => <SelectItem key={e.id} value={e.id}>{e.nom}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
             <div>
               <Label>Contrat</Label>
-              <Select value={form.contrat?.id ?? ""} onValueChange={(val) => {
-                const selected = contrats.find(c => c.id === val);
-                setForm({ ...form, contrat: selected });
-              }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir un contrat" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contrats.map(c => <SelectItem key={c.id} value={c.id}>{c.reference}</SelectItem>)}
-                </SelectContent>
+              <Select value={form.contrat?.id ?? ""} onValueChange={(val) => setForm({ ...form, contrat: contrats.find(c => c.id === val) })}>
+                <SelectTrigger><SelectValue placeholder="Choisir un contrat" /></SelectTrigger>
+                <SelectContent>{contrats.map(c => <SelectItem key={c.id} value={c.id}>{c.reference}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
@@ -367,9 +292,7 @@ const Payements = () => {
       {/* Modal Suppression */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Confirmer la suppression</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Confirmer la suppression</DialogTitle></DialogHeader>
           <p>Êtes-vous sûr de vouloir supprimer ce paiement ? Cette action est irréversible.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Annuler</Button>
