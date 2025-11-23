@@ -365,13 +365,11 @@ const Payements = () => {
             <div>
               <Label>Électricité</Label>
               <Select
-                value={form.electricite?.id ?? ""}
+                value={form.electricite?.id ?? "null"}  // correspond à "Aucune"
                 onValueChange={(val) =>
                   setForm({
                     ...form,
-                    electricite: val
-                      ? electricites.find((e) => e.id === val)
-                      : undefined,
+                    electricite: val === "null" ? undefined : electricites.find((e) => e.id === val),
                   })
                 }
               >
@@ -379,7 +377,7 @@ const Payements = () => {
                   <SelectValue placeholder="Choisir une électricité" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Aucune</SelectItem>
+                  <SelectItem value="null">Aucune</SelectItem>
                   {electricites.map((e) => (
                     <SelectItem key={e.id} value={e.id}>
                       {e.nom ?? e.name ?? e.label ?? `Électricité ${e.id}`}
@@ -387,6 +385,7 @@ const Payements = () => {
                   ))}
                 </SelectContent>
               </Select>
+
 
             </div>
 
