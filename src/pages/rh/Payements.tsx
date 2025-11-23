@@ -162,6 +162,14 @@ const Payements = () => {
     }
   };
 
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const handleOpenDetailModal = (payement: Payement) => {
+      setEditingPayement(payement);
+      setIsDetailModalOpen(true);
+    };
+
+
+
   const handleOpenDeleteModal = (id: string) => { setSelectedIdToDelete(id); setIsDeleteModalOpen(true); };
   const handleDelete = async () => {
     if (!selectedIdToDelete) return;
@@ -272,6 +280,7 @@ const Payements = () => {
 
 
                   <TableCell className="text-center space-x-2">
+                    <Button size="sm" variant="default" onClick={() => handleOpenDetailModal(p)}>Détails</Button>
                     <Button size="sm" variant="outline" onClick={() => handleOpenModal(p)}>Modifier</Button>
                     <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(p.id!)}>Supprimer</Button>
                   </TableCell>
@@ -436,6 +445,8 @@ const Payements = () => {
               <Button type="submit">{editingPayement ? "Mettre à jour" : "Créer"}</Button>
             </DialogFooter>
 
+
+
           </form>
         </DialogContent>
       </Dialog>
@@ -451,6 +462,30 @@ const Payements = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+
+      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+  <DialogContent className="sm:max-w-[500px]">
+    <DialogHeader>
+      <DialogTitle>Détails du paiement</DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-2">
+      <p><strong>Référence :</strong> {editingPayement?.reference}</p>
+      <p><strong>Montant :</strong> {editingPayement?.montant ?? "-"}</p>
+      <p><strong>Status :</strong> {editingPayement?.status}</p>
+      <p><strong>Mode de paiement :</strong> {editingPayement?.mode_payement?.mode_payement ?? "-"}</p>
+      <p><strong>Location :</strong> {editingPayement?.location?.nom ?? editingPayement?.location?.name ?? "-"}</p>
+      <p><strong>Électricité :</strong> {editingPayement?.electricite?.numero_compteur ?? "-"} ({editingPayement?.electricite?.fournisseur ?? ""})</p>
+      <p><strong>Salaire :</strong> {editingPayement?.contrat ? `${editingPayement.contrat.employer_nom} - ${editingPayement.contrat.salaire?.toLocaleString()} Ar` : "-"}</p>
+    </div>
+
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>Fermer</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
 
     </div>
   );
