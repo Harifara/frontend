@@ -381,4 +381,4 @@ export default function Achats() {
   );
 }
 
-export default AchatPages;
+export default Achats;
