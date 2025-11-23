@@ -223,12 +223,14 @@ const Payements = () => {
   const exportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
       filteredPayements.map(p => ({
+        Reference: p.reference,
         Montant: p.montant ?? "-",
         Status: p.status,
         Mode: p.mode_payement?.nom ?? p.mode_payement?.name ?? "-",
         Location: p.location?.nom ?? p.location?.name ?? "-",
         Electricite: p.electricite?.nom ?? p.electricite?.name ?? "-",
         Contrat: p.contrat?.employer_nom ?? "-",
+        
       }))
     );
     const workbook = XLSX.utils.book_new();
