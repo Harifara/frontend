@@ -296,16 +296,7 @@ const Payements = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
 
             {/* Montant */}
-            <div>
-              <Label htmlFor="montant">Montant</Label>
-              <Input
-                id="montant"
-                type="number"
-                step="0.01"
-                value={form.montant ?? ""}
-                onChange={(e) => setForm({ ...form, montant: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
+          
 
             {/* Status */}
             <div>
@@ -410,31 +401,30 @@ const Payements = () => {
             <div>
               <Label>Salaire</Label>
               <Select
-                value={form.contrat?.employer_nom ?? "null"}
+                value={form.contrat?.id ?? "null"}
                 onValueChange={(val) =>
                   setForm({
                     ...form,
                     contrat:
                       val === "null"
                         ? undefined
-                        : contrats.find((c) => c.employer_nom === val),
+                        : contrats.find((c) => c.id === val),
                   })
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir un contrat" />
                 </SelectTrigger>
-
                 <SelectContent>
                   <SelectItem value="null">Aucun</SelectItem>
-
                   {contrats.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.employer_nom } — {c.salaire?.toLocaleString()} Ar
+                      {c.employer_nom} — {c.salaire?.toLocaleString()} Ar
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+
             </div>
 
 
