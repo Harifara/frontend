@@ -260,7 +260,13 @@ const ContratsPage: React.FC = () => {
                   <TableRow key={c.id}>
                     <TableCell>{c.employer_nom ?? "-"}</TableCell>
                     <TableCell>{c.type_nom ?? "-"}</TableCell>
-                    <TableCell>{natureLabels[c.nature_contrat] ?? "-"}</TableCell>
+                    <TableCell>
+                      {c.nature_contrat === "emploi" 
+                        ? c.salaire !== null && c.salaire !== undefined ? String(c.salaire) : "-" 
+                        : c.montant_total !== null && c.montant_total !== undefined ? String(c.montant_total) : "-"
+                      }
+                    </TableCell>
+
                     <TableCell><Badge className={STATUS_BADGE(c.status_contrat)}>{c.status_contrat}</Badge></TableCell>
                     <TableCell>{c.date_debut_contrat}</TableCell>
                     <TableCell>{c.date_fin_contrat ?? "-"}</TableCell>
