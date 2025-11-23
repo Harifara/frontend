@@ -536,7 +536,7 @@ const ContratsPage: React.FC = () => {
             </div>
 
             {/* Salaire (seulement pour EMPLOI) */}
-            {editing?.nature_contrat === "emploi" && (
+            {editing?.nature_contrat === "emploi"  || editing?.nature_contrat !== "emploi" && (
               <div>
                 <Label>Salaire</Label>
                 <Input
