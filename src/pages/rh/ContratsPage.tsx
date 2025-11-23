@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 
 // Types
-type Employer = { id: string; nom_employer: string; prenom_employer: string; email?: string };
+type Employer = { id: string; nom_employer: string; prenom_employer: string };
 type TypeContrat = { id: string; nom_type: string; duree_max_jours?: number | null };
 const NATURE_OPTIONS = ["emploi", "prestation", "mission"];
 const natureLabels: Record<string, string> = {
@@ -286,101 +286,78 @@ const ContratsPage: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* MODAL CREATE/EDIT */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editing?.id ? "Éditer le contrat" : "Ajouter un contrat"}</DialogTitle>
-            <DialogDescription>Remplissez le formulaire pour enregistrer le contrat.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 mt-2">
+          <DialogHeader><DialogTitle>{editing?.id ? "Modifier le contrat" : "Créer un contrat"}</DialogTitle></DialogHeader>
+
+          <div className="grid gap-3 py-2">
             <div>
               <Label>Employé</Label>
-              <select
-                className="border p-2 w-full"
-                value={editing?.employer && typeof editing.employer === "object" ? editing.employer.id : editing?.employer || ""}
-                onChange={e => {
-                  const emp = employers.find(emp => emp.id === e.target.value) || null;
-                  setEditing(editing => editing ? { ...editing, employer: emp } : null);
-                }}
-              >
-                <option value="">-- Choisir un employé --</option>
-                {employers.map(emp => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.nom_employer} {emp.prenom_employer}
-                  </option>
-                ))}
+              <select className="border rounded p-2 w-full" value={typeof editing?.employer === "object" ? (editing.employer as Employer).id : editing?.employer ?? ""} onChange={e => {
+                const emp = employers.find(emp => emp.id === e.target.value);
+                setEditing(editing => editing ? { ...editing, employer: emp ?? e.target.value } : null);
+              }}>
+                <option value="">Sélectionner</option>
+                {employers.map(emp => <option key={emp.id} value={emp.id}>{emp.nom_employer} {emp.prenom_employer}</option>)}
               </select>
-
-
             </div>
-            <div>
-              <Label>Type de contrat</Label>
-              <select
-                className="border p-2 w-full"
-                value={editing?.type_contrat && typeof editing.type_contrat === "object" ? editing.type_contrat.id : editing?.type_contrat || ""}
-                onChange={e => {
-                  const t = types.find(t => t.id === e.target.value) || null;
-                  setEditing(editing => editing ? { ...editing, type_contrat: t } : null);
-                }}
-              >
-                <option value="">-- Choisir un type --</option>
-                {types.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.nom_type}
-                  </option>
-                ))}
-              </select>
 
-            </div>
             <div>
-              <Label>Nature du contrat</Label>
-              <select className="border p-2 w-full" value={editing?.nature_contrat} onChange={e => setEditing(editing => editing ? { ...editing, nature_contrat: e.target.value } : null)}>
+              <Label>Nature</Label>
+              <select className="border rounded p-2 w-full" value={editing?.nature_contrat ?? "emploi"} onChange={e => setEditing(editing => editing ? { ...editing, nature_contrat: e.target.value } : null)}>
                 {NATURE_OPTIONS.map(n => <option key={n} value={n}>{natureLabels[n]}</option>)}
               </select>
             </div>
+
             <div>
-              <Label>Status</Label>
-              <select className="border p-2 w-full" value={editing?.status_contrat} onChange={e => setEditing(editing => editing ? { ...editing, status_contrat: e.target.value } : null)}>
-                <option value="actif">Actif</option>
-                <option value="expire">Expiré</option>
-                <option value="resilie">Résilié</option>
-                <option value="suspendu">Suspendu</option>
-                <option value="termine">Terminé</option>
+              <Label>Type contrat</Label>
+              <select className="border rounded p-2 w-full" value={typeof editing?.type_contrat === "object" ? (editing.type_contrat as TypeContrat).id : editing?.type_contrat ?? ""} onChange={e => {
+                const t = types.find(t => t.id === e.target.value);
+                setEditing(editing => editing ? { ...editing, type_contrat: t ?? e.target.value } : null);
+              }}>
+                <option value="">Sélectionner</option>
+                {types.map(t => <option key={t.id} value={t.id}>{t.nom_type}</option>)}
               </select>
             </div>
+
             <div>
               <Label>Date début</Label>
-              <Input type="date" value={editing?.date_debut_contrat} onChange={e => setEditing(editing => editing ? { ...editing, date_debut_contrat: e.target.value } : null)} />
+              <Input type="date" value={editing?.date_debut_contrat ?? ""} onChange={e => setEditing(editing => editing ? { ...editing, date_debut_contrat: e.target.value } : null)} />
             </div>
+
             <div>
               <Label>Date fin</Label>
-              <Input type="date" value={editing?.date_fin_contrat || ""} onChange={e => setEditing(editing => editing ? { ...editing, date_fin_contrat: e.target.value || null } : null)} />
+              <Input type="date" value={editing?.date_fin_contrat ?? ""} onChange={e => setEditing(editing => editing ? { ...editing, date_fin_contrat: e.target.value } : null)} />
             </div>
+
             {editing?.nature_contrat === "emploi" ? (
               <div>
                 <Label>Salaire</Label>
-                <Input type="number" value={editing?.salaire || ""} onChange={e => setEditing(editing => editing ? { ...editing, salaire: e.target.value } : null)} />
+                <Input type="number" value={editing.salaire ?? ""} onChange={e => setEditing(editing => editing ? { ...editing, salaire: Number(e.target.value) } : null)} />
               </div>
             ) : (
               <>
                 <div>
                   <Label>Montant total</Label>
-                  <Input type="number" value={editing?.montant_total || ""} onChange={e => setEditing(editing => editing ? { ...editing, montant_total: e.target.value } : null)} />
+                  <Input type="number" value={editing.montant_total ?? ""} onChange={e => setEditing(editing => editing ? { ...editing, montant_total: Number(e.target.value) } : null)} />
                 </div>
                 <div>
-                  <Label>Description de la mission</Label>
-                  <textarea className="border p-2 w-full" value={editing?.description_mission || ""} onChange={e => setEditing(editing => editing ? { ...editing, description_mission: e.target.value } : null)} />
+                  <Label>Description mission</Label>
+                  <textarea className="border rounded p-2 w-full" value={editing.description_mission ?? ""} onChange={e => setEditing(editing => editing ? { ...editing, description_mission: e.target.value } : null)} />
                 </div>
               </>
             )}
+
             <div>
-              <Label>Contrat PDF</Label>
-              <Input type="file" accept="application/pdf" onChange={e => setFileToUpload(e.target.files ? e.target.files[0] : null)} />
+              <Label>Fichier contrat</Label>
+              <Input type="file" onChange={e => setFileToUpload(e.target.files?.[0] ?? null)} />
             </div>
           </div>
-          <DialogFooter className="mt-4 flex justify-end gap-2">
-            <Button onClick={saveContrat}>{editing?.id ? "Mettre à jour" : "Créer"}</Button>
+
+          <DialogFooter className="flex justify-end space-x-2">
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Annuler</Button>
+            <Button onClick={saveContrat}>{editing?.id ? "Mettre à jour" : "Créer"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -388,12 +365,11 @@ const ContratsPage: React.FC = () => {
       {/* CONFIRM DELETE */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Supprimer le contrat ?</DialogTitle>
-          </DialogHeader>
-          <DialogFooter className="flex justify-end gap-2">
-            <Button variant="destructive" onClick={confirmDelete}>Oui, supprimer</Button>
+          <DialogHeader><DialogTitle>Confirmer suppression</DialogTitle></DialogHeader>
+          <DialogDescription>Voulez-vous vraiment supprimer ce contrat ? Cette action est irréversible.</DialogDescription>
+          <DialogFooter className="flex justify-end space-x-2">
             <Button variant="outline" onClick={() => setIsDeleteOpen(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={confirmDelete}>Supprimer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
