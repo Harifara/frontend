@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 interface Achat { id: string; article: string; montant: number; nombre: number; statut: string }
 interface Payement { id: string; montant: number; status: string }
@@ -21,10 +22,17 @@ interface Demande {
 
 const Demandes = () => {
   const [demandes, setDemandes] = useState<Demande[]>([]);
+  const [achats, setAchats] = useState<Achat[]>([]);
+  const [payements, setPayements] = useState<Payement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDemande, setEditingDemande] = useState<Demande | null>(null);
+  const [form, setForm] = useState<{ description: string; achatsIds: string[]; payementsIds: string[] }>({
+    description: "",
+    achatsIds: [],
+    payementsIds: [],
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,10 +42,16 @@ const Demandes = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const data = await rhApi.getDemandes();
+      const [data, dataAchats, dataPayements] = await Promise.all([
+        rhApi.getDemandes(),
+        rhApi.getAchats(),
+        rhApi.getPayements(),
+      ]);
       setDemandes(data);
+      setAchats(dataAchats);
+      setPayements(dataPayements);
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de charger les demandes.", variant: "destructive" });
+      toast({ title: "Erreur", description: err.message || "Impossible de charger les données.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -63,6 +77,46 @@ const Demandes = () => {
     }
   };
 
+  const openModal = (demande?: Demande) => {
+    if (demande) {
+      setEditingDemande(demande);
+      setForm({
+        description: demande.description,
+        achatsIds: demande.achats.map(a => a.id),
+        payementsIds: demande.payements.map(p => p.id),
+      });
+    } else {
+      setEditingDemande(null);
+      setForm({ description: "", achatsIds: [], payementsIds: [] });
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (editingDemande) {
+        await rhApi.updateDemande(editingDemande.id, {
+          description: form.description,
+          achats_ids: form.achatsIds,
+          payements_ids: form.payementsIds,
+        });
+        toast({ title: "Succès", description: "Demande mise à jour." });
+      } else {
+        await rhApi.createDemande({
+          description: form.description,
+          achats_ids: form.achatsIds,
+          payements_ids: form.payementsIds,
+        });
+        toast({ title: "Succès", description: "Demande créée." });
+      }
+      setIsModalOpen(false);
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message || "Erreur lors de l'enregistrement.", variant: "destructive" });
+    }
+  };
+
   const filteredDemandes = demandes.filter(d =>
     d.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -73,7 +127,7 @@ const Demandes = () => {
     <div className="p-8 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Demandes</h1>
-        <Button onClick={() => setIsModalOpen(true)}>Ajouter une Demande</Button>
+        <Button onClick={() => openModal()}>Ajouter une Demande</Button>
       </div>
 
       <Input
@@ -106,6 +160,7 @@ const Demandes = () => {
                   <TableCell className="space-x-2">
                     <Button size="sm" variant="outline" onClick={() => handleApprove(d.id)}>Approuver</Button>
                     <Button size="sm" variant="destructive" onClick={() => handleReject(d.id)}>Refuser</Button>
+                    <Button size="sm" variant="outline" onClick={() => openModal(d)}>Modifier</Button>
                   </TableCell>
                 </TableRow>
               )) : (
@@ -124,12 +179,46 @@ const Demandes = () => {
           <DialogHeader>
             <DialogTitle>{editingDemande ? "Modifier la demande" : "Créer une demande"}</DialogTitle>
           </DialogHeader>
-          {/* Formulaire simple pour la demo */}
-          <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); /* ajout API */ }}>
-            <Input placeholder="Description" value={editingDemande?.description || ""} onChange={() => {}} required />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <Input
+              placeholder="Description"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              required
+            />
+            <div>
+              <label>Achats</label>
+              <Select
+                multiple
+                value={form.achatsIds}
+                onValueChange={(values: string[]) => setForm({ ...form, achatsIds: values })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner les achats" />
+                </SelectTrigger>
+                <SelectContent>
+                  {achats.map(a => <SelectItem key={a.id} value={a.id}>{a.article} - {a.montant}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label>Payements</label>
+              <Select
+                multiple
+                value={form.payementsIds}
+                onValueChange={(values: string[]) => setForm({ ...form, payementsIds: values })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner les payements" />
+                </SelectTrigger>
+                <SelectContent>
+                  {payements.map(p => <SelectItem key={p.id} value={p.id}>{p.montant} - {p.status}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Annuler</Button>
-              <Button type="submit">Enregistrer</Button>
+              <Button type="submit">{editingDemande ? "Mettre à jour" : "Créer"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
