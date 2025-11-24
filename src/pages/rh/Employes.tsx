@@ -225,17 +225,19 @@ const Employes: React.FC = () => {
               {filtered.length > 0 ? filtered.map(e => (
                 <TableRow key={e.id} className="hover:bg-gray-50">
                   <TableCell>
+                  <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200 flex items-center justify-center bg-gray-100">
                     {e.photo_profil ? (
                       <img
                         src={getPhotoUrl(e.photo_profil) || "/images/default-profile.png"}
-                        className="w-10 h-10 rounded-full object-cover"
+                        alt={`${e.nom_employer} ${e.prenom_employer}`}
+                        className="w-full h-full object-cover"
                       />
-
-
                     ) : (
-                      <span className="text-gray-400 text-sm">Aucune</span>
+                      <span className="text-gray-400 text-xs">Aucune</span>
                     )}
-                  </TableCell>
+                  </div>
+                </TableCell>
+
                   <TableCell>{e.nom_employer} {e.prenom_employer}</TableCell>
                   <TableCell>{e.email}</TableCell>
                   <TableCell>{e.fonction?.nom_fonction || "-"}</TableCell>
