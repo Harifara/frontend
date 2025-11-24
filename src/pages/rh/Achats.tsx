@@ -15,12 +15,13 @@ interface Achat {
   code_achat: string;
   nombre: number;
   montant: number;
-  type_achats: string | null;
+  type_achat?: { id: string; nom: string } | null; // correspond au serializer
+  type_achats: string | null; // pour le formulaire
 }
 
 export default function Achats() {
   const [achats, setAchats] = useState<Achat[]>([]);
-  const [typeAchats, setTypeAchats] = useState<any[]>([]);
+  const [typeAchats, setTypeAchats] = useState<{ id: string; nom: string }[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -60,7 +61,13 @@ export default function Achats() {
   const handleOpenModal = (achat?: Achat) => {
     if (achat) {
       setEditingAchat(achat);
-      setForm({ ...achat });
+      setForm({
+        article: achat.article,
+        code_achat: achat.code_achat,
+        nombre: achat.nombre,
+        montant: achat.montant,
+        type_achats: achat.type_achat?.id || null,
+      });
     } else {
       setEditingAchat(null);
       setForm({ article: "", code_achat: "", nombre: 1, montant: 0, type_achats: null });
@@ -86,7 +93,7 @@ export default function Achats() {
       code_achat: form.code_achat,
       nombre: Number(form.nombre),
       montant: Number(form.montant),
-      type_achats_id: form.type_achats,
+      type_achat_id: form.type_achats,
     };
 
     try {
@@ -158,6 +165,7 @@ export default function Achats() {
                 <TableHead className="text-center">Code</TableHead>
                 <TableHead className="text-center">Quantité</TableHead>
                 <TableHead className="text-center">Montant</TableHead>
+                <TableHead className="text-center">Type d'Achat</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -168,6 +176,7 @@ export default function Achats() {
                   <TableCell className="text-center">{a.code_achat}</TableCell>
                   <TableCell className="text-center">{a.nombre}</TableCell>
                   <TableCell className="text-center">{Number(a.montant).toLocaleString()} Ar</TableCell>
+                  <TableCell className="text-center">{a.type_achat?.nom || "-"}</TableCell>
                   <TableCell className="text-center space-x-2">
                     <Button size="sm" variant="outline" onClick={() => handleOpenModal(a)}>Modifier</Button>
                     <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(a.id!)}>Supprimer</Button>
@@ -175,7 +184,7 @@ export default function Achats() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-6">Aucun achat trouvé.</TableCell>
+                  <TableCell colSpan={6} className="text-center py-6">Aucun achat trouvé.</TableCell>
                 </TableRow>
               )}
             </TableBody>
