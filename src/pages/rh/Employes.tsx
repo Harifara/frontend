@@ -225,18 +225,16 @@ const Employes: React.FC = () => {
               {filtered.length > 0 ? filtered.map(e => (
                 <TableRow key={e.id} className="hover:bg-gray-50">
                   <TableCell>
-                  <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200 flex items-center justify-center bg-gray-100">
-                    {e.photo_profil ? (
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200 flex items-center justify-center bg-gray-100">
                       <img
-                        src={getPhotoUrl(e.photo_profil) || "/images/default-profile.png"}
+                        src={getPhotoUrl(e.photo_profil) || "/images/default-profile.png"} // image par défaut
                         alt={`${e.nom_employer} ${e.prenom_employer}`}
                         className="w-full h-full object-cover"
+                        onError={(event) => { (event.target as HTMLImageElement).src = "/images/default-profile.png"; }}
                       />
-                    ) : (
-                      <span className="text-gray-400 text-xs">Aucune</span>
-                    )}
-                  </div>
-                </TableCell>
+                    </div>
+                  </TableCell>
+
 
                   <TableCell>{e.nom_employer} {e.prenom_employer}</TableCell>
                   <TableCell>{e.email}</TableCell>
