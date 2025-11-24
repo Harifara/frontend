@@ -15,8 +15,11 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 
 interface TypeAchat {
   id: string;
+  type_achat: string;
   nom: string;
+  description?: string;
 }
+
 
 interface Achat {
   id?: string;
@@ -221,10 +224,11 @@ export default function Achats() {
                 <SelectContent>
                   {typeAchats.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
-                      {t.type_achat} {/* avant c'était t.nom */}
+                      {t.type_achat} {/* affiche le type d'achat */}
                     </SelectItem>
                   ))}
                 </SelectContent>
+
 
               </Select>
             </div>
