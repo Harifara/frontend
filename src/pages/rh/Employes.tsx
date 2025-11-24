@@ -229,19 +229,22 @@ const Employes: React.FC = () => {
               {filtered.length > 0 ? filtered.map(e => (
                 <TableRow key={e.id} className="hover:bg-gray-50">
                   <TableCell>
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-300 bg-gray-100 flex items-center justify-center">
-                      <img
-                        src={getPhotoUrl(e.photo_profil)}
-                        alt="photo"
-                        className="w-full h-full object-cover"
-                        onError={(event) => {
-                          const target = event.target as HTMLImageElement;
-                          target.onerror = null;              // évite boucle infinie
-                          target.src = DEFAULT_USER_ICON;     // met l’icône par défaut
-                        }}
-                      />
-
-                    </div>
+                    <div
+                        className="w-10 h-10 rounded-full overflow-hidden border border-gray-300 bg-gray-100 flex items-center justify-center cursor-pointer"
+                        onClick={() => navigate(`/rh/employes/${e.id}`)}
+                        title="Voir le profil"
+                      >
+                        <img
+                          src={getPhotoUrl(e.photo_profil)}
+                          alt="photo"
+                          className="w-full h-full object-cover"
+                          onError={(event) => {
+                            const target = event.target as HTMLImageElement;
+                            target.onerror = null;              
+                            target.src = DEFAULT_USER_ICON;     
+                          }}
+                        />
+                      </div>
                   </TableCell>
 
 
@@ -256,15 +259,6 @@ const Employes: React.FC = () => {
                   <TableCell className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => openEditModal(e)}>Modifier</Button>
                     <Button size="sm" variant="destructive" onClick={() => openDeleteModal(e.id!)}>Supprimer</Button>
-                    {e.photo_profil && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => window.open(getPhotoUrl(e.photo_profil), "_blank")}
-                      >
-                        Voir le profil
-                      </Button>
-                    )}
                   </TableCell>
                 </TableRow>
               )) : (
