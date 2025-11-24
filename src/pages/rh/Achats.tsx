@@ -206,26 +206,42 @@ export default function Achats() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-center">Article</TableHead>
-                <TableHead className="text-center">Code</TableHead>
-                <TableHead className="text-center">Type Achat</TableHead>
-                <TableHead className="text-center">Quantité</TableHead>
-                <TableHead className="text-center">Montant</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
+                <TableHead className="text-center w-1/5">Article</TableHead>
+                <TableHead className="text-center w-1/6">Code</TableHead>
+                <TableHead className="text-center w-1/6">Type Achat</TableHead>
+                <TableHead className="text-center w-1/12">Quantité</TableHead>
+                <TableHead className="text-center w-1/6">Montant</TableHead>
+                <TableHead className="text-center w-1/5">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredAchats.length > 0 ? (
                 filteredAchats.map((a) => (
-                  <TableRow key={a.id}>
+                  <TableRow key={a.id} className="hover:bg-gray-50">
                     <TableCell className="text-center">{a.article}</TableCell>
                     <TableCell className="text-center">{a.code_achat}</TableCell>
-                    <TableCell className="text-center">{a.type_achat?.nom || "-"}</TableCell>
+                    <TableCell className="text-center">
+                      {a.type_achat?.nom || "-"}
+                    </TableCell>
                     <TableCell className="text-center">{a.nombre}</TableCell>
-                    <TableCell className="text-center">{Number(a.montant).toLocaleString()} Ar</TableCell>
-                    <TableCell className="text-center space-x-2">
-                      <Button size="sm" variant="outline" onClick={() => handleOpenModal(a)}>Modifier</Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(a.id!)}>Supprimer</Button>
+                    <TableCell className="text-center">
+                      {Number(a.montant).toLocaleString()} Ar
+                    </TableCell>
+                    <TableCell className="text-center flex justify-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleOpenModal(a)}
+                      >
+                        Modifier
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleOpenDeleteModal(a.id!)}
+                      >
+                        Supprimer
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -238,6 +254,7 @@ export default function Achats() {
               )}
             </TableBody>
           </Table>
+
         </CardContent>
       </Card>
 
