@@ -76,14 +76,15 @@ export default function Achats() {
       setEditingAchat(achat);
       setForm({
         ...achat,
-        type_achat_id: achat.type_achat?.id || null,
+        type_achat_id: achat.type_achat?.id || undefined,
       });
     } else {
       setEditingAchat(null);
-      setForm({ article: "", code_achat: "", nombre: 1, montant: 0, type_achat_id: null });
+      setForm({ article: "", code_achat: "", nombre: 1, montant: 0, type_achat_id: undefined });
     }
     setIsModalOpen(true);
   };
+
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
@@ -214,12 +215,21 @@ export default function Achats() {
             {/* Type d'Achat */}
             <div>
               <Label>Type d'Achat</Label>
-              <Select onValueChange={(value) => setTypeAchatId(value)} value={typeAchatId}>
-                {typeAchats.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.nom}
-                  </SelectItem>
-                ))}
+              <Select
+                value={form.type_achat_id || undefined}
+                onValueChange={(v) => setForm({ ...form, type_achat_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir un type d'achat" />
+                </SelectTrigger>
+
+                <SelectContent>
+                  {typeAchats.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.nom}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
             </div>
 
