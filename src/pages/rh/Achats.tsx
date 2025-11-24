@@ -1,17 +1,37 @@
 import React, { useEffect, useState } from "react";
 import { rhApi } from "@/lib/api";
 import {
-  Card, CardContent, CardHeader, CardTitle
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 interface TypeAchat {
   id: string;
@@ -62,16 +82,19 @@ export default function Achats() {
         rhApi.getTypeAchats(),
       ]);
 
+      // Vérification de la structure de la réponse
       console.log("Réponse Achats:", achatsRes);
       console.log("Réponse Types d'achats:", typesRes);
 
-      // Adapter en fonction de la structure réelle de l'API
-      const typeData = typesRes?.data || typesRes?.results || [];
-      setAchats(achatsRes?.data || []);
-      setTypeAchats(typeData);
+      setAchats(achatsRes?.data ?? []);
+      setTypeAchats(typesRes?.data ?? typesRes ?? []);
     } catch (err: any) {
       console.error(err);
-      toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les données.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -80,7 +103,7 @@ export default function Achats() {
       setEditingAchat(achat);
       setForm({
         ...achat,
-        type_achat_id: achat.type_achat?.id || null,
+        type_achat_id: achat.type_achat?.id ?? null,
       });
     } else {
       setEditingAchat(null);
@@ -97,7 +120,11 @@ export default function Achats() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.article || !form.code_achat || !form.type_achat_id) {
-      toast({ title: "Champs requis", description: "Veuillez remplir tous les champs.", variant: "destructive" });
+      toast({
+        title: "Champs requis",
+        description: "Veuillez remplir tous les champs.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -121,7 +148,11 @@ export default function Achats() {
       fetchData();
     } catch (err: any) {
       console.error(err);
-      toast({ title: "Erreur", description: err.message || "Impossible d'enregistrer l'achat.", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: err.message || "Impossible d'enregistrer l'achat.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -144,9 +175,10 @@ export default function Achats() {
     setIsDeleteModalOpen(false);
   };
 
-  const filteredAchats = achats.filter(a =>
-    a.article.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.code_achat.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredAchats = achats.filter(
+    (a) =>
+      a.article.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      a.code_achat.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -183,21 +215,25 @@ export default function Achats() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAchats.length > 0 ? filteredAchats.map((a) => (
-                <TableRow key={a.id}>
-                  <TableCell className="text-center">{a.article}</TableCell>
-                  <TableCell className="text-center">{a.code_achat}</TableCell>
-                  <TableCell className="text-center">{a.type_achat?.nom || "-"}</TableCell>
-                  <TableCell className="text-center">{a.nombre}</TableCell>
-                  <TableCell className="text-center">{Number(a.montant).toLocaleString()} Ar</TableCell>
-                  <TableCell className="text-center space-x-2">
-                    <Button size="sm" variant="outline" onClick={() => handleOpenModal(a)}>Modifier</Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(a.id!)}>Supprimer</Button>
-                  </TableCell>
-                </TableRow>
-              )) : (
+              {filteredAchats.length > 0 ? (
+                filteredAchats.map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="text-center">{a.article}</TableCell>
+                    <TableCell className="text-center">{a.code_achat}</TableCell>
+                    <TableCell className="text-center">{a.type_achat?.nom || "-"}</TableCell>
+                    <TableCell className="text-center">{a.nombre}</TableCell>
+                    <TableCell className="text-center">{Number(a.montant).toLocaleString()} Ar</TableCell>
+                    <TableCell className="text-center space-x-2">
+                      <Button size="sm" variant="outline" onClick={() => handleOpenModal(a)}>Modifier</Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(a.id!)}>Supprimer</Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6">Aucun achat trouvé.</TableCell>
+                  <TableCell colSpan={6} className="text-center py-6">
+                    Aucun achat trouvé.
+                  </TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -214,32 +250,32 @@ export default function Achats() {
           <DialogHeader>
             <DialogTitle>{editingAchat ? "Modifier l'Achat" : "Créer un Achat"}</DialogTitle>
           </DialogHeader>
+
           <p id="achat-form-description" className="sr-only">
             Formulaire pour créer ou modifier un achat.
           </p>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Type d'Achat */}
             <div>
               <Label>Type d'Achat</Label>
               <Select
                 value={form.type_achat_id ?? undefined}
-                onValueChange={(v) => setForm({ ...form, type_achat_id: v || null })}
+                onValueChange={(v) =>
+                  setForm({ ...form, type_achat_id: v || null })
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir un type d'achat" />
                 </SelectTrigger>
                 <SelectContent>
-                  {typeAchats.length > 0
-                    ? typeAchats.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.nom}
-                        </SelectItem>
-                      ))
-                    : null // On ne rend rien si aucun type dispo
-                  }
+                  {typeAchats.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.nom}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-
             </div>
 
             {/* Article */}
@@ -297,11 +333,17 @@ export default function Achats() {
       {/* MODAL DELETE */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader><DialogTitle>Confirmation</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Confirmation</DialogTitle>
+          </DialogHeader>
           <p>Voulez-vous vraiment supprimer cet achat ?</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Annuler</Button>
-            <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Supprimer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
