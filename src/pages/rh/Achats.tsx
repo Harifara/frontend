@@ -63,6 +63,7 @@ export default function Achats() {
           rhApi.getAchats(),
           rhApi.getTypeAchats(),
         ]);
+        console.log("Types d'achats récupérés:", typesRes);
         setAchats(achatsRes?.data || []);
         setTypeAchats(typesRes?.data || []);
       } catch (err: any) {
@@ -229,6 +230,7 @@ export default function Achats() {
                     ))}
                   </SelectContent>
                 </Select>
+
 
 
               </div>
