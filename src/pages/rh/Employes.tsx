@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { createPDFDoc } from "@/lib/pdfTemplate";
+import { User } from "lucide-react";
+
 
 interface Fonction { id: string; nom_fonction: string; }
 interface District { id: string; name: string; }
@@ -226,14 +228,21 @@ const Employes: React.FC = () => {
                 <TableRow key={e.id} className="hover:bg-gray-50">
                   <TableCell>
                     <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-200 flex items-center justify-center bg-gray-100">
-                      <img
-                        src={getPhotoUrl(e.photo_profil) || "/images/default-profile.png"} // image par défaut
-                        alt={`${e.nom_employer} ${e.prenom_employer}`}
-                        className="w-full h-full object-cover"
-                        onError={(event) => { (event.target as HTMLImageElement).src = "/images/default-profile.png"; }}
-                      />
+                      {e.photo_profil ? (
+                        <img
+                          src={getPhotoUrl(e.photo_profil)}
+                          alt={`${e.nom_employer} ${e.prenom_employer}`}
+                          className="w-full h-full object-cover"
+                          onError={(event) => { 
+                            (event.target as HTMLImageElement).style.display = "none"; // cache l'image cassée
+                          }}
+                        />
+                      ) : (
+                        <User className="w-6 h-6 text-gray-400" />
+                      )}
                     </div>
                   </TableCell>
+
 
 
                   <TableCell>{e.nom_employer} {e.prenom_employer}</TableCell>
