@@ -45,13 +45,14 @@ export default function Achats() {
 
   const fetchData = async () => {
     try {
-      const [ach, dem, type] = await Promise.all([
+      const [achatsRes, typesRes] = await Promise.all([
         rhApi.getAchats(),
         rhApi.getTypesAchat(),
       ]);
-      setAchats(ach?.data || []);
-      setTypesAchat(type?.data || []);
-    } catch {
+      setAchats(achatsRes?.data || []);
+      setTypesAchat(typesRes?.data || []);
+    } catch (err) {
+      console.error(err);
       toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
     }
   };
@@ -99,6 +100,7 @@ export default function Achats() {
       handleCloseModal();
       fetchData();
     } catch (err: any) {
+      console.error(err);
       toast({ title: "Erreur", description: err.message || "Impossible d'enregistrer l'achat.", variant: "destructive" });
     }
   };
@@ -114,7 +116,8 @@ export default function Achats() {
       await rhApi.deleteAchat(selectedIdToDelete);
       toast({ title: "Succès", description: "Achat supprimé." });
       fetchData();
-    } catch {
+    } catch (err) {
+      console.error(err);
       toast({ title: "Erreur", description: "Impossible de supprimer.", variant: "destructive" });
     }
     setSelectedIdToDelete(null);
@@ -188,8 +191,6 @@ export default function Achats() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            
-
             <div>
               <Label>Type d'Achat</Label>
               <Select value={form.type_achat ?? ""} onValueChange={(v) => setForm({ ...form, type_achat: v || null })}>
