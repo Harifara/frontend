@@ -224,7 +224,7 @@ export default function Achats() {
                   <SelectContent>
                     {typeAchats.map((t) => (
                       <SelectItem key={t.id} value={t.id}>
-                        {t.nom} ({t.type_achat})
+                        {t.nom} 
                       </SelectItem>
                     ))}
                   </SelectContent>
