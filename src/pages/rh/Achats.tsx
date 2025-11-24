@@ -193,7 +193,6 @@ export default function Achats() {
 
   return (
     <div className="p-8 space-y-6">
-
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Achats</h1>
         <Button onClick={() => handleOpenModal()}>Ajouter un Achat</Button>
