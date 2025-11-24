@@ -48,8 +48,9 @@ export default function Achats() {
     code_achat: "",
     nombre: 1,
     montant: 0,
-    type_achat_id: null, // ✅ ici
+    type_achat_id: null, // ✅ Correct
   });
+
 
 
   useEffect(() => {
@@ -57,25 +58,26 @@ export default function Achats() {
   }, []);
 
   const fetchData = async () => {
-    try {
-      const [achatsRes, typesRes] = await Promise.all([
-        rhApi.getAchats(),
-        rhApi.getTypeAchats(),
-      ]);
-      setAchats(achatsRes?.data || []);
-      setTypeAchats(typesRes?.data || []);
-    } catch (err: any) {
-      console.error(err);
-      toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
-    }
-  };
+      try {
+        const [achatsRes, typesRes] = await Promise.all([
+          rhApi.getAchats(),
+          rhApi.getTypeAchats(),
+        ]);
+        setAchats(achatsRes?.data || []);
+        setTypeAchats(typesRes?.data || []);
+      } catch (err: any) {
+        console.error(err);
+        toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
+      }
+    };
+
 
   const handleOpenModal = (achat?: Achat) => {
     if (achat) {
       setEditingAchat(achat);
       setForm({
         ...achat,
-        type_achat_id: achat.type_achat?.id || null, // ✅ récupérer l'id du type
+        type_achat_id: achat.type_achat?.id || null,
       });
     } else {
       setEditingAchat(null);
@@ -85,6 +87,7 @@ export default function Achats() {
   };
 
 
+
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingAchat(null);
@@ -92,7 +95,7 @@ export default function Achats() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.article || !form.code_achat || !form.type_achats) {
+    if (!form.article || !form.code_achat || !form.type_achat_id) {
       toast({ title: "Champs requis", description: "Veuillez remplir tous les champs.", variant: "destructive" });
       return;
     }
@@ -104,7 +107,6 @@ export default function Achats() {
       montant: Number(form.montant),
       type_achat_id: form.type_achat_id,
     };
-
 
     try {
       if (editingAchat) {
@@ -121,6 +123,7 @@ export default function Achats() {
       toast({ title: "Erreur", description: err.message || "Impossible d'enregistrer l'achat.", variant: "destructive" });
     }
   };
+
 
   const handleOpenDeleteModal = (id: string) => {
     setSelectedIdToDelete(id);
@@ -226,6 +229,7 @@ export default function Achats() {
                     ))}
                   </SelectContent>
                 </Select>
+
 
               </div>
 
