@@ -256,6 +256,15 @@ const Employes: React.FC = () => {
                   <TableCell className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => openEditModal(e)}>Modifier</Button>
                     <Button size="sm" variant="destructive" onClick={() => openDeleteModal(e.id!)}>Supprimer</Button>
+                    {e.photo_profil && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => window.open(getPhotoUrl(e.photo_profil), "_blank")}
+                      >
+                        Voir le profil
+                      </Button>
+                    )}
                   </TableCell>
                 </TableRow>
               )) : (
