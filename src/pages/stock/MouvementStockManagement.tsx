@@ -18,11 +18,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { stockApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
+// ---------------------------
+// Interfaces
+// ---------------------------
 interface MouvementStock {
   id: string;
   article: string;
@@ -48,6 +51,14 @@ interface Magasin {
   nom: string;
 }
 
+// ---------------------------
+// Utilitaire pour convertir "" en null
+// ---------------------------
+const cleanUUID = (id: string | null | undefined) => (!id || id.trim() === "" ? null : id);
+
+// ---------------------------
+// Composant principal
+// ---------------------------
 const MouvementStockManagement: React.FC = () => {
   const [mouvements, setMouvements] = useState<MouvementStock[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
@@ -64,15 +75,14 @@ const MouvementStockManagement: React.FC = () => {
     recepteur_id: "",
     recepteur_type: "magasin",
   });
-
   const { toast } = useToast();
 
-  // ⚡ Simule le magasinier connecté
-  const magasinier_id = "uuid-magasinier-1";
+  // ⚡ UUID valide pour le magasinier (à remplacer par ton auth réel)
+  const magasinier_id = "00000000-0000-0000-0000-000000000001";
 
-  // -----------------------
+  // ---------------------------
   // FETCH DATA
-  // -----------------------
+  // ---------------------------
   const fetchAllData = async () => {
     try {
       const [mouvementsRes, articlesRes, magasinsRes] = await Promise.all([
@@ -84,7 +94,11 @@ const MouvementStockManagement: React.FC = () => {
       setArticles(articlesRes);
       setMagasins(magasinsRes);
     } catch (error: any) {
-      toast({ title: "Erreur", description: error.message || "Impossible de charger les données", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible de charger les données",
+        variant: "destructive",
+      });
     }
   };
 
@@ -92,72 +106,40 @@ const MouvementStockManagement: React.FC = () => {
     fetchAllData();
   }, []);
 
-  // -----------------------
-  // OPEN MODAL
-  // -----------------------
-  const handleOpenModal = (mvt?: MouvementStock) => {
-    if (mvt) {
-      // Edition
-      setEditingMouvement(mvt);
-      setForm({
-        article: mvt.article,
-        magasin_source: mvt.magasin_source || "",
-        magasin_dest: mvt.magasin_dest || "",
-        quantite: mvt.quantite,
-        type_mouvement: mvt.type_mouvement,
-        commentaire: mvt.commentaire || "",
-        recepteur_id: mvt.recepteur_id || "",
-        recepteur_type: mvt.recepteur_type,
-      });
-    } else {
-      // Nouveau
-      setEditingMouvement(null);
-      setForm({
-        article: "",
-        magasin_source: "",
-        magasin_dest: "",
-        quantite: 0,
-        type_mouvement: "entree",
-        commentaire: "",
-        recepteur_id: "",
-        recepteur_type: "magasin",
-      });
-    }
-    setOpenModal(true);
-  };
-
-  // -----------------------
-  // SAVE
-  // -----------------------
+  // ---------------------------
+  // CRUD Actions
+  // ---------------------------
   const handleSave = async () => {
-    if (!form.article || !form.quantite || Number(form.quantite) <= 0) {
-      toast({ title: "Erreur", description: "Veuillez remplir les champs obligatoires et quantité > 0", variant: "destructive" });
-      return;
+    // --------- Validation frontend ---------
+    if (!form.article) {
+      return toast({ title: "Erreur", description: "Veuillez sélectionner un article", variant: "destructive" });
+    }
+    if (!form.quantite || Number(form.quantite) <= 0) {
+      return toast({ title: "Erreur", description: "La quantité doit être supérieure à 0", variant: "destructive" });
     }
 
-    // Validation dynamique selon le type
-    if ((form.type_mouvement === 'entree' || form.type_mouvement === 'retour') && !form.magasin_dest) {
-      toast({ title: "Erreur", description: "Le magasin destinataire est obligatoire", variant: "destructive" });
-      return;
-    }
-    if (form.type_mouvement === 'sortie' && !form.magasin_source) {
-      toast({ title: "Erreur", description: "Le magasin source est obligatoire", variant: "destructive" });
-      return;
-    }
-    if (form.type_mouvement === 'transfert' && (!form.magasin_source || !form.magasin_dest)) {
-      toast({ title: "Erreur", description: "Le magasin source et destination sont obligatoires", variant: "destructive" });
-      return;
+    if ((form.type_mouvement === "entree" || form.type_mouvement === "retour") && !form.magasin_dest) {
+      return toast({ title: "Erreur", description: "Le magasin destinataire est obligatoire", variant: "destructive" });
     }
 
+    if (form.type_mouvement === "sortie" && !form.magasin_source) {
+      return toast({ title: "Erreur", description: "Le magasin source est obligatoire", variant: "destructive" });
+    }
+
+    if (form.type_mouvement === "transfert" && (!form.magasin_source || !form.magasin_dest)) {
+      return toast({ title: "Erreur", description: "Les magasins source et destination sont obligatoires", variant: "destructive" });
+    }
+
+    // --------- Payload propre ---------
     const payload = {
       article: form.article,
-      magasin_source: form.magasin_source || null,
-      magasin_dest: form.magasin_dest || null,
+      magasin_source: cleanUUID(form.magasin_source),
+      magasin_dest: cleanUUID(form.magasin_dest),
       quantite: Number(form.quantite),
       type_mouvement: form.type_mouvement,
       commentaire: form.commentaire || null,
       magasinier_id: magasinier_id,
-      recepteur_id: form.recepteur_id || null,
+      recepteur_id: cleanUUID(form.recepteur_id),
       recepteur_type: form.recepteur_type,
       transporteur: null,
     };
@@ -173,13 +155,37 @@ const MouvementStockManagement: React.FC = () => {
 
       setOpenModal(false);
       setEditingMouvement(null);
+      setForm({
+        article: "",
+        magasin_source: "",
+        magasin_dest: "",
+        quantite: 0,
+        type_mouvement: "entree",
+        commentaire: "",
+        recepteur_id: "",
+        recepteur_type: "magasin",
+      });
       fetchAllData();
     } catch (error: any) {
+      console.error(error);
       toast({ title: "Erreur", description: error.response?.data?.detail || error.message || "Impossible d'enregistrer le mouvement", variant: "destructive" });
     }
   };
 
-  const handleEdit = (mvt: MouvementStock) => handleOpenModal(mvt);
+  const handleEdit = (mvt: MouvementStock) => {
+    setEditingMouvement(mvt);
+    setForm({
+      article: mvt.article,
+      magasin_source: mvt.magasin_source || "",
+      magasin_dest: mvt.magasin_dest || "",
+      quantite: mvt.quantite,
+      type_mouvement: mvt.type_mouvement,
+      commentaire: mvt.commentaire || "",
+      recepteur_id: mvt.recepteur_id || "",
+      recepteur_type: mvt.recepteur_type,
+    });
+    setOpenModal(true);
+  };
 
   const handleDelete = async (mvt: MouvementStock) => {
     if (!confirm(`Supprimer le mouvement de ${articles.find(a => a.id === mvt.article)?.nom || "cet article"} ?`)) return;
@@ -192,19 +198,31 @@ const MouvementStockManagement: React.FC = () => {
     }
   };
 
-  // -----------------------
+  // ---------------------------
   // RENDER
-  // -----------------------
+  // ---------------------------
   return (
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Gestion des Mouvements de Stock</h2>
-        <Button onClick={() => handleOpenModal()}>
+        <Button onClick={() => {
+          setEditingMouvement(null);
+          setForm({
+            article: "",
+            magasin_source: "",
+            magasin_dest: "",
+            quantite: 0,
+            type_mouvement: "entree",
+            commentaire: "",
+            recepteur_id: "",
+            recepteur_type: "magasin",
+          });
+          setOpenModal(true);
+        }}>
           <Plus className="mr-2 h-4 w-4" /> Nouveau
         </Button>
       </div>
 
-      {/* Tableau */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -285,30 +303,25 @@ const MouvementStockManagement: React.FC = () => {
               <Input type="number" value={form.quantite} onChange={(e) => setForm({ ...form, quantite: Number(e.target.value) })} />
             </div>
 
-            {/* Champs conditionnels */}
-            {['sortie', 'transfert'].includes(form.type_mouvement) && (
-              <div>
-                <Label>Magasin Source</Label>
-                <Select value={form.magasin_source} onValueChange={(val) => setForm({ ...form, magasin_source: val })}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
-                  <SelectContent>
-                    {magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div>
+              <Label>Magasin Source</Label>
+              <Select value={form.magasin_source} onValueChange={(val) => setForm({ ...form, magasin_source: val })}>
+                <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
+                <SelectContent>
+                  {magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
 
-            {['entree', 'retour', 'transfert'].includes(form.type_mouvement) && (
-              <div>
-                <Label>Magasin Destination</Label>
-                <Select value={form.magasin_dest} onValueChange={(val) => setForm({ ...form, magasin_dest: val })}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
-                  <SelectContent>
-                    {magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div>
+              <Label>Magasin Destination</Label>
+              <Select value={form.magasin_dest} onValueChange={(val) => setForm({ ...form, magasin_dest: val })}>
+                <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
+                <SelectContent>
+                  {magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
 
             <div>
               <Label>Commentaire</Label>
