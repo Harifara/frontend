@@ -77,11 +77,9 @@ export default function Achats() {
           rhApi.getTypeAchats(),
         ]);
 
-        // Vérifie si les données sont dans "results" ou directement dans "data"
-        const achatsData = achatsRes?.data?.results ?? achatsRes?.data ?? [];
-        const typeAchatsData = typesRes?.data?.results ?? typesRes?.data ?? [];
+        console.log("Achats chargés: ", achatsRes?.data); // <-- vérifie ici
 
-        const achatsMapped = achatsData.map((a: any) => ({
+        const achatsMapped = (achatsRes?.data ?? []).map((a: any) => ({
           ...a,
           montant: Number(a.montant),
           type_achat: a.type_achat
@@ -90,8 +88,7 @@ export default function Achats() {
         }));
 
         setAchats(achatsMapped);
-        setTypeAchats(typeAchatsData);
-        console.log("Achats chargés:", achatsMapped); // Pour vérifier en console
+        setTypeAchats(typesRes?.data ?? typesRes ?? []);
       } catch (err) {
         console.error(err);
         toast({
@@ -101,6 +98,7 @@ export default function Achats() {
         });
       }
     };
+
 
 
   const handleOpenModal = (achat?: Achat) => {
