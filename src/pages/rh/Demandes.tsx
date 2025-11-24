@@ -73,8 +73,6 @@ const Demandes = () => {
         rhApi.getPayements(),
       ]);
 
-      console.log("RAW ACHATS =", achatsRes?.data);
-
       setDemandes(extractList(demandesRes));
       setAchats(extractList(achatsRes));
       setPayements(extractList(payementsRes));
@@ -169,6 +167,7 @@ const Demandes = () => {
                 <TableHead>Description</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Montant</TableHead>
+                <TableHead>Détails</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -179,76 +178,105 @@ const Demandes = () => {
                   <TableCell>{d.description}</TableCell>
                   <TableCell>{d.status}</TableCell>
                   <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
+
+                  {/* ----------------- */}
+                  {/* Détails Achats / Payements */}
+                  {/* ----------------- */}
+                  <TableCell>
+                    <div className="mb-2">
+                      <strong>Achats :</strong>
+                      <ul className="ml-4 list-disc">
+                        {d.achats.map(a => (
+                          <li key={a.id}>
+                            {a.article} - {a.nombre} x {a.montant.toLocaleString()} Ar ({a.statut})
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div>
+                      <strong>Payements :</strong>
+                      <ul className="ml-4 list-disc">
+                        {d.payements.map(p => (
+                          <li key={p.id}>
+                            {p.montant.toLocaleString()} Ar - {p.status}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </TableCell>
+
+                  {/* ----------------- */}
+                  {/* Actions */}
+                  {/* ----------------- */}
                   <TableCell className="space-x-2">
 
-  {/* --- APPROUVER --- */}
-  <Button
-    size="sm"
-    variant="outline"
-    onClick={async () => {
-      try {
-        await rhApi.approveDemande(d.id);
-        toast({ title: "Succès", description: "Demande approuvée." });
-        fetchData();
-      } catch (err: any) {
-        toast({ title: "Erreur", description: err.message, variant: "destructive" });
-      }
-    }}
-  >
-    Approuver
-  </Button>
+                    {/* Approuver */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          await rhApi.approveDemande(d.id);
+                          toast({ title: "Succès", description: "Demande approuvée." });
+                          fetchData();
+                        } catch (err: any) {
+                          toast({ title: "Erreur", description: err.message, variant: "destructive" });
+                        }
+                      }}
+                    >
+                      Approuver
+                    </Button>
 
-  {/* --- REFUSER --- */}
-  <Button
-    size="sm"
-    variant="destructive"
-    onClick={async () => {
-      try {
-        await rhApi.rejectDemande(d.id);
-        toast({ title: "Succès", description: "Demande refusée." });
-        fetchData();
-      } catch (err: any) {
-        toast({ title: "Erreur", description: err.message, variant: "destructive" });
-      }
-    }}
-  >
-    Refuser
-  </Button>
+                    {/* Refuser */}
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={async () => {
+                        try {
+                          await rhApi.rejectDemande(d.id);
+                          toast({ title: "Succès", description: "Demande refusée." });
+                          fetchData();
+                        } catch (err: any) {
+                          toast({ title: "Erreur", description: err.message, variant: "destructive" });
+                        }
+                      }}
+                    >
+                      Refuser
+                    </Button>
 
-  {/* --- MODIFIER --- */}
-  <Button
-    size="sm"
-    variant="outline"
-    onClick={() => openModal(d)}
-  >
-    Modifier
-  </Button>
+                    {/* Modifier */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openModal(d)}
+                    >
+                      Modifier
+                    </Button>
 
-  {/* --- SUPPRIMER --- */}
-  <Button
-    size="sm"
-    variant="destructive"
-    onClick={async () => {
-      if (!confirm("Voulez-vous vraiment supprimer cette demande ?")) return;
+                    {/* Supprimer */}
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={async () => {
+                        if (!confirm("Voulez-vous vraiment supprimer cette demande ?")) return;
+                        try {
+                          await rhApi.deleteDemande(d.id);
+                          toast({ title: "Supprimée", description: "La demande a été supprimée." });
+                          fetchData();
+                        } catch (err: any) {
+                          toast({ title: "Erreur", description: err.message, variant: "destructive" });
+                        }
+                      }}
+                    >
+                      Supprimer
+                    </Button>
 
-      try {
-        await rhApi.deleteDemande(d.id);
-        toast({ title: "Supprimée", description: "La demande a été supprimée." });
-        fetchData();
-      } catch (err: any) {
-        toast({ title: "Erreur", description: err.message, variant: "destructive" });
-      }
-    }}
-  >
-    Supprimer
-  </Button>
-
-</TableCell>
+                  </TableCell>
 
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-6">
+                  <TableCell colSpan={5} className="text-center py-6">
                     Aucune demande trouvée.
                   </TableCell>
                 </TableRow>
@@ -260,7 +288,7 @@ const Demandes = () => {
       </Card>
 
       {/* -------------------- */}
-      {/* Modal */}
+      {/* Modal Création / Modification */}
       {/* -------------------- */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
