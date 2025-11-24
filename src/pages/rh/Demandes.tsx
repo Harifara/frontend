@@ -1,3 +1,4 @@
+// src/pages/rh/Demandes.tsx
 import React, { useEffect, useState } from "react";
 import { rhApi } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -8,8 +9,23 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { MultiSelect } from "@/components/ui/multi-select";
 
-interface Achat { id: string; article: string; montant: number; nombre: number; statut: string }
-interface Payement { id: string; montant: number; status: string }
+// ------------------
+// Types
+// ------------------
+interface Achat { 
+  id: string; 
+  article: string; 
+  montant: number; 
+  nombre: number; 
+  statut: string 
+}
+
+interface Payement { 
+  id: string; 
+  montant: number; 
+  status: string 
+}
+
 interface Demande {
   id: string;
   description: string;
@@ -18,6 +34,15 @@ interface Demande {
   payements: Payement[];
   montant: number;
 }
+
+// Fonction pour normaliser n'importe quel format d’API
+const extractList = (response: any) => {
+  if (!response) return [];
+  if (Array.isArray(response)) return response;
+  if (response.data && Array.isArray(response.data)) return response.data;
+  if (response.results && Array.isArray(response.results)) return response.results;
+  return [];
+};
 
 const Demandes = () => {
   const [demandes, setDemandes] = useState<Demande[]>([]);
@@ -36,10 +61,9 @@ const Demandes = () => {
 
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
+  // -----------------
+  // Fetch initial data
+  // -----------------
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -51,9 +75,10 @@ const Demandes = () => {
 
       console.log("RAW ACHATS =", achatsRes?.data);
 
-      setDemandes(demandesRes.data || []);
-      setAchats(achatsRes.data || []);
-      setPayements(payementsRes.data || []);
+      setDemandes(extractList(demandesRes));
+      setAchats(extractList(achatsRes));
+      setPayements(extractList(payementsRes));
+      
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
@@ -61,6 +86,11 @@ const Demandes = () => {
     }
   };
 
+  useEffect(() => { fetchData(); }, []);
+
+  // -----------------
+  // Modal open
+  // -----------------
   const openModal = (demande?: Demande) => {
     if (demande) {
       setEditingDemande(demande);
@@ -71,15 +101,14 @@ const Demandes = () => {
       });
     } else {
       setEditingDemande(null);
-      setForm({
-        description: "",
-        achatsIds: [],
-        payementsIds: [],
-      });
+      setForm({ description: "", achatsIds: [], payementsIds: [] });
     }
     setIsModalOpen(true);
   };
 
+  // -----------------
+  // Submit (create/update)
+  // -----------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -100,11 +129,15 @@ const Demandes = () => {
 
       setIsModalOpen(false);
       fetchData();
+
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message, variant: "destructive" });
     }
   };
 
+  // -----------------
+  // Filtre search
+  // -----------------
   const filteredDemandes = demandes.filter(d =>
     d.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -113,6 +146,7 @@ const Demandes = () => {
 
   return (
     <div className="p-8 space-y-6">
+      
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Demandes</h1>
         <Button onClick={() => openModal()}>Ajouter une Demande</Button>
@@ -138,8 +172,9 @@ const Demandes = () => {
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
-              {filteredDemandes.map(d => (
+              {filteredDemandes.length ? filteredDemandes.map(d => (
                 <TableRow key={d.id}>
                   <TableCell>{d.description}</TableCell>
                   <TableCell>{d.status}</TableCell>
@@ -150,14 +185,25 @@ const Demandes = () => {
                     <Button size="sm" variant="outline" onClick={() => openModal(d)}>Modifier</Button>
                   </TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-6">
+                    Aucune demande trouvée.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
+
           </Table>
         </CardContent>
       </Card>
 
+      {/* -------------------- */}
+      {/* Modal */}
+      {/* -------------------- */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
+          
           <DialogHeader>
             <DialogTitle>{editingDemande ? "Modifier la Demande" : "Créer une Demande"}</DialogTitle>
           </DialogHeader>
@@ -171,6 +217,7 @@ const Demandes = () => {
               required
             />
 
+            {/* Achats */}
             <div>
               <label className="font-medium">Achats</label>
               <MultiSelect
@@ -183,6 +230,7 @@ const Demandes = () => {
               />
             </div>
 
+            {/* Payements */}
             <div>
               <label className="font-medium">Payements</label>
               <MultiSelect
@@ -201,6 +249,7 @@ const Demandes = () => {
             </DialogFooter>
 
           </form>
+
         </DialogContent>
       </Dialog>
 
