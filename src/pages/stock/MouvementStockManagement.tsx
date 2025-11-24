@@ -18,10 +18,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2 } from "lucide-react";
 import { stockApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 
 interface MouvementStock {
   id: string;
@@ -48,12 +48,7 @@ interface Magasin {
   nom: string;
 }
 
-interface User {
-  id: string;
-  role: "magasinier" | "responsable_stock";
-}
-
-const MouvementStockManagement: React.FC<{ currentUser: User }> = ({ currentUser }) => {
+const MouvementStockManagement: React.FC = () => {
   const [mouvements, setMouvements] = useState<MouvementStock[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [magasins, setMagasins] = useState<Magasin[]>([]);
@@ -69,9 +64,10 @@ const MouvementStockManagement: React.FC<{ currentUser: User }> = ({ currentUser
     recepteur_id: "",
     recepteur_type: "magasin",
   });
-
   const { toast } = useToast();
-  const magasinier_id = currentUser.id;
+
+  // ⚡ Simule le magasinier connecté (à remplacer par ton auth réel)
+  const magasinier_id = "uuid-magasinier-1";
 
   // -----------------------
   // FETCH DATA
@@ -83,9 +79,9 @@ const MouvementStockManagement: React.FC<{ currentUser: User }> = ({ currentUser
         stockApi.getArticles(),
         stockApi.getMagasins(),
       ]);
-      setMouvements(Array.isArray(mouvementsRes) ? mouvementsRes : []);
-      setArticles(Array.isArray(articlesRes) ? articlesRes : []);
-      setMagasins(Array.isArray(magasinsRes) ? magasinsRes : []);
+      setMouvements(mouvementsRes);
+      setArticles(articlesRes);
+      setMagasins(magasinsRes);
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message || "Impossible de charger les données", variant: "destructive" });
     }
@@ -96,22 +92,13 @@ const MouvementStockManagement: React.FC<{ currentUser: User }> = ({ currentUser
   }, []);
 
   // -----------------------
-  // PERMISSIONS
-  // -----------------------
-  const canEdit = (mvt: MouvementStock) =>
-    currentUser.role === "responsable_stock" || (currentUser.role === "magasinier" && mvt.magasinier_id === currentUser.id);
-
-  const canDelete = (mvt: MouvementStock) =>
-    currentUser.role === "responsable_stock";
-
-  // -----------------------
   // CRUD Actions
   // -----------------------
   const handleSave = async () => {
-    if (!form.article) return toast({ title: "Erreur", description: "Veuillez sélectionner un article", variant: "destructive" });
-    if (form.quantite <= 0) return toast({ title: "Erreur", description: "La quantité doit être supérieure à 0", variant: "destructive" });
-    if (form.type_mouvement === "sortie" && !form.magasin_source) return toast({ title: "Erreur", description: "La sortie nécessite un magasin source", variant: "destructive" });
-    if ((form.type_mouvement === "entree" || form.type_mouvement === "retour") && !form.magasin_dest) return toast({ title: "Erreur", description: "L'entrée ou le retour nécessite un magasin destination", variant: "destructive" });
+    if (!form.article || !form.quantite || Number(form.quantite) <= 0) {
+      toast({ title: "Erreur", description: "Veuillez remplir les champs obligatoires et quantité > 0", variant: "destructive" });
+      return;
+    }
 
     const payload = {
       article: form.article,
@@ -120,7 +107,7 @@ const MouvementStockManagement: React.FC<{ currentUser: User }> = ({ currentUser
       quantite: Number(form.quantite),
       type_mouvement: form.type_mouvement,
       commentaire: form.commentaire || null,
-      magasinier_id,
+      magasinier_id: magasinier_id,
       recepteur_id: form.recepteur_id || null,
       recepteur_type: form.recepteur_type,
       transporteur: null,
@@ -134,33 +121,41 @@ const MouvementStockManagement: React.FC<{ currentUser: User }> = ({ currentUser
         await stockApi.createMouvement(payload);
         toast({ title: "Succès", description: "Mouvement ajouté avec succès" });
       }
+
       setOpenModal(false);
       setEditingMouvement(null);
-      setForm({ article: "", magasin_source: "", magasin_dest: "", quantite: 0, type_mouvement: "entree", commentaire: "", recepteur_id: "", recepteur_type: "magasin" });
+      setForm({
+        article: "",
+        magasin_source: "",
+        magasin_dest: "",
+        quantite: 0,
+        type_mouvement: "entree",
+        commentaire: "",
+        recepteur_id: "",
+        recepteur_type: "magasin",
+      });
       fetchAllData();
     } catch (error: any) {
       toast({ title: "Erreur", description: error.response?.data?.detail || error.message || "Impossible d'enregistrer le mouvement", variant: "destructive" });
     }
   };
 
-  const handleEdit = (mvt?: MouvementStock) => {
-    if (!mvt) return;
+  const handleEdit = (mvt: MouvementStock) => {
     setEditingMouvement(mvt);
     setForm({
-      article: mvt.article || "",
+      article: mvt.article,
       magasin_source: mvt.magasin_source || "",
       magasin_dest: mvt.magasin_dest || "",
-      quantite: mvt.quantite || 0,
-      type_mouvement: mvt.type_mouvement || "entree",
+      quantite: mvt.quantite,
+      type_mouvement: mvt.type_mouvement,
       commentaire: mvt.commentaire || "",
       recepteur_id: mvt.recepteur_id || "",
-      recepteur_type: mvt.recepteur_type || "magasin",
+      recepteur_type: mvt.recepteur_type,
     });
     setOpenModal(true);
   };
 
-  const handleDelete = async (mvt?: MouvementStock) => {
-    if (!mvt?.id) return;
+  const handleDelete = async (mvt: MouvementStock) => {
     if (!confirm(`Supprimer le mouvement de ${articles.find(a => a.id === mvt.article)?.nom || "cet article"} ?`)) return;
     try {
       await stockApi.deleteMouvement(mvt.id);
@@ -171,18 +166,26 @@ const MouvementStockManagement: React.FC<{ currentUser: User }> = ({ currentUser
     }
   };
 
-  // -----------------------
-  // RENDER
-  // -----------------------
   return (
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Gestion des Mouvements de Stock</h2>
-        {(currentUser.role === "responsable_stock" || currentUser.role === "magasinier") && (
-          <Button onClick={() => { handleEdit(); }}>
-            <Plus className="mr-2 h-4 w-4" /> Nouveau
-          </Button>
-        )}
+        <Button onClick={() => {
+          setEditingMouvement(null);
+          setForm({
+            article: "",
+            magasin_source: "",
+            magasin_dest: "",
+            quantite: 0,
+            type_mouvement: "entree",
+            commentaire: "",
+            recepteur_id: "",
+            recepteur_type: "magasin",
+          });
+          setOpenModal(true);
+        }}>
+          <Plus className="mr-2 h-4 w-4" /> Nouveau
+        </Button>
       </div>
 
       <div className="rounded-md border">
@@ -199,35 +202,30 @@ const MouvementStockManagement: React.FC<{ currentUser: User }> = ({ currentUser
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mouvements.filter(Boolean).map(mvt => {
-              const id = mvt?.id;
-              if (!id) return null;
-              const articleNom = articles.find(a => a.id === mvt.article)?.nom || "—";
-              const magasinSourceNom = magasins.find(m => m.id === mvt.magasin_source)?.nom || "—";
-              const magasinDestNom = magasins.find(m => m.id === mvt.magasin_dest)?.nom || "—";
-              return (
-                <TableRow key={id}>
-                  <TableCell>{articleNom}</TableCell>
-                  <TableCell className="capitalize">{mvt.type_mouvement || "—"}</TableCell>
-                  <TableCell>{mvt.quantite || 0}</TableCell>
-                  <TableCell>{magasinSourceNom}</TableCell>
-                  <TableCell>{magasinDestNom}</TableCell>
-                  <TableCell>{mvt.date_mouvement ? new Date(mvt.date_mouvement).toLocaleString() : "—"}</TableCell>
+            {mouvements.length ? (
+              mouvements.map((mvt) => (
+                <TableRow key={mvt.id}>
+                  <TableCell>{articles.find(a => a.id === mvt.article)?.nom || "—"}</TableCell>
+                  <TableCell className="capitalize">{mvt.type_mouvement}</TableCell>
+                  <TableCell>{mvt.quantite}</TableCell>
+                  <TableCell>{magasins.find(m => m.id === mvt.magasin_source)?.nom || "—"}</TableCell>
+                  <TableCell>{magasins.find(m => m.id === mvt.magasin_dest)?.nom || "—"}</TableCell>
+                  <TableCell>{new Date(mvt.date_mouvement).toLocaleString()}</TableCell>
                   <TableCell className="space-x-2">
-                    {canEdit(mvt) && (
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(mvt)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {canDelete(mvt) && (
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(mvt)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(mvt)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(mvt)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </TableCell>
                 </TableRow>
-              );
-            })}
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={7} className="text-center py-6">Aucun mouvement trouvé.</TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
@@ -241,14 +239,19 @@ const MouvementStockManagement: React.FC<{ currentUser: User }> = ({ currentUser
           <div className="grid gap-4 py-4">
             <div>
               <Label>Article</Label>
-              <Select value={form.article} onValueChange={val => setForm({ ...form, article: val })}>
-                <SelectTrigger><SelectValue placeholder="Sélectionnez un article" /></SelectTrigger>
-                <SelectContent>{articles.map(a => <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>)}</SelectContent>
+              <Select value={form.article} onValueChange={(val) => setForm({ ...form, article: val })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez un article" />
+                </SelectTrigger>
+                <SelectContent>
+                  {articles.map(a => <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
+
             <div>
               <Label>Type de mouvement</Label>
-              <Select value={form.type_mouvement} onValueChange={val => setForm({ ...form, type_mouvement: val })}>
+              <Select value={form.type_mouvement} onValueChange={(val) => setForm({ ...form, type_mouvement: val })}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="entree">Entrée</SelectItem>
@@ -259,27 +262,35 @@ const MouvementStockManagement: React.FC<{ currentUser: User }> = ({ currentUser
                 </SelectContent>
               </Select>
             </div>
+
             <div>
               <Label>Quantité</Label>
-              <Input type="number" value={form.quantite} onChange={e => setForm({ ...form, quantite: Number(e.target.value) })} />
+              <Input type="number" value={form.quantite} onChange={(e) => setForm({ ...form, quantite: Number(e.target.value) })} />
             </div>
+
             <div>
               <Label>Magasin Source</Label>
-              <Select value={form.magasin_source} onValueChange={val => setForm({ ...form, magasin_source: val })}>
+              <Select value={form.magasin_source} onValueChange={(val) => setForm({ ...form, magasin_source: val })}>
                 <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
-                <SelectContent>{magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
+
             <div>
               <Label>Magasin Destination</Label>
-              <Select value={form.magasin_dest} onValueChange={val => setForm({ ...form, magasin_dest: val })}>
+              <Select value={form.magasin_dest} onValueChange={(val) => setForm({ ...form, magasin_dest: val })}>
                 <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
-                <SelectContent>{magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
+
             <div>
               <Label>Commentaire</Label>
-              <Textarea value={form.commentaire} onChange={e => setForm({ ...form, commentaire: e.target.value })} />
+              <Textarea value={form.commentaire} onChange={(e) => setForm({ ...form, commentaire: e.target.value })} />
             </div>
           </div>
           <DialogFooter>
