@@ -48,8 +48,9 @@ export default function Achats() {
     code_achat: "",
     nombre: 1,
     montant: 0,
-    type_achats: null,
+    type_achat_id: null, // ✅ ici
   });
+
 
   useEffect(() => {
     fetchData();
@@ -72,13 +73,17 @@ export default function Achats() {
   const handleOpenModal = (achat?: Achat) => {
     if (achat) {
       setEditingAchat(achat);
-      setForm({ ...achat });
+      setForm({
+        ...achat,
+        type_achat_id: achat.type_achat?.id || null, // ✅ récupérer l'id du type
+      });
     } else {
       setEditingAchat(null);
-      setForm({ article: "", code_achat: "", nombre: 1, montant: 0, type_achats: null });
+      setForm({ article: "", code_achat: "", nombre: 1, montant: 0, type_achat_id: null });
     }
     setIsModalOpen(true);
   };
+
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
@@ -217,12 +222,11 @@ export default function Achats() {
                   </SelectTrigger>
                   <SelectContent>
                     {typeAchats.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.nom}
-                      </SelectItem>
+                      <SelectItem key={t.id} value={t.id}>{t.nom}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+
               </div>
 
               {/* Article */}
