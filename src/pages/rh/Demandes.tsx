@@ -42,12 +42,12 @@ const Demandes = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [data, dataAchats, dataPayements] = await Promise.all([
+      const [dataDemandes, dataAchats, dataPayements] = await Promise.all([
         rhApi.getDemandes(),
         rhApi.getAchats(),
         rhApi.getPayements(),
       ]);
-      setDemandes(data);
+      setDemandes(dataDemandes);
       setAchats(dataAchats);
       setPayements(dataPayements);
     } catch (err: any) {
@@ -173,7 +173,6 @@ const Demandes = () => {
         </CardContent>
       </Card>
 
-      {/* Modal Ajout/Modification */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
