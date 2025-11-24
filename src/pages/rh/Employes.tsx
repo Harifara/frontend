@@ -235,26 +235,29 @@ const Employes: React.FC = () => {
               {filtered.length > 0 ? filtered.map(e => (
                 <TableRow key={e.id} className="hover:bg-gray-50">
                   <TableCell>
-                    <div
+                      <div
                         className="w-10 h-10 rounded-full overflow-hidden border border-gray-300 bg-gray-100 flex items-center justify-center cursor-pointer"
                         onClick={() => navigate(`/rh/employes/${e.id}`)}
                         title="Voir le profil"
                       >
                         <img
-                          key={getPhotoUrl(e.photo_profil)}
-                          src={getPhotoUrl(e.photo_profil)}
-                          alt="photo"
+                          src={
+                            e.photo_profil
+                              ? e.photo_profil.startsWith("http")
+                                ? e.photo_profil
+                                : `${MEDIA_URL.replace(/\/?$/, "/")}${e.photo_profil.replace(/^\/+/, "")}`
+                              : DEFAULT_USER_ICON
+                          }
+                          alt={e.nom_employer}
                           className="w-full h-full object-cover"
                           onError={(event) => {
                             const target = event.target as HTMLImageElement;
-                            target.onerror = null;
-                            target.src = DEFAULT_USER_ICON;
+                            target.onerror = null;               // éviter boucle infinie
+                            target.src = DEFAULT_USER_ICON;      // afficher icône par défaut
                           }}
                         />
-
-
                       </div>
-                  </TableCell>
+                    </TableCell>
 
                   <TableCell>{e.nom_employer} {e.prenom_employer}</TableCell>
                   <TableCell>{e.email}</TableCell>
