@@ -42,21 +42,25 @@ const Demandes = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [dataDemandes, dataAchats, dataPayements] = await Promise.all([
+        const [dataDemandes, dataAchats, dataPayements] = await Promise.all([
         rhApi.getDemandes(),
         rhApi.getAchats(),
         rhApi.getPayements(),
-      ]);
+        ]);
 
-      setDemandes(dataDemandes?.data || []);
-      setAchats(dataAchats?.data || []);
-      setPayements(dataPayements?.data || []);
+        console.log("ACHATS", dataAchats?.data);
+        console.log("PAYEMENTS", dataPayements?.data);
+
+        setDemandes(dataDemandes?.data || []);
+        setAchats(dataAchats?.data || []);
+        setPayements(dataPayements?.data || []);
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de charger les données.", variant: "destructive" });
+        toast({ title: "Erreur", description: err.message || "Impossible de charger les données.", variant: "destructive" });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
+    };
+
 
   const handleApprove = async (id: string) => {
     try {
