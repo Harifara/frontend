@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
+const DEFAULT_USER_ICON = "/default-user-icon.png";
 interface Employer {
   id: string;
   nom_employer: string;
@@ -80,22 +80,23 @@ const EmployeProfile = () => {
         <CardHeader className="flex flex-col md:flex-row gap-6 items-center">
           {/* Photo de profil */}
           <div className="relative w-32 h-32">
-            {employe.photo_profil ? (
               <img
                 src={
-                  employe.photo_profil.startsWith("http")
-                    ? employe.photo_profil
-                    : `${API_URL}${employe.photo_profil}`
+                  employe.photo_profil
+                    ? employe.photo_profil.startsWith("http")
+                      ? employe.photo_profil
+                      : `${API_URL.replace(/\/?$/, "/")}${employe.photo_profil}`
+                    : DEFAULT_USER_ICON
                 }
                 alt="Profil"
                 className="w-32 h-32 rounded-full object-cover border-4 border-gray-100 shadow"
+                onError={(e) => {
+                  const target = e.currentTarget as HTMLImageElement;
+                  target.onerror = null; // éviter boucle infinie
+                  target.src = DEFAULT_USER_ICON; // fallback
+                }}
               />
-            ) : (
-              <div className="w-32 h-32 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
-                Aucun
-              </div>
-            )}
-          </div>
+            </div>
 
           {/* Infos de base */}
           <div className="space-y-1 text-center md:text-left">
