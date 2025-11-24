@@ -222,24 +222,24 @@ export default function Achats() {
             <div>
               <Label>Type d'Achat</Label>
               <Select
-                value={form.type_achat_id || ""}
+                value={form.type_achat_id ?? undefined}
                 onValueChange={(v) => setForm({ ...form, type_achat_id: v || null })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir un type d'achat" />
                 </SelectTrigger>
                 <SelectContent>
-                  {typeAchats.length > 0 ? (
-                    typeAchats.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>
-                        {t.nom}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="" disabled>Aucun type disponible</SelectItem>
-                  )}
+                  {typeAchats.length > 0
+                    ? typeAchats.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>
+                          {t.nom}
+                        </SelectItem>
+                      ))
+                    : null // On ne rend rien si aucun type dispo
+                  }
                 </SelectContent>
               </Select>
+
             </div>
 
             {/* Article */}
