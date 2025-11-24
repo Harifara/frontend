@@ -24,8 +24,14 @@ interface Achat {
   code_achat: string;
   nombre: number;
   montant: number;
-  type_achats: string | null;
+  type_achat?: {
+    id: string;
+    nom: string;
+  } | null;
+  type_achat_id?: string | null;
 }
+
+
 
 export default function Achats() {
   const [achats, setAchats] = useState<Achat[]>([]);
@@ -91,8 +97,9 @@ export default function Achats() {
       code_achat: form.code_achat,
       nombre: Number(form.nombre),
       montant: Number(form.montant),
-      type_achat_id: form.type_achats,
+      type_achat_id: form.type_achat_id,
     };
+
 
     try {
       if (editingAchat) {
@@ -161,6 +168,7 @@ export default function Achats() {
               <TableRow>
                 <TableHead className="text-center">Article</TableHead>
                 <TableHead className="text-center">Code</TableHead>
+                <TableHead className="text-center">Type Achat</TableHead>
                 <TableHead className="text-center">Quantité</TableHead>
                 <TableHead className="text-center">Montant</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
@@ -171,6 +179,7 @@ export default function Achats() {
                 <TableRow key={a.id}>
                   <TableCell className="text-center">{a.article}</TableCell>
                   <TableCell className="text-center">{a.code_achat}</TableCell>
+                  <TableCell className="text-center">{a.type_achat?.nom || "-"}</TableCell>
                   <TableCell className="text-center">{a.nombre}</TableCell>
                   <TableCell className="text-center">{Number(a.montant).toLocaleString()} Ar</TableCell>
                   <TableCell className="text-center space-x-2">
@@ -197,14 +206,12 @@ export default function Achats() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label>Type d'Achat</Label>
-              <Select value={form.type_achats ?? ""} onValueChange={(v) => setForm({ ...form, type_achats: v || null })}>
-                <SelectTrigger><SelectValue placeholder="Choisir un type" /></SelectTrigger>
-                <SelectContent>
-                  {typeAchats.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.nom}</SelectItem>
-                  ))}
-                </SelectContent>
+              <Select value={form.type_achat_id ?? ""} onValueChange={(v) => setForm({ ...form, type_achat_id: v || null })}>
+                {typeAchats.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.nom}</SelectItem>
+                ))}
               </Select>
+
             </div>
             <div>
               <Label>Article</Label>
