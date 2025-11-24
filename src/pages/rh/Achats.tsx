@@ -71,31 +71,37 @@ export default function Achats() {
   }, []);
 
   const fetchData = async () => {
-    try {
-      const [achatsRes, typesRes] = await Promise.all([
-        rhApi.getAchats(),
-        rhApi.getTypeAchats(),
-      ]);
+      try {
+        const [achatsRes, typesRes] = await Promise.all([
+          rhApi.getAchats(),
+          rhApi.getTypeAchats(),
+        ]);
 
-      const achatsMapped = (achatsRes?.data ?? []).map((a: any) => ({
-        ...a,
-        montant: Number(a.montant),
-        type_achat: a.type_achat
-          ? { id: a.type_achat.id, nom: a.type_achat.nom }
-          : null,
-      }));
+        // Vérifie si les données sont dans "results" ou directement dans "data"
+        const achatsData = achatsRes?.data?.results ?? achatsRes?.data ?? [];
+        const typeAchatsData = typesRes?.data?.results ?? typesRes?.data ?? [];
 
-      setAchats(achatsMapped);
-      setTypeAchats(typesRes?.data ?? typesRes ?? []);
-    } catch (err) {
-      console.error(err);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les données.",
-        variant: "destructive",
-      });
-    }
-  };
+        const achatsMapped = achatsData.map((a: any) => ({
+          ...a,
+          montant: Number(a.montant),
+          type_achat: a.type_achat
+            ? { id: a.type_achat.id, nom: a.type_achat.nom }
+            : null,
+        }));
+
+        setAchats(achatsMapped);
+        setTypeAchats(typeAchatsData);
+        console.log("Achats chargés:", achatsMapped); // Pour vérifier en console
+      } catch (err) {
+        console.error(err);
+        toast({
+          title: "Erreur",
+          description: "Impossible de charger les données.",
+          variant: "destructive",
+        });
+      }
+    };
+
 
   const handleOpenModal = (achat?: Achat) => {
     if (achat) {
