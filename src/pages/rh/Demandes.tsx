@@ -34,6 +34,9 @@ interface Demande {
   montant: number;
 }
 
+// ------------------
+// Helper functions
+// ------------------
 const extractList = (response: any) => {
   if (!response) return [];
   if (Array.isArray(response)) return response;
@@ -42,6 +45,19 @@ const extractList = (response: any) => {
   return [];
 };
 
+const statusStyle = (status: string) => {
+  switch (status) {
+    case "en_attente": return { bg: "bg-yellow-500", icon: "⏳" };
+    case "en_cours": return { bg: "bg-blue-500", icon: "🔄" };
+    case "approuve": return { bg: "bg-green-500", icon: "✔️" };
+    case "refuse": return { bg: "bg-red-500", icon: "❌" };
+    default: return { bg: "bg-gray-400", icon: "❔" };
+  }
+};
+
+// ------------------
+// Composant
+// ------------------
 const Demandes = () => {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [achats, setAchats] = useState<Achat[]>([]);
@@ -153,12 +169,16 @@ const Demandes = () => {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredDemandes.length ? filteredDemandes.map(d => (
-          <Card key={d.id} className="rounded-xl shadow-md border p-4">
+          <Card key={d.id} className="relative rounded-xl shadow-md border p-4">
+            {/* Badge statut */}
+            <div className={`absolute top-2 right-2 flex items-center justify-center w-8 h-8 text-white text-sm font-bold rounded-full ${statusStyle(d.status).bg}`}>
+              {statusStyle(d.status).icon}
+            </div>
+
             <CardHeader>
               <CardTitle className="text-lg font-semibold">{d.description}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <p><strong>Status:</strong> {d.status}</p>
               <p><strong>Montant total:</strong> {d.montant.toLocaleString()} Ar</p>
 
               <div>
@@ -184,45 +204,24 @@ const Demandes = () => {
               </div>
 
               <div className="flex flex-wrap gap-2 mt-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={async () => {
-                    try { await rhApi.approveDemande(d.id); toast({ title: "Succès", description: "Demande approuvée." }); fetchData(); }
-                    catch (err: any) { toast({ title: "Erreur", description: err.message, variant: "destructive" }); }
-                  }}
-                >
+                <Button size="sm" variant="outline"
+                  onClick={async () => { try { await rhApi.approveDemande(d.id); toast({ title: "Succès", description: "Demande approuvée." }); fetchData(); } catch (err: any) { toast({ title: "Erreur", description: err.message, variant: "destructive" }); } }}>
                   Approuver
                 </Button>
 
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={async () => {
-                    try { await rhApi.rejectDemande(d.id); toast({ title: "Succès", description: "Demande refusée." }); fetchData(); }
-                    catch (err: any) { toast({ title: "Erreur", description: err.message, variant: "destructive" }); }
-                  }}
-                >
+                <Button size="sm" variant="destructive"
+                  onClick={async () => { try { await rhApi.rejectDemande(d.id); toast({ title: "Succès", description: "Demande refusée." }); fetchData(); } catch (err: any) { toast({ title: "Erreur", description: err.message, variant: "destructive" }); } }}>
                   Refuser
                 </Button>
 
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => openModal(d)}
-                >
-                  Modifier
-                </Button>
+                <Button size="sm" variant="outline" onClick={() => openModal(d)}>Modifier</Button>
 
-                <Button
-                  size="sm"
-                  variant="destructive"
+                <Button size="sm" variant="destructive"
                   onClick={async () => {
                     if (!confirm("Voulez-vous vraiment supprimer cette demande ?")) return;
                     try { await rhApi.deleteDemande(d.id); toast({ title: "Supprimée", description: "La demande a été supprimée." }); fetchData(); }
                     catch (err: any) { toast({ title: "Erreur", description: err.message, variant: "destructive" }); }
-                  }}
-                >
+                  }}>
                   Supprimer
                 </Button>
               </div>
