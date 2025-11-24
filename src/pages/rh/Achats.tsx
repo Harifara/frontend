@@ -208,10 +208,13 @@ export default function Achats() {
 
       {/* MODAL FORM */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="sm:max-w-[500px]" aria-describedby="achat-form-description">
             <DialogHeader>
               <DialogTitle>{editingAchat ? "Modifier l'Achat" : "Créer un Achat"}</DialogTitle>
             </DialogHeader>
+            <p id="achat-form-description" className="sr-only">
+              Formulaire pour créer ou modifier un achat.
+            </p>
             <form onSubmit={handleSubmit} className="space-y-4">
               
               {/* Type d'Achat */}
