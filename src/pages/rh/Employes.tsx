@@ -51,6 +51,8 @@ const Employes: React.FC = () => {
 
   const { toast } = useToast();
   const navigate = useNavigate();
+  const getPhotoUrl = (photo?: string) =>
+  photo ? (photo.startsWith("http") ? photo : `${MEDIA_URL.replace(/\/?$/, "/")}${photo}`) : null;
 
  
 
@@ -225,13 +227,10 @@ const Employes: React.FC = () => {
                   <TableCell>
                     {e.photo_profil ? (
                       <img
-                        src={
-                          e.photo_profil?.startsWith("http")
-                            ? e.photo_profil
-                            : `${MEDIA_URL}${e.photo_profil}`
-                        }
+                        src={getPhotoUrl(e.photo_profil) || "/images/default-profile.png"}
                         className="w-10 h-10 rounded-full object-cover"
                       />
+
 
                     ) : (
                       <span className="text-gray-400 text-sm">Aucune</span>
