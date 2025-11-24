@@ -1,11 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { rhApi } from "@/lib/api";
-import {
-  Card, CardContent, CardHeader, CardTitle
-} from "@/components/ui/card";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
-} from "@/components/ui/table";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,7 +15,6 @@ interface TypeAchat {
   nom: string;
   description?: string;
 }
-
 
 interface Achat {
   id?: string;
@@ -49,7 +44,7 @@ export default function Achats() {
     code_achat: "",
     nombre: 1,
     montant: 0,
-    type_achat_id: null,
+    type_achat_id: undefined,
   });
 
   useEffect(() => {
@@ -58,13 +53,10 @@ export default function Achats() {
 
   const fetchData = async () => {
     try {
-      const [achatsRes, typesRes] = await Promise.all([
-        rhApi.getAchats(),
-        rhApi.getTypeAchats(),
-      ]);
-      console.log("Types d'achats récupérés:", typesRes);
+      const [achatsRes, typesRes] = await Promise.all([rhApi.getAchats(), rhApi.getTypeAchats()]);
       setAchats(achatsRes?.data || []);
       setTypeAchats(typesRes?.data || []);
+      console.log("Types d'achats récupérés:", typesRes?.data);
     } catch (err: any) {
       console.error(err);
       toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
@@ -72,19 +64,16 @@ export default function Achats() {
   };
 
   const handleOpenModal = (achat?: Achat) => {
-    if (achat) {
-      setEditingAchat(achat);
-      setForm({
-        ...achat,
-        type_achat_id: achat.type_achat?.id || undefined,
-      });
-    } else {
-      setEditingAchat(null);
-      setForm({ article: "", code_achat: "", nombre: 1, montant: 0, type_achat_id: undefined });
-    }
+    setEditingAchat(achat || null);
+    setForm({
+      article: achat?.article || "",
+      code_achat: achat?.code_achat || "",
+      nombre: achat?.nombre || 1,
+      montant: achat?.montant || 0,
+      type_achat_id: achat?.type_achat?.id || undefined,
+    });
     setIsModalOpen(true);
   };
-
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
@@ -204,7 +193,11 @@ export default function Achats() {
 
       {/* MODAL FORM */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]" aria-describedby="achat-form-description">
+        <DialogContent
+          key={isModalOpen ? "open" : "closed"} // force rerender
+          className="sm:max-w-[500px]"
+          aria-describedby="achat-form-description"
+        >
           <DialogHeader>
             <DialogTitle>{editingAchat ? "Modifier l'Achat" : "Créer un Achat"}</DialogTitle>
           </DialogHeader>
@@ -222,17 +215,17 @@ export default function Achats() {
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir un type d'achat" />
                 </SelectTrigger>
-
-                <SelectContent>
-                  {typeAchats.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.nom}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                {typeAchats.length > 0 && (
+                  <SelectContent>
+                    {typeAchats.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.nom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                )}
               </Select>
             </div>
-
 
             {/* Article */}
             <div>
@@ -289,7 +282,9 @@ export default function Achats() {
       {/* MODAL DELETE */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader><DialogTitle>Confirmation</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Confirmation</DialogTitle>
+          </DialogHeader>
           <p>Voulez-vous vraiment supprimer cet achat ?</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Annuler</Button>
