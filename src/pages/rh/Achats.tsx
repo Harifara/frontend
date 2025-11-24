@@ -71,30 +71,32 @@ export default function Achats() {
   }, []);
 
   const fetchData = async () => {
-    try {
-      const [achatsRes, typesRes] = await Promise.all([
-        rhApi.getAchats(),
-        rhApi.getTypeAchats(),
-      ]);
+  try {
+    const [typesRes, achatsRes] = await Promise.all([
+      rhApi.get("/type-achats/"),
+      rhApi.get("/achats/")
+    ]);
 
-      // Mapper type_achat pour éviter les undefined
-      const achatsMapped = (achatsRes?.data ?? []).map((a: Achat) => ({
-        ...a,
-        type_achat: a.type_achat ? { id: a.type_achat.id, nom: a.type_achat.nom } : null,
-        montant: Number(a.montant),
-      }));
+    const achatsMapped = achatsRes.data.map((a: any) => ({
+      id: a.id,
+      article: a.article,
+      code_achat: a.code_achat,
+      nombre: a.nombre,
+      montant: a.montant,
+      type_achat: a.type_achat ? {
+        id: a.type_achat.id,
+        nom: a.type_achat.nom
+      } : null
+    }));
 
-      setAchats(achatsMapped);
-      setTypeAchats(typesRes?.data ?? typesRes ?? []);
-    } catch (err: any) {
-      console.error(err);
-      toast({
-        title: "Erreur",
-        description: "Impossible de charger les données.",
-        variant: "destructive",
-      });
-    }
-  };
+    setAchats(achatsMapped);
+    setFilteredAchats(achatsMapped); // ⚠ IMPORTANT
+    setTypeAchats(typesRes.data);
+  } catch (error) {
+    console.error("Erreur fetch achats :", error);
+  }
+};
+
 
   const handleOpenModal = (achat?: Achat) => {
     if (achat) {
