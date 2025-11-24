@@ -193,22 +193,21 @@ const Demandes = () => {
 
             <div>
               <label>Achats</label>
-              <Select
-                multiple
-                value={form.achatsIds}
-                onValueChange={(values: string[]) => setForm({ ...form, achatsIds: values })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner les achats" />
-                </SelectTrigger>
-                <SelectContent>
-                  {achats.length > 0 ? achats.map(a => (
-                    <SelectItem key={a.id} value={String(a.id)}>
-                      {a.article} - {a.montant.toLocaleString()} Ar
-                    </SelectItem>
-                  )) : <SelectItem disabled>Aucun achat disponible</SelectItem>}
-                </SelectContent>
-              </Select>
+              <Select multiple
+                    value={form.achatsIds}
+                    onValueChange={(values: string[]) => setForm({ ...form, achatsIds: values })}
+                    disabled={achats.length === 0} // désactive si vide
+                    >
+                    <SelectTrigger>
+                        <SelectValue placeholder={achats.length > 0 ? "Sélectionner les achats" : "Chargement..."} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {achats.length > 0
+                        ? achats.map(a => <SelectItem key={a.id} value={String(a.id)}>{a.article} - {a.montant.toLocaleString()} Ar</SelectItem>)
+                        : <SelectItem disabled>Aucun achat disponible</SelectItem>}
+                    </SelectContent>
+                </Select>
+
             </div>
 
             <div>
