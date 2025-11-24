@@ -76,7 +76,7 @@ export default function Achats() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!form.article || !form.code_achat || !form.type_achat) {
+    if (!form.article || !form.code_achat || !form.type_achats) {
       toast({ title: "Champs requis", description: "Veuillez remplir les champs obligatoires.", variant: "destructive" });
       return;
     }
@@ -86,7 +86,7 @@ export default function Achats() {
       code_achat: form.code_achat,
       nombre: Number(form.nombre),
       montant: Number(form.montant),
-      type_achats_id: form.type_achats || null,
+      type_achats_id: form.type_achats,
     };
 
     try {
