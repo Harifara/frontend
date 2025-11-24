@@ -68,6 +68,9 @@ const MouvementStockManagement: React.FC = () => {
   const { toast } = useToast();
   const magasinier_id = "uuid-magasinier-1";
 
+  // -----------------------
+  // FETCH DATA
+  // -----------------------
   const fetchAllData = async () => {
     try {
       const [mouvementsRes, articlesRes, magasinsRes] = await Promise.all([
@@ -87,9 +90,25 @@ const MouvementStockManagement: React.FC = () => {
     fetchAllData();
   }, []);
 
+  // -----------------------
+  // CRUD Actions
+  // -----------------------
   const handleSave = async () => {
-    if (!form.article || form.quantite <= 0) {
-      toast({ title: "Erreur", description: "Veuillez remplir les champs obligatoires et quantité > 0", variant: "destructive" });
+    // ⚡ Validation stricte avant envoi
+    if (!form.article) {
+      toast({ title: "Erreur", description: "Veuillez sélectionner un article", variant: "destructive" });
+      return;
+    }
+    if (form.quantite <= 0) {
+      toast({ title: "Erreur", description: "La quantité doit être supérieure à 0", variant: "destructive" });
+      return;
+    }
+    if (form.type_mouvement === "sortie" && !form.magasin_source) {
+      toast({ title: "Erreur", description: "La sortie nécessite un magasin source", variant: "destructive" });
+      return;
+    }
+    if ((form.type_mouvement === "entree" || form.type_mouvement === "retour") && !form.magasin_dest) {
+      toast({ title: "Erreur", description: "L'entrée ou le retour nécessite un magasin destination", variant: "destructive" });
       return;
     }
 
@@ -115,6 +134,7 @@ const MouvementStockManagement: React.FC = () => {
         toast({ title: "Succès", description: "Mouvement ajouté avec succès" });
       }
 
+      // Reset formulaire
       setOpenModal(false);
       setEditingMouvement(null);
       setForm({
@@ -163,7 +183,11 @@ const MouvementStockManagement: React.FC = () => {
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Gestion des Mouvements de Stock</h2>
-        <Button onClick={() => { setEditingMouvement(null); setForm({ article: "", magasin_source: "", magasin_dest: "", quantite: 0, type_mouvement: "entree", commentaire: "", recepteur_id: "", recepteur_type: "magasin" }); setOpenModal(true); }}>
+        <Button onClick={() => {
+          setEditingMouvement(null);
+          setForm({ article: "", magasin_source: "", magasin_dest: "", quantite: 0, type_mouvement: "entree", commentaire: "", recepteur_id: "", recepteur_type: "magasin" });
+          setOpenModal(true);
+        }}>
           <Plus className="mr-2 h-4 w-4" /> Nouveau
         </Button>
       </div>
@@ -206,6 +230,7 @@ const MouvementStockManagement: React.FC = () => {
         </Table>
       </div>
 
+      {/* Modal Ajouter / Modifier */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
         <DialogContent>
           <DialogHeader>
@@ -260,7 +285,6 @@ const MouvementStockManagement: React.FC = () => {
               <Textarea value={form.commentaire} onChange={(e) => setForm({ ...form, commentaire: e.target.value })} />
             </div>
           </div>
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenModal(false)}>Annuler</Button>
             <Button onClick={handleSave}>Enregistrer</Button>
