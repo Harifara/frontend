@@ -220,9 +220,12 @@ export default function Achats() {
                 </SelectTrigger>
                 <SelectContent>
                   {typeAchats.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.nom}</SelectItem>
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.type_achat} {/* avant c'était t.nom */}
+                    </SelectItem>
                   ))}
                 </SelectContent>
+
               </Select>
             </div>
 
