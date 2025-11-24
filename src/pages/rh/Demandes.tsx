@@ -180,10 +180,71 @@ const Demandes = () => {
                   <TableCell>{d.status}</TableCell>
                   <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
                   <TableCell className="space-x-2">
-                    <Button size="sm" variant="outline">Approuver</Button>
-                    <Button size="sm" variant="destructive">Refuser</Button>
-                    <Button size="sm" variant="outline" onClick={() => openModal(d)}>Modifier</Button>
-                  </TableCell>
+
+  {/* --- APPROUVER --- */}
+  <Button
+    size="sm"
+    variant="outline"
+    onClick={async () => {
+      try {
+        await rhApi.approveDemande(d.id);
+        toast({ title: "Succès", description: "Demande approuvée." });
+        fetchData();
+      } catch (err: any) {
+        toast({ title: "Erreur", description: err.message, variant: "destructive" });
+      }
+    }}
+  >
+    Approuver
+  </Button>
+
+  {/* --- REFUSER --- */}
+  <Button
+    size="sm"
+    variant="destructive"
+    onClick={async () => {
+      try {
+        await rhApi.rejectDemande(d.id);
+        toast({ title: "Succès", description: "Demande refusée." });
+        fetchData();
+      } catch (err: any) {
+        toast({ title: "Erreur", description: err.message, variant: "destructive" });
+      }
+    }}
+  >
+    Refuser
+  </Button>
+
+  {/* --- MODIFIER --- */}
+  <Button
+    size="sm"
+    variant="outline"
+    onClick={() => openModal(d)}
+  >
+    Modifier
+  </Button>
+
+  {/* --- SUPPRIMER --- */}
+  <Button
+    size="sm"
+    variant="destructive"
+    onClick={async () => {
+      if (!confirm("Voulez-vous vraiment supprimer cette demande ?")) return;
+
+      try {
+        await rhApi.deleteDemande(d.id);
+        toast({ title: "Supprimée", description: "La demande a été supprimée." });
+        fetchData();
+      } catch (err: any) {
+        toast({ title: "Erreur", description: err.message, variant: "destructive" });
+      }
+    }}
+  >
+    Supprimer
+  </Button>
+
+</TableCell>
+
                 </TableRow>
               )) : (
                 <TableRow>
