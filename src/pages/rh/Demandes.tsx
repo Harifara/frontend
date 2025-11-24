@@ -47,9 +47,9 @@ const Demandes = () => {
         rhApi.getAchats(),
         rhApi.getPayements(),
       ]);
-      setDemandes(dataDemandes);
-      setAchats(dataAchats);
-      setPayements(dataPayements);
+      setDemandes(dataDemandes?.data || []);
+      setAchats(dataAchats?.data || []);
+      setPayements(dataPayements?.data || []);
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Impossible de charger les données.", variant: "destructive" });
     } finally {
@@ -94,20 +94,19 @@ const Demandes = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const payload = {
+      description: form.description,
+      achats_ids: form.achatsIds,
+      payements_ids: form.payementsIds,
+    };
+
     try {
       if (editingDemande) {
-        await rhApi.updateDemande(editingDemande.id, {
-          description: form.description,
-          achats_ids: form.achatsIds,
-          payements_ids: form.payementsIds,
-        });
+        await rhApi.updateDemande(editingDemande.id, payload);
         toast({ title: "Succès", description: "Demande mise à jour." });
       } else {
-        await rhApi.createDemande({
-          description: form.description,
-          achats_ids: form.achatsIds,
-          payements_ids: form.payementsIds,
-        });
+        await rhApi.createDemande(payload);
         toast({ title: "Succès", description: "Demande créée." });
       }
       setIsModalOpen(false);
@@ -156,7 +155,7 @@ const Demandes = () => {
                 <TableRow key={d.id}>
                   <TableCell>{d.description}</TableCell>
                   <TableCell>{d.status}</TableCell>
-                  <TableCell>{d.montant}</TableCell>
+                  <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
                   <TableCell className="space-x-2">
                     <Button size="sm" variant="outline" onClick={() => handleApprove(d.id)}>Approuver</Button>
                     <Button size="sm" variant="destructive" onClick={() => handleReject(d.id)}>Refuser</Button>
