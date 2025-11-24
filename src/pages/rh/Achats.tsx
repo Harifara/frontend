@@ -20,7 +20,7 @@ interface Achat {
 
 export default function Achats() {
   const [achats, setAchats] = useState<Achat[]>([]);
-  const [typesAchats, setTypesAchats] = useState<any[]>([]);
+  const [typeAchats, setTypeAchats] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,10 +47,10 @@ export default function Achats() {
     try {
       const [achatsRes, typesRes] = await Promise.all([
         rhApi.getAchats(),
-        rhApi.getTypesAchats(),
+        rhApi.getTypeAchats(),
       ]);
       setAchats(achatsRes?.data || []);
-      setTypesAchats(typesRes?.data || []);
+      setTypeAchats(typesRes?.data || []);
     } catch (err) {
       console.error(err);
       toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
@@ -196,7 +196,7 @@ export default function Achats() {
               <Select value={form.type_achats ?? ""} onValueChange={(v) => setForm({ ...form, type_achats: v || null })}>
                 <SelectTrigger><SelectValue placeholder="Choisir un type" /></SelectTrigger>
                 <SelectContent>
-                  {typesAchats.map((t) => (
+                  {typeAchats.map((t) => (
                     <SelectItem key={t.id} value={t.id}>{t.nom}</SelectItem>
                   ))}
                 </SelectContent>
