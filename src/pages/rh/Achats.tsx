@@ -63,7 +63,7 @@ export default function Achats() {
     code_achat: "",
     nombre: 1,
     montant: 0,
-    type_achat_id: null,
+    type_achat_id: "",
   });
 
   useEffect(() => {
@@ -80,9 +80,7 @@ export default function Achats() {
       const achatsMapped = (achatsRes?.data ?? []).map((a: any) => ({
         ...a,
         montant: Number(a.montant),
-        type_achat: a.type_achat
-          ? { id: a.type_achat.id, nom: a.type_achat.nom }
-          : null,
+        type_achat: a.type_achat ?? { id: "", nom: "Non défini" },
       }));
 
       setAchats(achatsMapped);
@@ -102,7 +100,7 @@ export default function Achats() {
       setEditingAchat(achat);
       setForm({
         ...achat,
-        type_achat_id: achat.type_achat?.id ?? null,
+        type_achat_id: achat.type_achat?.id ?? "",
       });
     } else {
       setEditingAchat(null);
@@ -111,7 +109,7 @@ export default function Achats() {
         code_achat: "",
         nombre: 1,
         montant: 0,
-        type_achat_id: null,
+        type_achat_id: "",
       });
     }
     setIsModalOpen(true);
@@ -124,7 +122,6 @@ export default function Achats() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!form.article || !form.code_achat || !form.type_achat_id) {
       toast({
         title: "Champs requis",
@@ -143,15 +140,30 @@ export default function Achats() {
     };
 
     try {
+      let res;
       if (editingAchat) {
-        await rhApi.updateAchat(editingAchat.id!, payload);
+        res = await rhApi.updateAchat(editingAchat.id!, payload);
         toast({ title: "Succès", description: "Achat mis à jour." });
+
+        // Mettre à jour le tableau localement
+        setAchats((prev) =>
+          prev.map((a) =>
+            a.id === editingAchat.id
+              ? { ...res.data, type_achat: typeAchats.find(t => t.id === res.data.type_achat_id) }
+              : a
+          )
+        );
       } else {
-        await rhApi.createAchat(payload);
+        res = await rhApi.createAchat(payload);
         toast({ title: "Succès", description: "Achat créé." });
+
+        // Ajouter directement le nouvel achat au tableau
+        setAchats((prev) => [
+          ...prev,
+          { ...res.data, type_achat: typeAchats.find(t => t.id === res.data.type_achat_id) },
+        ]);
       }
       handleCloseModal();
-      fetchData();
     } catch (err: any) {
       console.error(err);
       toast({
@@ -172,7 +184,7 @@ export default function Achats() {
     try {
       await rhApi.deleteAchat(selectedIdToDelete);
       toast({ title: "Succès", description: "Achat supprimé." });
-      fetchData();
+      setAchats((prev) => prev.filter((a) => a.id !== selectedIdToDelete));
     } catch (err) {
       console.error(err);
       toast({
@@ -228,29 +240,13 @@ export default function Achats() {
                   <TableRow key={a.id}>
                     <TableCell className="text-center">{a.article}</TableCell>
                     <TableCell className="text-center">{a.code_achat}</TableCell>
-                    <TableCell className="text-center">
-                      {a.type_achat?.nom || "Non défini"}
-                    </TableCell>
+                    <TableCell className="text-center">{a.type_achat?.nom || "Non défini"}</TableCell>
                     <TableCell className="text-center">{a.nombre}</TableCell>
-                    <TableCell className="text-center">
-                      {a.montant.toLocaleString()} Ar
-                    </TableCell>
+                    <TableCell className="text-center">{Number(a.montant).toLocaleString()} Ar</TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleOpenModal(a)}
-                        >
-                          Modifier
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => handleOpenDeleteModal(a.id!)}
-                        >
-                          Supprimer
-                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => handleOpenModal(a)}>Modifier</Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(a.id!)}>Supprimer</Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -269,16 +265,20 @@ export default function Achats() {
 
       {/* MODAL AJOUT / MODIF */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px]" aria-describedby="achat-dialog-description">
           <DialogHeader>
             <DialogTitle>{editingAchat ? "Modifier l'Achat" : "Créer un Achat"}</DialogTitle>
           </DialogHeader>
+
+          <p id="achat-dialog-description" className="sr-only">
+            Formulaire de création ou modification d'un achat
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label>Type d'Achat</Label>
               <Select
-                value={form.type_achat_id ?? undefined}
+                value={form.type_achat_id || ""}
                 onValueChange={(v) => setForm({ ...form, type_achat_id: v })}
               >
                 <SelectTrigger>
@@ -286,9 +286,7 @@ export default function Achats() {
                 </SelectTrigger>
                 <SelectContent>
                   {typeAchats.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.nom}
-                    </SelectItem>
+                    <SelectItem key={t.id} value={t.id}>{t.nom}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -296,49 +294,27 @@ export default function Achats() {
 
             <div>
               <Label>Article</Label>
-              <Input
-                value={form.article}
-                onChange={(e) => setForm({ ...form, article: e.target.value })}
-                required
-              />
+              <Input value={form.article} onChange={(e) => setForm({ ...form, article: e.target.value })} required />
             </div>
 
             <div>
               <Label>Code Achat</Label>
-              <Input
-                value={form.code_achat}
-                onChange={(e) => setForm({ ...form, code_achat: e.target.value })}
-                required
-              />
+              <Input value={form.code_achat} onChange={(e) => setForm({ ...form, code_achat: e.target.value })} required />
             </div>
 
             <div>
               <Label>Quantité</Label>
-              <Input
-                type="number"
-                min={1}
-                value={form.nombre}
-                onChange={(e) => setForm({ ...form, nombre: Number(e.target.value) })}
-              />
+              <Input type="number" min={1} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: Number(e.target.value) })} />
             </div>
 
             <div>
               <Label>Montant</Label>
-              <Input
-                type="number"
-                min={0}
-                value={form.montant}
-                onChange={(e) => setForm({ ...form, montant: Number(e.target.value) })}
-              />
+              <Input type="number" min={0} value={form.montant} onChange={(e) => setForm({ ...form, montant: Number(e.target.value) })} />
             </div>
 
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={handleCloseModal}>
-                Annuler
-              </Button>
-              <Button type="submit">
-                {editingAchat ? "Mettre à jour" : "Créer"}
-              </Button>
+              <Button variant="outline" type="button" onClick={handleCloseModal}>Annuler</Button>
+              <Button type="submit">{editingAchat ? "Mettre à jour" : "Créer"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -352,12 +328,8 @@ export default function Achats() {
           </DialogHeader>
           <p>Voulez-vous vraiment supprimer cet achat ?</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-              Annuler
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Supprimer
-            </Button>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
