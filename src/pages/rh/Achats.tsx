@@ -110,11 +110,14 @@ export default function Achats() {
     const payload = {
       article: form.article,
       code_achat: form.code_achat,
-      nombre: form.nombre,
-      montant: form.montant,
-      demande: form.demande,
-      type_achat: form.type_achat,
+      nombre: Number(form.nombre),
+      montant: Number(form.montant),
+
+      demande_id: form.demande || null,
+      type_achat_id: form.type_achat || null,
     };
+
+
 
     try {
       if (editingAchat) {
@@ -243,8 +246,8 @@ export default function Achats() {
             <div>
               <Label>Demande</Label>
               <Select
-                value={form.demande ?? "null"}
-                onValueChange={(v) => setForm({ ...form, demande: v === "null" ? null : v })}
+                value={form.demande === null ? "" : form.demande}
+                onValueChange={(v) => setForm({ ...form, demande: v === "" ? null : v })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir une demande" />
@@ -265,7 +268,8 @@ export default function Achats() {
               <Label>Type d'Achat</Label>
               <Select
                 value={form.type_achat ?? ""}
-                onValueChange={(v) => setForm({ ...form, type_achat: v })}
+                onValueChange={(v) => setForm({ ...form, type_achat: v || null })}
+
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir un type" />
