@@ -34,6 +34,7 @@ import ModePayement from "./pages/rh/ModePayement";
 import Payements from "./pages/rh/Payements";
 import TypeAchat from "./pages/rh/TypeAchat";
 import Achats from "./pages/rh/Achats";
+import Demandes from "./pages/rh/Demandes";
 import Categories from "./pages/stock/Categories";
 import Articles from "./pages/stock/Articles";
 import Magasins from "./pages/stock/Magasins";
@@ -104,6 +105,7 @@ const App = () => (
               <Route path="/rh/payements" element={<Payements />} />
               <Route path="/rh/TypeAchat" element={<TypeAchat />} />
               <Route path="/rh/achats" element={<Achats />} />
+              <Route path="/rh/demandes" element={<Demandes />} />
 
               {/* Pages Stock */}
               <Route path="/stock/magasins" element={<Magasins />} />

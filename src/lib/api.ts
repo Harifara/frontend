@@ -541,6 +541,32 @@ completeAchat: async (id: string) =>
     headers: getHeaders(await ensureKongToken()),
   }),
 
+getDemandes: async () => fetchWithLog(`${API_BASE_URL}/rh/demandes/`, {
+    headers: getHeaders(await ensureKongToken()),
+  }),
+  createDemande: async (payload: any) => fetchWithLog(`${API_BASE_URL}/rh/demandes/`, {
+    method: "POST",
+    headers: getHeaders(await ensureKongToken()),
+    body: JSON.stringify(payload),
+  }),
+  updateDemande: async (id: string, payload: any) => fetchWithLog(`${API_BASE_URL}/rh/demandes/${cleanUUID(id)}/`, {
+    method: "PATCH",
+    headers: getHeaders(await ensureKongToken()),
+    body: JSON.stringify(payload),
+  }),
+  deleteDemande: async (id: string) => fetchWithLog(`${API_BASE_URL}/rh/demandes/${cleanUUID(id)}/`, {
+    method: "DELETE",
+    headers: getHeaders(await ensureKongToken()),
+  }),
+  approveDemande: async (id: string) => fetchWithLog(`${API_BASE_URL}/rh/demandes/${cleanUUID(id)}/approve/`, {
+    method: "POST",
+    headers: getHeaders(await ensureKongToken()),
+  }),
+  rejectDemande: async (id: string) => fetchWithLog(`${API_BASE_URL}/rh/demandes/${cleanUUID(id)}/reject/`, {
+    method: "POST",
+    headers: getHeaders(await ensureKongToken()),
+  }),
+
 
 
 };
