@@ -1,13 +1,12 @@
-// src/pages/rh/Demandes.tsx
 import React, { useEffect, useState } from "react";
 import { rhApi } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { MultiSelect } from "@/components/ui/multi-select";
 
 interface Achat { id: string; article: string; montant: number; nombre: number; statut: string }
 interface Payement { id: string; montant: number; status: string }
@@ -20,15 +19,6 @@ interface Demande {
   montant: number;
 }
 
-// 🔥 fonction pour extraire n'importe quel format d'API
-const extractList = (response: any) => {
-  if (!response) return [];
-  if (Array.isArray(response)) return response;
-  if (response.data && Array.isArray(response.data)) return response.data;
-  if (response.results && Array.isArray(response.results)) return response.results;
-  return [];
-};
-
 const Demandes = () => {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [achats, setAchats] = useState<Achat[]>([]);
@@ -38,10 +28,10 @@ const Demandes = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDemande, setEditingDemande] = useState<Demande | null>(null);
 
-  const [form, setForm] = useState<{ description: string; achatsIds: string[]; payementsIds: string[] }>({
+  const [form, setForm] = useState({
     description: "",
-    achatsIds: [],
-    payementsIds: [],
+    achatsIds: [] as string[],
+    payementsIds: [] as string[],
   });
 
   const { toast } = useToast();
@@ -52,45 +42,22 @@ const Demandes = () => {
 
   const fetchData = async () => {
     setIsLoading(true);
-
     try {
-      const [rawDemandes, rawAchats, rawPayements] = await Promise.all([
+      const [demandesRes, achatsRes, payementsRes] = await Promise.all([
         rhApi.getDemandes(),
         rhApi.getAchats(),
         rhApi.getPayements(),
       ]);
 
-      console.log("RAW ACHATS =", rawAchats);
-      console.log("RAW PAYEMENTS =", rawPayements);
+      console.log("RAW ACHATS =", achatsRes?.data);
 
-      setDemandes(extractList(rawDemandes));
-      setAchats(extractList(rawAchats));
-      setPayements(extractList(rawPayements));
-
+      setDemandes(demandesRes.data || []);
+      setAchats(achatsRes.data || []);
+      setPayements(payementsRes.data || []);
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de charger les données.", variant: "destructive" });
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleApprove = async (id: string) => {
-    try {
-      await rhApi.approveDemande(id);
-      toast({ title: "Succès", description: "Demande approuvée." });
-      fetchData();
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Erreur lors de l'approbation.", variant: "destructive" });
-    }
-  };
-
-  const handleReject = async (id: string) => {
-    try {
-      await rhApi.rejectDemande(id);
-      toast({ title: "Succès", description: "Demande refusée." });
-      fetchData();
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Erreur lors du rejet.", variant: "destructive" });
     }
   };
 
@@ -99,14 +66,17 @@ const Demandes = () => {
       setEditingDemande(demande);
       setForm({
         description: demande.description,
-        achatsIds: demande.achats.map(a => String(a.id)),
-        payementsIds: demande.payements.map(p => String(p.id)),
+        achatsIds: demande.achats.map(a => a.id),
+        payementsIds: demande.payements.map(p => p.id),
       });
     } else {
       setEditingDemande(null);
-      setForm({ description: "", achatsIds: [], payementsIds: [] });
+      setForm({
+        description: "",
+        achatsIds: [],
+        payementsIds: [],
+      });
     }
-
     setIsModalOpen(true);
   };
 
@@ -131,7 +101,7 @@ const Demandes = () => {
       setIsModalOpen(false);
       fetchData();
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Erreur lors de l'enregistrement.", variant: "destructive" });
+      toast({ title: "Erreur", description: err.message, variant: "destructive" });
     }
   };
 
@@ -149,10 +119,9 @@ const Demandes = () => {
       </div>
 
       <Input
-        placeholder="Rechercher par description..."
+        placeholder="Rechercher..."
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
-        className="mb-4"
       />
 
       <Card>
@@ -170,36 +139,31 @@ const Demandes = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredDemandes.length ? filteredDemandes.map(d => (
+              {filteredDemandes.map(d => (
                 <TableRow key={d.id}>
                   <TableCell>{d.description}</TableCell>
                   <TableCell>{d.status}</TableCell>
                   <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
                   <TableCell className="space-x-2">
-                    <Button size="sm" variant="outline" onClick={() => handleApprove(d.id)}>Approuver</Button>
-                    <Button size="sm" variant="destructive" onClick={() => handleReject(d.id)}>Refuser</Button>
+                    <Button size="sm" variant="outline">Approuver</Button>
+                    <Button size="sm" variant="destructive">Refuser</Button>
                     <Button size="sm" variant="outline" onClick={() => openModal(d)}>Modifier</Button>
                   </TableCell>
                 </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-6">Aucune demande trouvée.</TableCell>
-                </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingDemande ? "Modifier la demande" : "Créer une demande"}</DialogTitle>
-            <DialogDescription>Ajustez les informations ci-dessous.</DialogDescription>
+            <DialogTitle>{editingDemande ? "Modifier la Demande" : "Créer une Demande"}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+
             <Input
               placeholder="Description"
               value={form.description}
@@ -208,52 +172,38 @@ const Demandes = () => {
             />
 
             <div>
-              <label>Achats</label>
-              <Select
-                multiple
-                value={form.achatsIds}
-                onValueChange={(values: string[]) => setForm({ ...form, achatsIds: values })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner les achats" />
-                </SelectTrigger>
-                <SelectContent>
-                  {achats.length > 0 ? achats.map(a => (
-                    <SelectItem key={a.id} value={String(a.id)}>
-                      {a.article} - {a.montant.toLocaleString()} Ar
-                    </SelectItem>
-                  )) : <SelectItem disabled>Aucun achat disponible</SelectItem>}
-                </SelectContent>
-              </Select>
+              <label className="font-medium">Achats</label>
+              <MultiSelect
+                items={achats.map(a => ({
+                  value: a.id,
+                  label: `${a.article} - ${a.montant} Ar`,
+                }))}
+                selected={form.achatsIds}
+                onChange={(values) => setForm({ ...form, achatsIds: values })}
+              />
             </div>
 
             <div>
-              <label>Payements</label>
-              <Select
-                multiple
-                value={form.payementsIds}
-                onValueChange={(values: string[]) => setForm({ ...form, payementsIds: values })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionner les payements" />
-                </SelectTrigger>
-                <SelectContent>
-                  {payements.length > 0 ? payements.map(p => (
-                    <SelectItem key={p.id} value={String(p.id)}>
-                      {p.montant.toLocaleString()} Ar - {p.status}
-                    </SelectItem>
-                  )) : <SelectItem disabled>Aucun payement disponible</SelectItem>}
-                </SelectContent>
-              </Select>
+              <label className="font-medium">Payements</label>
+              <MultiSelect
+                items={payements.map(p => ({
+                  value: p.id,
+                  label: `${p.montant} Ar - ${p.status}`,
+                }))}
+                selected={form.payementsIds}
+                onChange={(values) => setForm({ ...form, payementsIds: values })}
+              />
             </div>
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Annuler</Button>
               <Button type="submit">{editingDemande ? "Mettre à jour" : "Créer"}</Button>
             </DialogFooter>
+
           </form>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 };
