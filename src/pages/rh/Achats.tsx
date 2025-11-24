@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { rhApi } from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Card, CardContent, CardHeader, CardTitle
+} from "@/components/ui/card";
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,27 +13,28 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
+interface TypeAchat {
+  id: string;
+  nom: string;
+}
+
 interface Achat {
   id?: string;
   article: string;
   code_achat: string;
   nombre: number;
   montant: number;
-  type_achat?: { id: string; nom: string } | null; // correspond au serializer
-  type_achats: string | null; // pour le formulaire
+  type_achats: string | null;
 }
 
 export default function Achats() {
   const [achats, setAchats] = useState<Achat[]>([]);
-  const [typeAchats, setTypeAchats] = useState<{ id: string; nom: string }[]>([]);
+  const [typeAchats, setTypeAchats] = useState<TypeAchat[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-
   const [editingAchat, setEditingAchat] = useState<Achat | null>(null);
   const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
-
   const { toast } = useToast();
 
   const [form, setForm] = useState<Achat>({
@@ -52,7 +57,7 @@ export default function Achats() {
       ]);
       setAchats(achatsRes?.data || []);
       setTypeAchats(typesRes?.data || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
       toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
     }
@@ -61,13 +66,7 @@ export default function Achats() {
   const handleOpenModal = (achat?: Achat) => {
     if (achat) {
       setEditingAchat(achat);
-      setForm({
-        article: achat.article,
-        code_achat: achat.code_achat,
-        nombre: achat.nombre,
-        montant: achat.montant,
-        type_achats: achat.type_achat?.id || null,
-      });
+      setForm({ ...achat });
     } else {
       setEditingAchat(null);
       setForm({ article: "", code_achat: "", nombre: 1, montant: 0, type_achats: null });
@@ -82,9 +81,8 @@ export default function Achats() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!form.article || !form.code_achat || !form.type_achats) {
-      toast({ title: "Champs requis", description: "Veuillez remplir les champs obligatoires.", variant: "destructive" });
+      toast({ title: "Champs requis", description: "Veuillez remplir tous les champs.", variant: "destructive" });
       return;
     }
 
@@ -131,7 +129,7 @@ export default function Achats() {
     setIsDeleteModalOpen(false);
   };
 
-  const filteredAchats = achats.filter((a) =>
+  const filteredAchats = achats.filter(a =>
     a.article.toLowerCase().includes(searchTerm.toLowerCase()) ||
     a.code_achat.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -165,7 +163,6 @@ export default function Achats() {
                 <TableHead className="text-center">Code</TableHead>
                 <TableHead className="text-center">Quantité</TableHead>
                 <TableHead className="text-center">Montant</TableHead>
-                <TableHead className="text-center">Type d'Achat</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -176,7 +173,6 @@ export default function Achats() {
                   <TableCell className="text-center">{a.code_achat}</TableCell>
                   <TableCell className="text-center">{a.nombre}</TableCell>
                   <TableCell className="text-center">{Number(a.montant).toLocaleString()} Ar</TableCell>
-                  <TableCell className="text-center">{a.type_achat?.nom || "-"}</TableCell>
                   <TableCell className="text-center space-x-2">
                     <Button size="sm" variant="outline" onClick={() => handleOpenModal(a)}>Modifier</Button>
                     <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(a.id!)}>Supprimer</Button>
@@ -184,7 +180,7 @@ export default function Achats() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-6">Aucun achat trouvé.</TableCell>
+                  <TableCell colSpan={5} className="text-center py-6">Aucun achat trouvé.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -198,7 +194,6 @@ export default function Achats() {
           <DialogHeader>
             <DialogTitle>{editingAchat ? "Modifier l'Achat" : "Créer un Achat"}</DialogTitle>
           </DialogHeader>
-
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label>Type d'Achat</Label>
@@ -211,27 +206,22 @@ export default function Achats() {
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label>Article</Label>
               <Input value={form.article} onChange={(e) => setForm({ ...form, article: e.target.value })} />
             </div>
-
             <div>
               <Label>Code Achat</Label>
               <Input value={form.code_achat} onChange={(e) => setForm({ ...form, code_achat: e.target.value })} />
             </div>
-
             <div>
               <Label>Quantité</Label>
               <Input type="number" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: Number(e.target.value) })} />
             </div>
-
             <div>
               <Label>Montant</Label>
               <Input type="number" value={form.montant} onChange={(e) => setForm({ ...form, montant: Number(e.target.value) })} />
             </div>
-
             <DialogFooter>
               <Button variant="outline" type="button" onClick={handleCloseModal}>Annuler</Button>
               <Button type="submit">{editingAchat ? "Mettre à jour" : "Créer"}</Button>
