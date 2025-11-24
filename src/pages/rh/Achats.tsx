@@ -71,32 +71,31 @@ export default function Achats() {
   }, []);
 
   const fetchData = async () => {
-  try {
-    const [typesRes, achatsRes] = await Promise.all([
-      rhApi.get("/type-achats/"),
-      rhApi.get("/achats/")
-    ]);
+    try {
+      const [achatsRes, typesRes] = await Promise.all([
+        rhApi.getAchats(),
+        rhApi.getTypeAchats(),
+      ]);
 
-    const achatsMapped = achatsRes.data.map((a: any) => ({
-      id: a.id,
-      article: a.article,
-      code_achat: a.code_achat,
-      nombre: a.nombre,
-      montant: a.montant,
-      type_achat: a.type_achat ? {
-        id: a.type_achat.id,
-        nom: a.type_achat.nom
-      } : null
-    }));
+      const achatsMapped = (achatsRes?.data ?? []).map((a: any) => ({
+        ...a,
+        montant: Number(a.montant),
+        type_achat: a.type_achat
+          ? { id: a.type_achat.id, nom: a.type_achat.nom }
+          : null,
+      }));
 
-    setAchats(achatsMapped);
-    setFilteredAchats(achatsMapped); // ⚠ IMPORTANT
-    setTypeAchats(typesRes.data);
-  } catch (error) {
-    console.error("Erreur fetch achats :", error);
-  }
-};
-
+      setAchats(achatsMapped);
+      setTypeAchats(typesRes?.data ?? typesRes ?? []);
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les données.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleOpenModal = (achat?: Achat) => {
     if (achat) {
@@ -107,7 +106,13 @@ export default function Achats() {
       });
     } else {
       setEditingAchat(null);
-      setForm({ article: "", code_achat: "", nombre: 1, montant: 0, type_achat_id: null });
+      setForm({
+        article: "",
+        code_achat: "",
+        nombre: 1,
+        montant: 0,
+        type_achat_id: null,
+      });
     }
     setIsModalOpen(true);
   };
@@ -119,6 +124,7 @@ export default function Achats() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!form.article || !form.code_achat || !form.type_achat_id) {
       toast({
         title: "Champs requis",
@@ -169,7 +175,11 @@ export default function Achats() {
       fetchData();
     } catch (err) {
       console.error(err);
-      toast({ title: "Erreur", description: "Impossible de supprimer.", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: "Impossible de supprimer.",
+        variant: "destructive",
+      });
     }
     setSelectedIdToDelete(null);
     setIsDeleteModalOpen(false);
@@ -183,13 +193,12 @@ export default function Achats() {
 
   return (
     <div className="p-8 space-y-6">
-      {/* ENTÊTE */}
+
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Achats</h1>
         <Button onClick={() => handleOpenModal()}>Ajouter un Achat</Button>
       </div>
 
-      {/* RECHERCHE */}
       <Input
         placeholder="Rechercher un article..."
         value={searchTerm}
@@ -197,7 +206,6 @@ export default function Achats() {
         className="w-full md:w-1/3"
       />
 
-      {/* TABLEAU */}
       <Card>
         <CardHeader>
           <CardTitle>Liste des Achats</CardTitle>
@@ -206,32 +214,28 @@ export default function Achats() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-center w-1/5">Article</TableHead>
-                <TableHead className="text-center w-1/6">Code</TableHead>
-                <TableHead className="text-center w-1/6">Type Achat</TableHead>
-                <TableHead className="text-center w-1/12">Quantité</TableHead>
-                <TableHead className="text-center w-1/6">Montant</TableHead>
-                <TableHead className="text-center w-1/5">Actions</TableHead>
+                <TableHead className="text-center">Article</TableHead>
+                <TableHead className="text-center">Code</TableHead>
+                <TableHead className="text-center">Type Achat</TableHead>
+                <TableHead className="text-center">Quantité</TableHead>
+                <TableHead className="text-center">Montant</TableHead>
+                <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
 
             <TableBody>
-              {achats && achats.length > 0 ? (
-                achats.map((a) => (
-                  <TableRow key={a.id} className="hover:bg-gray-50">
-                    <TableCell className="text-center">{a.article || "-"}</TableCell>
-                    <TableCell className="text-center">{a.code_achat || "-"}</TableCell>
-
+              {filteredAchats.length > 0 ? (
+                filteredAchats.map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="text-center">{a.article}</TableCell>
+                    <TableCell className="text-center">{a.code_achat}</TableCell>
                     <TableCell className="text-center">
                       {a.type_achat?.nom || "Non défini"}
                     </TableCell>
-
-                    <TableCell className="text-center">{a.nombre ?? "-"}</TableCell>
-
+                    <TableCell className="text-center">{a.nombre}</TableCell>
                     <TableCell className="text-center">
-                      {a.montant ? Number(a.montant).toLocaleString() + " Ar" : "-"}
+                      {a.montant.toLocaleString()} Ar
                     </TableCell>
-
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-2">
                         <Button
@@ -241,11 +245,10 @@ export default function Achats() {
                         >
                           Modifier
                         </Button>
-
                         <Button
                           size="sm"
                           variant="destructive"
-                          onClick={() => handleOpenDeleteModal(a.id)}
+                          onClick={() => handleOpenDeleteModal(a.id!)}
                         >
                           Supprimer
                         </Button>
@@ -262,11 +265,10 @@ export default function Achats() {
               )}
             </TableBody>
           </Table>
-
         </CardContent>
       </Card>
 
-      {/* MODAL FORM */}
+      {/* MODAL AJOUT / MODIF */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -274,25 +276,25 @@ export default function Achats() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Type Achat */}
             <div>
               <Label>Type d'Achat</Label>
               <Select
                 value={form.type_achat_id ?? undefined}
-                onValueChange={(v) => setForm({ ...form, type_achat_id: v || null })}
+                onValueChange={(v) => setForm({ ...form, type_achat_id: v })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir un type d'achat" />
                 </SelectTrigger>
                 <SelectContent>
                   {typeAchats.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.nom}</SelectItem>
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.nom}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Article */}
             <div>
               <Label>Article</Label>
               <Input
@@ -302,7 +304,6 @@ export default function Achats() {
               />
             </div>
 
-            {/* Code Achat */}
             <div>
               <Label>Code Achat</Label>
               <Input
@@ -312,7 +313,6 @@ export default function Achats() {
               />
             </div>
 
-            {/* Quantité */}
             <div>
               <Label>Quantité</Label>
               <Input
@@ -323,7 +323,6 @@ export default function Achats() {
               />
             </div>
 
-            {/* Montant */}
             <div>
               <Label>Montant</Label>
               <Input
@@ -335,14 +334,18 @@ export default function Achats() {
             </div>
 
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={handleCloseModal}>Annuler</Button>
-              <Button type="submit">{editingAchat ? "Mettre à jour" : "Créer"}</Button>
+              <Button variant="outline" type="button" onClick={handleCloseModal}>
+                Annuler
+              </Button>
+              <Button type="submit">
+                {editingAchat ? "Mettre à jour" : "Créer"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* MODAL DELETE */}
+      {/* MODAL SUPPRESSION */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
@@ -350,8 +353,12 @@ export default function Achats() {
           </DialogHeader>
           <p>Voulez-vous vraiment supprimer cet achat ?</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Annuler</Button>
-            <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Supprimer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
