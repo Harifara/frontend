@@ -227,25 +227,31 @@ const Employes: React.FC = () => {
               {filtered.length > 0 ? filtered.map(e => (
                 <TableRow key={e.id} className="hover:bg-gray-50">
                   <TableCell>
-                    <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-300 flex items-center justify-center bg-gray-100">
-                      {!e.photo_profil ? (
-                        // Aucune photo → icône utilisateur
-                        <User className="w-6 h-6 text-gray-400" />
-                      ) : (
-                        <img
-                          src={getPhotoUrl(e.photo_profil)}
-                          alt={`${e.nom_employer} ${e.prenom_employer}`}
-                          className="w-full h-full object-cover"
-                          onError={(event) => {
-                            // Si l'image ne charge pas → on supprime l'image et affiche l’icône
-                            const target = event.target as HTMLImageElement;
-                            target.style.display = "none"; // cache l'image cassée
-                            target.parentElement!.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
-                          }}
-                        />
-                      )}
+                    <div className="w-10 h-10 rounded-full overflow-hidden border border-gray-300 bg-gray-100 flex items-center justify-center">
+                      <img
+                        src={getPhotoUrl(e.photo_profil)}
+                        alt="photo"
+                        className="w-full h-full object-cover"
+                        onError={(event) => {
+                          const target = event.target as HTMLImageElement;
+                          target.onerror = null; // évite boucle
+                          target.src = "";       // supprime l'image cassée
+                          target.parentElement!.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" 
+                                class="w-6 h-6 text-gray-400" 
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                              <circle cx="12" cy="7" r="4"/>
+                            </svg>
+                          `;
+                        }}
+                      />
                     </div>
                   </TableCell>
+
 
 
 
