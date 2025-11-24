@@ -199,44 +199,84 @@ export default function Achats() {
 
       {/* MODAL FORM */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>{editingAchat ? "Modifier l'Achat" : "Créer un Achat"}</DialogTitle>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label>Type d'Achat</Label>
-              <Select value={form.type_achat_id ?? ""} onValueChange={(v) => setForm({ ...form, type_achat_id: v || null })}>
-                {typeAchats.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.nom}</SelectItem>
-                ))}
-              </Select>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>{editingAchat ? "Modifier l'Achat" : "Créer un Achat"}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              
+              {/* Type d'Achat */}
+              <div>
+                <Label>Type d'Achat</Label>
+                <Select
+                  value={form.type_achat_id ?? ""}
+                  onValueChange={(v) => setForm({ ...form, type_achat_id: v || null })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir un type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {typeAchats.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.nom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
+              {/* Article */}
+              <div>
+                <Label>Article</Label>
+                <Input
+                  value={form.article}
+                  onChange={(e) => setForm({ ...form, article: e.target.value })}
+                  required
+                />
+              </div>
 
-            </div>
-            <div>
-              <Label>Article</Label>
-              <Input value={form.article} onChange={(e) => setForm({ ...form, article: e.target.value })} />
-            </div>
-            <div>
-              <Label>Code Achat</Label>
-              <Input value={form.code_achat} onChange={(e) => setForm({ ...form, code_achat: e.target.value })} />
-            </div>
-            <div>
-              <Label>Quantité</Label>
-              <Input type="number" value={form.nombre} onChange={(e) => setForm({ ...form, nombre: Number(e.target.value) })} />
-            </div>
-            <div>
-              <Label>Montant</Label>
-              <Input type="number" value={form.montant} onChange={(e) => setForm({ ...form, montant: Number(e.target.value) })} />
-            </div>
-            <DialogFooter>
-              <Button variant="outline" type="button" onClick={handleCloseModal}>Annuler</Button>
-              <Button type="submit">{editingAchat ? "Mettre à jour" : "Créer"}</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+              {/* Code Achat */}
+              <div>
+                <Label>Code Achat</Label>
+                <Input
+                  value={form.code_achat}
+                  onChange={(e) => setForm({ ...form, code_achat: e.target.value })}
+                  required
+                />
+              </div>
+
+              {/* Quantité */}
+              <div>
+                <Label>Quantité</Label>
+                <Input
+                  type="number"
+                  min={1}
+                  value={form.nombre}
+                  onChange={(e) => setForm({ ...form, nombre: Number(e.target.value) })}
+                />
+              </div>
+
+              {/* Montant */}
+              <div>
+                <Label>Montant</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={form.montant}
+                  onChange={(e) => setForm({ ...form, montant: Number(e.target.value) })}
+                />
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" type="button" onClick={handleCloseModal}>
+                  Annuler
+                </Button>
+                <Button type="submit">{editingAchat ? "Mettre à jour" : "Créer"}</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+
 
       {/* MODAL DELETE */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
