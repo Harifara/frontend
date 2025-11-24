@@ -15,12 +15,12 @@ interface Achat {
   code_achat: string;
   nombre: number;
   montant: number;
-  type_achat: string | null;
+  type_achats: string | null;
 }
 
 export default function Achats() {
   const [achats, setAchats] = useState<Achat[]>([]);
-  const [typesAchat, setTypesAchat] = useState<any[]>([]);
+  const [typesAchats, setTypesAchats] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,7 +36,7 @@ export default function Achats() {
     code_achat: "",
     nombre: 1,
     montant: 0,
-    type_achat: null,
+    type_achats: null,
   });
 
   useEffect(() => {
@@ -47,10 +47,10 @@ export default function Achats() {
     try {
       const [achatsRes, typesRes] = await Promise.all([
         rhApi.getAchats(),
-        rhApi.getTypesAchat(),
+        rhApi.getTypesAchats(),
       ]);
       setAchats(achatsRes?.data || []);
-      setTypesAchat(typesRes?.data || []);
+      setTypesAchats(typesRes?.data || []);
     } catch (err) {
       console.error(err);
       toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
@@ -63,7 +63,7 @@ export default function Achats() {
       setForm({ ...achat });
     } else {
       setEditingAchat(null);
-      setForm({ article: "", code_achat: "", nombre: 1, montant: 0, type_achat: null });
+      setForm({ article: "", code_achat: "", nombre: 1, montant: 0, type_achats: null });
     }
     setIsModalOpen(true);
   };
@@ -86,7 +86,7 @@ export default function Achats() {
       code_achat: form.code_achat,
       nombre: Number(form.nombre),
       montant: Number(form.montant),
-      type_achat_id: form.type_achat || null,
+      type_achats_id: form.type_achats || null,
     };
 
     try {
@@ -193,10 +193,10 @@ export default function Achats() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label>Type d'Achat</Label>
-              <Select value={form.type_achat ?? ""} onValueChange={(v) => setForm({ ...form, type_achat: v || null })}>
+              <Select value={form.type_achats ?? ""} onValueChange={(v) => setForm({ ...form, type_achats: v || null })}>
                 <SelectTrigger><SelectValue placeholder="Choisir un type" /></SelectTrigger>
                 <SelectContent>
-                  {typesAchat.map((t) => (
+                  {typesAchats.map((t) => (
                     <SelectItem key={t.id} value={t.id}>{t.nom}</SelectItem>
                   ))}
                 </SelectContent>
