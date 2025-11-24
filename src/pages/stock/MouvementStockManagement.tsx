@@ -18,10 +18,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { stockApi } from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { stockApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface MouvementStock {
   id: string;
@@ -64,14 +64,10 @@ const MouvementStockManagement: React.FC = () => {
     recepteur_id: "",
     recepteur_type: "magasin",
   });
-  const { toast } = useToast();
 
-  // ⚡ Simule le magasinier connecté (à remplacer par ton auth réel)
+  const { toast } = useToast();
   const magasinier_id = "uuid-magasinier-1";
 
-  // -----------------------
-  // FETCH DATA
-  // -----------------------
   const fetchAllData = async () => {
     try {
       const [mouvementsRes, articlesRes, magasinsRes] = await Promise.all([
@@ -91,11 +87,8 @@ const MouvementStockManagement: React.FC = () => {
     fetchAllData();
   }, []);
 
-  // -----------------------
-  // CRUD Actions
-  // -----------------------
   const handleSave = async () => {
-    if (!form.article || !form.quantite || Number(form.quantite) <= 0) {
+    if (!form.article || form.quantite <= 0) {
       toast({ title: "Erreur", description: "Veuillez remplir les champs obligatoires et quantité > 0", variant: "destructive" });
       return;
     }
@@ -107,7 +100,7 @@ const MouvementStockManagement: React.FC = () => {
       quantite: Number(form.quantite),
       type_mouvement: form.type_mouvement,
       commentaire: form.commentaire || null,
-      magasinier_id: magasinier_id,
+      magasinier_id,
       recepteur_id: form.recepteur_id || null,
       recepteur_type: form.recepteur_type,
       transporteur: null,
@@ -170,20 +163,7 @@ const MouvementStockManagement: React.FC = () => {
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Gestion des Mouvements de Stock</h2>
-        <Button onClick={() => {
-          setEditingMouvement(null);
-          setForm({
-            article: "",
-            magasin_source: "",
-            magasin_dest: "",
-            quantite: 0,
-            type_mouvement: "entree",
-            commentaire: "",
-            recepteur_id: "",
-            recepteur_type: "magasin",
-          });
-          setOpenModal(true);
-        }}>
+        <Button onClick={() => { setEditingMouvement(null); setForm({ article: "", magasin_source: "", magasin_dest: "", quantite: 0, type_mouvement: "entree", commentaire: "", recepteur_id: "", recepteur_type: "magasin" }); setOpenModal(true); }}>
           <Plus className="mr-2 h-4 w-4" /> Nouveau
         </Button>
       </div>
@@ -212,12 +192,8 @@ const MouvementStockManagement: React.FC = () => {
                   <TableCell>{magasins.find(m => m.id === mvt.magasin_dest)?.nom || "—"}</TableCell>
                   <TableCell>{new Date(mvt.date_mouvement).toLocaleString()}</TableCell>
                   <TableCell className="space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(mvt)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(mvt)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(mvt)}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(mvt)}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))
@@ -230,7 +206,6 @@ const MouvementStockManagement: React.FC = () => {
         </Table>
       </div>
 
-      {/* Modal Ajouter / Modifier */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
         <DialogContent>
           <DialogHeader>
@@ -240,12 +215,8 @@ const MouvementStockManagement: React.FC = () => {
             <div>
               <Label>Article</Label>
               <Select value={form.article} onValueChange={(val) => setForm({ ...form, article: val })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un article" />
-                </SelectTrigger>
-                <SelectContent>
-                  {articles.map(a => <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>)}
-                </SelectContent>
+                <SelectTrigger><SelectValue placeholder="Sélectionnez un article" /></SelectTrigger>
+                <SelectContent>{articles.map(a => <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
@@ -272,9 +243,7 @@ const MouvementStockManagement: React.FC = () => {
               <Label>Magasin Source</Label>
               <Select value={form.magasin_source} onValueChange={(val) => setForm({ ...form, magasin_source: val })}>
                 <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
-                <SelectContent>
-                  {magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
@@ -282,9 +251,7 @@ const MouvementStockManagement: React.FC = () => {
               <Label>Magasin Destination</Label>
               <Select value={form.magasin_dest} onValueChange={(val) => setForm({ ...form, magasin_dest: val })}>
                 <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
-                <SelectContent>
-                  {magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}</SelectContent>
               </Select>
             </div>
 
@@ -293,6 +260,7 @@ const MouvementStockManagement: React.FC = () => {
               <Textarea value={form.commentaire} onChange={(e) => setForm({ ...form, commentaire: e.target.value })} />
             </div>
           </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenModal(false)}>Annuler</Button>
             <Button onClick={handleSave}>Enregistrer</Button>
