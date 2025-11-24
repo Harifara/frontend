@@ -31,8 +31,6 @@ interface Achat {
   type_achat_id?: string | null;
 }
 
-
-
 export default function Achats() {
   const [achats, setAchats] = useState<Achat[]>([]);
   const [typeAchats, setTypeAchats] = useState<TypeAchat[]>([]);
@@ -48,30 +46,27 @@ export default function Achats() {
     code_achat: "",
     nombre: 1,
     montant: 0,
-    type_achat_id: null, // ✅ Correct
+    type_achat_id: null,
   });
-
-
 
   useEffect(() => {
     fetchData();
   }, []);
 
   const fetchData = async () => {
-      try {
-        const [achatsRes, typesRes] = await Promise.all([
-          rhApi.getAchats(),
-          rhApi.getTypeAchats(),
-        ]);
-        console.log("Types d'achats récupérés:", typesRes);
-        setAchats(achatsRes?.data || []);
-        setTypeAchats(typesRes?.data || []);
-      } catch (err: any) {
-        console.error(err);
-        toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
-      }
-    };
-
+    try {
+      const [achatsRes, typesRes] = await Promise.all([
+        rhApi.getAchats(),
+        rhApi.getTypeAchats(),
+      ]);
+      console.log("Types d'achats récupérés:", typesRes);
+      setAchats(achatsRes?.data || []);
+      setTypeAchats(typesRes?.data || []);
+    } catch (err: any) {
+      console.error(err);
+      toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
+    }
+  };
 
   const handleOpenModal = (achat?: Achat) => {
     if (achat) {
@@ -86,8 +81,6 @@ export default function Achats() {
     }
     setIsModalOpen(true);
   };
-
-
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
@@ -124,7 +117,6 @@ export default function Achats() {
       toast({ title: "Erreur", description: err.message || "Impossible d'enregistrer l'achat.", variant: "destructive" });
     }
   };
-
 
   const handleOpenDeleteModal = (id: string) => {
     setSelectedIdToDelete(id);
@@ -198,7 +190,7 @@ export default function Achats() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-6">Aucun achat trouvé.</TableCell>
+                  <TableCell colSpan={6} className="text-center py-6">Aucun achat trouvé.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -208,88 +200,83 @@ export default function Achats() {
 
       {/* MODAL FORM */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="sm:max-w-[500px]" aria-describedby="achat-form-description">
-            <DialogHeader>
-              <DialogTitle>{editingAchat ? "Modifier l'Achat" : "Créer un Achat"}</DialogTitle>
-            </DialogHeader>
-            <p id="achat-form-description" className="sr-only">
-              Formulaire pour créer ou modifier un achat.
-            </p>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              
-              {/* Type d'Achat */}
-              <div>
-                <Label>Type d'Achat</Label>
-                <Select
-                  value={form.type_achat_id ?? ""}
-                  onValueChange={(v) => setForm({ ...form, type_achat_id: v || null })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choisir un type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {typeAchats.map((t) => (
-                      <SelectItem key={t.id} value={t.id}>{t.nom}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+        <DialogContent className="sm:max-w-[500px]" aria-describedby="achat-form-description">
+          <DialogHeader>
+            <DialogTitle>{editingAchat ? "Modifier l'Achat" : "Créer un Achat"}</DialogTitle>
+          </DialogHeader>
+          <p id="achat-form-description" className="sr-only">
+            Formulaire pour créer ou modifier un achat.
+          </p>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Type d'Achat */}
+            <div>
+              <Label>Type d'Achat</Label>
+              <Select
+                value={form.type_achat_id ?? ""}
+                onValueChange={(v) => setForm({ ...form, type_achat_id: v || null })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choisir un type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {typeAchats.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.nom}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
+            {/* Article */}
+            <div>
+              <Label>Article</Label>
+              <Input
+                value={form.article}
+                onChange={(e) => setForm({ ...form, article: e.target.value })}
+                required
+              />
+            </div>
 
+            {/* Code Achat */}
+            <div>
+              <Label>Code Achat</Label>
+              <Input
+                value={form.code_achat}
+                onChange={(e) => setForm({ ...form, code_achat: e.target.value })}
+                required
+              />
+            </div>
 
-              </div>
+            {/* Quantité */}
+            <div>
+              <Label>Quantité</Label>
+              <Input
+                type="number"
+                min={1}
+                value={form.nombre}
+                onChange={(e) => setForm({ ...form, nombre: Number(e.target.value) })}
+              />
+            </div>
 
-              {/* Article */}
-              <div>
-                <Label>Article</Label>
-                <Input
-                  value={form.article}
-                  onChange={(e) => setForm({ ...form, article: e.target.value })}
-                  required
-                />
-              </div>
+            {/* Montant */}
+            <div>
+              <Label>Montant</Label>
+              <Input
+                type="number"
+                min={0}
+                value={form.montant}
+                onChange={(e) => setForm({ ...form, montant: Number(e.target.value) })}
+              />
+            </div>
 
-              {/* Code Achat */}
-              <div>
-                <Label>Code Achat</Label>
-                <Input
-                  value={form.code_achat}
-                  onChange={(e) => setForm({ ...form, code_achat: e.target.value })}
-                  required
-                />
-              </div>
-
-              {/* Quantité */}
-              <div>
-                <Label>Quantité</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={form.nombre}
-                  onChange={(e) => setForm({ ...form, nombre: Number(e.target.value) })}
-                />
-              </div>
-
-              {/* Montant */}
-              <div>
-                <Label>Montant</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={form.montant}
-                  onChange={(e) => setForm({ ...form, montant: Number(e.target.value) })}
-                />
-              </div>
-
-              <DialogFooter>
-                <Button variant="outline" type="button" onClick={handleCloseModal}>
-                  Annuler
-                </Button>
-                <Button type="submit">{editingAchat ? "Mettre à jour" : "Créer"}</Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={handleCloseModal}>
+                Annuler
+              </Button>
+              <Button type="submit">{editingAchat ? "Mettre à jour" : "Créer"}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* MODAL DELETE */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
