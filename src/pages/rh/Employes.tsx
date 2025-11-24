@@ -54,13 +54,18 @@ const Employes: React.FC = () => {
 
   const { toast } = useToast();
   const navigate = useNavigate();
-  const getPhotoUrl = (photo?: string) =>
-  photo ? (photo.startsWith("http") ? photo : `${MEDIA_URL.replace(/\/?$/, "/")}${photo}`) : DEFAULT_USER_ICON;
+  const getPhotoUrl = (photo?: string) => {
+    if (!photo) return DEFAULT_USER_ICON;
 
+    // Si l'URL commence par http ou https, retourne telle quelle
+    if (photo.startsWith("http") || photo.startsWith("https")) return photo;
 
+    // Si l'URL commence par "/", concatène correctement MEDIA_URL
+    if (photo.startsWith("/")) return `${MEDIA_URL.replace(/\/?$/, "")}${photo}`;
 
- 
-
+    // Sinon ajoute "/" entre MEDIA_URL et photo
+    return `${MEDIA_URL.replace(/\/?$/, "/")}${photo}`;
+  };
 
 
   // Chargement initial
@@ -236,23 +241,20 @@ const Employes: React.FC = () => {
                         title="Voir le profil"
                       >
                         <img
-                          key={getPhotoUrl(e.photo_profil)} // ✅ clé unique pour forcer le rechargement
+                          key={getPhotoUrl(e.photo_profil)}
                           src={getPhotoUrl(e.photo_profil)}
                           alt="photo"
                           className="w-full h-full object-cover"
                           onError={(event) => {
                             const target = event.target as HTMLImageElement;
-                            target.onerror = null;               // éviter boucle infinie
-                            target.src = DEFAULT_USER_ICON;      // afficher icône par défaut
+                            target.onerror = null;
+                            target.src = DEFAULT_USER_ICON;
                           }}
                         />
 
+
                       </div>
                   </TableCell>
-
-
-
-
 
                   <TableCell>{e.nom_employer} {e.prenom_employer}</TableCell>
                   <TableCell>{e.email}</TableCell>
