@@ -18,7 +18,7 @@ interface Achat {
   nombre: number;
   montant: number;
   demande: string | null;
-  type_achat: string;
+  type_achat: string | null;
 }
 
 export default function Achats() {
@@ -26,10 +26,14 @@ export default function Achats() {
   const [demandes, setDemandes] = useState<any[]>([]);
   const [typesAchat, setTypesAchat] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
   const [editingAchat, setEditingAchat] = useState<Achat | null>(null);
   const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
+
+  const { toast } = useToast();
 
   const [form, setForm] = useState<Achat>({
     article: "",
@@ -37,10 +41,8 @@ export default function Achats() {
     nombre: 1,
     montant: 0,
     demande: null,
-    type_achat: "",
+    type_achat: null,
   });
-
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchData();
@@ -57,7 +59,7 @@ export default function Achats() {
       setAchats(ach?.data || []);
       setDemandes(dem?.data || []);
       setTypesAchat(type?.data || []);
-    } catch (err) {
+    } catch {
       toast({
         title: "Erreur",
         description: "Impossible de charger les données.",
@@ -69,7 +71,11 @@ export default function Achats() {
   const handleOpenModal = (achat?: Achat) => {
     if (achat) {
       setEditingAchat(achat);
-      setForm(achat);
+      setForm({
+        ...achat,
+        demande: achat.demande ?? null,
+        type_achat: achat.type_achat ?? null,
+      });
     } else {
       setEditingAchat(null);
       setForm({
@@ -78,7 +84,7 @@ export default function Achats() {
         nombre: 1,
         montant: 0,
         demande: null,
-        type_achat: "",
+        type_achat: null,
       });
     }
     setIsModalOpen(true);
@@ -106,7 +112,7 @@ export default function Achats() {
       code_achat: form.code_achat,
       nombre: form.nombre,
       montant: form.montant,
-      demande: form.demande || null,
+      demande: form.demande,
       type_achat: form.type_achat,
     };
 
@@ -121,10 +127,10 @@ export default function Achats() {
 
       handleCloseModal();
       fetchData();
-    } catch (err) {
+    } catch (err: any) {
       toast({
         title: "Erreur",
-        description: "Impossible d'enregistrer l'achat.",
+        description: err.message || "Impossible d'enregistrer l'achat.",
         variant: "destructive",
       });
     }
@@ -137,55 +143,25 @@ export default function Achats() {
 
   const handleDelete = async () => {
     if (!selectedIdToDelete) return;
-
     try {
       await rhApi.deleteAchat(selectedIdToDelete);
       toast({ title: "Succès", description: "Achat supprimé." });
       fetchData();
-    } catch (err: any) {
+    } catch {
       toast({
         title: "Erreur",
-        description: err.message || "Erreur lors de la suppression.",
+        description: "Impossible de supprimer.",
         variant: "destructive",
       });
-    } finally {
-      setSelectedIdToDelete(null);
-      setIsDeleteModalOpen(false);
     }
+    setSelectedIdToDelete(null);
+    setIsDeleteModalOpen(false);
   };
 
   const filteredAchats = achats.filter((a) =>
-    a.article.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.code_achat.toLowerCase().includes(searchTerm.toLowerCase())
+    (a.article ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (a.code_achat ?? "").toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // Export PDF
-  const exportPDF = async () => {
-    const data = filteredAchats.map((a) => [
-      a.article,
-      a.code_achat,
-      a.nombre,
-      a.montant.toLocaleString() + " Ar",
-    ]);
-
-    const columns = ["Article", "Code", "Qté", "Montant"];
-    await createPDFDoc("Liste des Achats", data, columns, "achats.pdf");
-  };
-
-  // Export Excel
-  const exportExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(
-      filteredAchats.map((a) => ({
-        Article: a.article,
-        Code: a.code_achat,
-        Nombre: a.nombre,
-        Montant: a.montant,
-      }))
-    );
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Achats");
-    XLSX.writeFile(workbook, "achats.xlsx");
-  };
 
   return (
     <div className="p-8 space-y-6">
@@ -195,17 +171,13 @@ export default function Achats() {
         <Button onClick={() => handleOpenModal()}>Ajouter un Achat</Button>
       </div>
 
-      {/* RECHERCHE ET EXPORT */}
-      <div className="flex gap-4">
-        <Input
-          placeholder="Rechercher un article..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="flex-1"
-        />
-        <Button variant="outline" onClick={exportPDF}>PDF</Button>
-        <Button variant="outline" onClick={exportExcel}>Excel</Button>
-      </div>
+      {/* RECHERCHE */}
+      <Input
+        placeholder="Rechercher un article..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+        className="w-full md:w-1/3"
+      />
 
       {/* TABLE */}
       <Card>
@@ -223,23 +195,24 @@ export default function Achats() {
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
-              {filteredAchats.length ? (
+              {filteredAchats.length > 0 ? (
                 filteredAchats.map((a) => (
                   <TableRow key={a.id}>
                     <TableCell className="text-center">{a.article}</TableCell>
                     <TableCell className="text-center">{a.code_achat}</TableCell>
                     <TableCell className="text-center">{a.nombre}</TableCell>
-                    <TableCell className="text-center">{a.montant.toLocaleString()} Ar</TableCell>
+                    <TableCell className="text-center">
+                      {Number(a.montant).toLocaleString()} Ar
+                    </TableCell>
+
                     <TableCell className="text-center space-x-2">
                       <Button size="sm" variant="outline" onClick={() => handleOpenModal(a)}>
                         Modifier
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleOpenDeleteModal(a.id!)}
-                      >
+
+                      <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(a.id!)}>
                         Supprimer
                       </Button>
                     </TableCell>
@@ -257,22 +230,20 @@ export default function Achats() {
         </CardContent>
       </Card>
 
-      {/* MODAL AJOUT / MODIFICATION */}
+      {/* MODAL FORM */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>
-              {editingAchat ? "Modifier l'Achat" : "Créer un Achat"}
-            </DialogTitle>
+            <DialogTitle>{editingAchat ? "Modifier l'Achat" : "Créer un Achat"}</DialogTitle>
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
 
             {/* DEMANDE */}
             <div>
-              <Label>Demande (optionnel)</Label>
+              <Label>Demande</Label>
               <Select
-                value={form.demande || "null"}
+                value={form.demande ?? "null"}
                 onValueChange={(v) => setForm({ ...form, demande: v === "null" ? null : v })}
               >
                 <SelectTrigger>
@@ -293,7 +264,7 @@ export default function Achats() {
             <div>
               <Label>Type d'Achat</Label>
               <Select
-                value={form.type_achat}
+                value={form.type_achat ?? ""}
                 onValueChange={(v) => setForm({ ...form, type_achat: v })}
               >
                 <SelectTrigger>
@@ -313,17 +284,15 @@ export default function Achats() {
               <Input
                 value={form.article}
                 onChange={(e) => setForm({ ...form, article: e.target.value })}
-                placeholder="Ex : Chaise ergonomique"
               />
             </div>
 
-            {/* CODE ACHAT */}
+            {/* CODE */}
             <div>
               <Label>Code Achat</Label>
               <Input
                 value={form.code_achat}
                 onChange={(e) => setForm({ ...form, code_achat: e.target.value })}
-                placeholder="Ex : ACH-2025-001"
               />
             </div>
 
@@ -348,36 +317,25 @@ export default function Achats() {
             </div>
 
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={handleCloseModal}>
-                Annuler
-              </Button>
-              <Button type="submit">
-                {editingAchat ? "Mettre à jour" : "Créer"}
-              </Button>
+              <Button variant="outline" type="button" onClick={handleCloseModal}>Annuler</Button>
+              <Button type="submit">{editingAchat ? "Mettre à jour" : "Créer"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* MODAL SUPPRESSION */}
+      {/* MODAL DELETE */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle>Confirmation</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Confirmation</DialogTitle></DialogHeader>
           <p>Voulez-vous vraiment supprimer cet achat ?</p>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-              Annuler
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Supprimer
-            </Button>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
 }
-
