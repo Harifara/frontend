@@ -54,8 +54,9 @@ const Employes: React.FC = () => {
 
   const { toast } = useToast();
   const navigate = useNavigate();
-  const getPhotoUrl = (photo?: string) => 
+  const getPhotoUrl = (photo?: string) =>
   photo ? (photo.startsWith("http") ? photo : `${MEDIA_URL.replace(/\/?$/, "/")}${photo}`) : DEFAULT_USER_ICON;
+
 
 
  
@@ -235,15 +236,17 @@ const Employes: React.FC = () => {
                         title="Voir le profil"
                       >
                         <img
+                          key={getPhotoUrl(e.photo_profil)} // ✅ clé unique pour forcer le rechargement
                           src={getPhotoUrl(e.photo_profil)}
                           alt="photo"
                           className="w-full h-full object-cover"
                           onError={(event) => {
                             const target = event.target as HTMLImageElement;
-                            target.onerror = null;              
-                            target.src = DEFAULT_USER_ICON;     
+                            target.onerror = null;               // éviter boucle infinie
+                            target.src = DEFAULT_USER_ICON;      // afficher icône par défaut
                           }}
                         />
+
                       </div>
                   </TableCell>
 
