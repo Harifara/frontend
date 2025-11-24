@@ -223,34 +223,42 @@ const MouvementStockManagement: React.FC<{ currentUser: User }> = ({ currentUser
           </TableHeader>
           <TableBody>
             {mouvements.length ? (
-              mouvements.map((mvt) => (
-                <TableRow key={mvt.id}>
-                  <TableCell>{articles?.find(a => a.id === mvt.article)?.nom || "—"}</TableCell>
-                  <TableCell className="capitalize">{mvt.type_mouvement}</TableCell>
-                  <TableCell>{mvt.quantite}</TableCell>
-                  <TableCell>{magasins?.find(m => m.id === mvt.magasin_source)?.nom || "—"}</TableCell>
-                  <TableCell>{magasins?.find(m => m.id === mvt.magasin_dest)?.nom || "—"}</TableCell>
-                  <TableCell>{new Date(mvt.date_mouvement).toLocaleString()}</TableCell>
-                  <TableCell className="space-x-2">
-                    {canEdit(mvt) && (
-                      <Button variant="outline" size="sm" onClick={() => handleEdit(mvt)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                    )}
-                    {canDelete(mvt) && (
-                      <Button variant="destructive" size="sm" onClick={() => handleDelete(mvt)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))
+              mouvements.map((mvt) => {
+                if (!mvt || !mvt.id) return null; // Sécurise si mvt est undefined
+                const articleNom = articles?.find(a => a.id === mvt.article)?.nom || "—";
+                const magasinSourceNom = magasins?.find(m => m.id === mvt.magasin_source)?.nom || "—";
+                const magasinDestNom = magasins?.find(m => m.id === mvt.magasin_dest)?.nom || "—";
+
+                return (
+                  <TableRow key={mvt.id}>
+                    <TableCell>{articleNom}</TableCell>
+                    <TableCell className="capitalize">{mvt.type_mouvement || "—"}</TableCell>
+                    <TableCell>{mvt.quantite || 0}</TableCell>
+                    <TableCell>{magasinSourceNom}</TableCell>
+                    <TableCell>{magasinDestNom}</TableCell>
+                    <TableCell>{mvt.date_mouvement ? new Date(mvt.date_mouvement).toLocaleString() : "—"}</TableCell>
+                    <TableCell className="space-x-2">
+                      {canEdit(mvt) && (
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(mvt)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {canDelete(mvt) && (
+                        <Button variant="destructive" size="sm" onClick={() => handleDelete(mvt)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={7} className="text-center py-6">Aucun mouvement trouvé.</TableCell>
               </TableRow>
             )}
           </TableBody>
+
         </Table>
       </div>
 
