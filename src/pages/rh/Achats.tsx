@@ -35,9 +35,7 @@ import {
 
 interface TypeAchat {
   id: string;
-  type_achat: string;
   nom: string;
-  description?: string;
 }
 
 interface Achat {
@@ -45,11 +43,8 @@ interface Achat {
   article: string;
   code_achat: string;
   nombre: number;
-  montant: number;
-  type_achat?: {
-    id: string;
-    nom: string;
-  } | null;
+  montant: number | string;
+  type_achat?: TypeAchat | null;
   type_achat_id?: string | null;
 }
 
@@ -82,11 +77,14 @@ export default function Achats() {
         rhApi.getTypeAchats(),
       ]);
 
-      // Vérification de la structure de la réponse
-      console.log("Réponse Achats:", achatsRes);
-      console.log("Réponse Types d'achats:", typesRes);
+      // Mapper type_achat pour éviter les undefined
+      const achatsMapped = (achatsRes?.data ?? []).map((a: Achat) => ({
+        ...a,
+        type_achat: a.type_achat ? { id: a.type_achat.id, nom: a.type_achat.nom } : null,
+        montant: Number(a.montant),
+      }));
 
-      setAchats(achatsRes?.data ?? []);
+      setAchats(achatsMapped);
       setTypeAchats(typesRes?.data ?? typesRes ?? []);
     } catch (err: any) {
       console.error(err);
@@ -177,8 +175,8 @@ export default function Achats() {
 
   const filteredAchats = achats.filter(
     (a) =>
-      a.article.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      a.code_achat.toLowerCase().includes(searchTerm.toLowerCase())
+      (a.article ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (a.code_achat ?? "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -197,7 +195,7 @@ export default function Achats() {
         className="w-full md:w-1/3"
       />
 
-      {/* TABLE */}
+      {/* TABLEAU */}
       <Card>
         <CardHeader>
           <CardTitle>Liste des Achats</CardTitle>
@@ -220,28 +218,12 @@ export default function Achats() {
                   <TableRow key={a.id} className="hover:bg-gray-50">
                     <TableCell className="text-center">{a.article}</TableCell>
                     <TableCell className="text-center">{a.code_achat}</TableCell>
-                    <TableCell className="text-center">
-                      {a.type_achat?.nom || "-"}
-                    </TableCell>
+                    <TableCell className="text-center">{a.type_achat?.nom || "-"}</TableCell>
                     <TableCell className="text-center">{a.nombre}</TableCell>
-                    <TableCell className="text-center">
-                      {Number(a.montant).toLocaleString()} Ar
-                    </TableCell>
+                    <TableCell className="text-center">{Number(a.montant).toLocaleString()} Ar</TableCell>
                     <TableCell className="text-center flex justify-center gap-2">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleOpenModal(a)}
-                      >
-                        Modifier
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleOpenDeleteModal(a.id!)}
-                      >
-                        Supprimer
-                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => handleOpenModal(a)}>Modifier</Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(a.id!)}>Supprimer</Button>
                     </TableCell>
                   </TableRow>
                 ))
@@ -254,42 +236,30 @@ export default function Achats() {
               )}
             </TableBody>
           </Table>
-
         </CardContent>
       </Card>
 
       {/* MODAL FORM */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent
-          className="sm:max-w-[500px]"
-          aria-describedby="achat-form-description"
-        >
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{editingAchat ? "Modifier l'Achat" : "Créer un Achat"}</DialogTitle>
           </DialogHeader>
 
-          <p id="achat-form-description" className="sr-only">
-            Formulaire pour créer ou modifier un achat.
-          </p>
-
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Type d'Achat */}
+            {/* Type Achat */}
             <div>
               <Label>Type d'Achat</Label>
               <Select
                 value={form.type_achat_id ?? undefined}
-                onValueChange={(v) =>
-                  setForm({ ...form, type_achat_id: v || null })
-                }
+                onValueChange={(v) => setForm({ ...form, type_achat_id: v || null })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choisir un type d'achat" />
                 </SelectTrigger>
                 <SelectContent>
                   {typeAchats.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.nom}
-                    </SelectItem>
+                    <SelectItem key={t.id} value={t.id}>{t.nom}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -338,9 +308,7 @@ export default function Achats() {
             </div>
 
             <DialogFooter>
-              <Button variant="outline" type="button" onClick={handleCloseModal}>
-                Annuler
-              </Button>
+              <Button variant="outline" type="button" onClick={handleCloseModal}>Annuler</Button>
               <Button type="submit">{editingAchat ? "Mettre à jour" : "Créer"}</Button>
             </DialogFooter>
           </form>
@@ -355,12 +323,8 @@ export default function Achats() {
           </DialogHeader>
           <p>Voulez-vous vraiment supprimer cet achat ?</p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-              Annuler
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Supprimer
-            </Button>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
