@@ -4,7 +4,7 @@ import { rhApi } from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
@@ -20,6 +20,15 @@ interface Demande {
   montant: number;
 }
 
+// 🔥 fonction pour extraire n'importe quel format d'API
+const extractList = (response: any) => {
+  if (!response) return [];
+  if (Array.isArray(response)) return response;
+  if (response.data && Array.isArray(response.data)) return response.data;
+  if (response.results && Array.isArray(response.results)) return response.results;
+  return [];
+};
+
 const Demandes = () => {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [achats, setAchats] = useState<Achat[]>([]);
@@ -28,11 +37,13 @@ const Demandes = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDemande, setEditingDemande] = useState<Demande | null>(null);
+
   const [form, setForm] = useState<{ description: string; achatsIds: string[]; payementsIds: string[] }>({
     description: "",
     achatsIds: [],
     payementsIds: [],
   });
+
   const { toast } = useToast();
 
   useEffect(() => {
@@ -41,26 +52,27 @@ const Demandes = () => {
 
   const fetchData = async () => {
     setIsLoading(true);
+
     try {
-        const [dataDemandes, dataAchats, dataPayements] = await Promise.all([
+      const [rawDemandes, rawAchats, rawPayements] = await Promise.all([
         rhApi.getDemandes(),
         rhApi.getAchats(),
         rhApi.getPayements(),
-        ]);
+      ]);
 
-        console.log("ACHATS", dataAchats?.data);
-        console.log("PAYEMENTS", dataPayements?.data);
+      console.log("RAW ACHATS =", rawAchats);
+      console.log("RAW PAYEMENTS =", rawPayements);
 
-        setDemandes(dataDemandes?.data || []);
-        setAchats(dataAchats?.data || []);
-        setPayements(dataPayements?.data || []);
+      setDemandes(extractList(rawDemandes));
+      setAchats(extractList(rawAchats));
+      setPayements(extractList(rawPayements));
+
     } catch (err: any) {
-        toast({ title: "Erreur", description: err.message || "Impossible de charger les données.", variant: "destructive" });
+      toast({ title: "Erreur", description: err.message || "Impossible de charger les données.", variant: "destructive" });
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
-    };
-
+  };
 
   const handleApprove = async (id: string) => {
     try {
@@ -94,6 +106,7 @@ const Demandes = () => {
       setEditingDemande(null);
       setForm({ description: "", achatsIds: [], payementsIds: [] });
     }
+
     setIsModalOpen(true);
   };
 
@@ -114,6 +127,7 @@ const Demandes = () => {
         await rhApi.createDemande(payload);
         toast({ title: "Succès", description: "Demande créée." });
       }
+
       setIsModalOpen(false);
       fetchData();
     } catch (err: any) {
@@ -177,12 +191,14 @@ const Demandes = () => {
         </CardContent>
       </Card>
 
-      {/* Modal création / modification */}
+      {/* Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{editingDemande ? "Modifier la demande" : "Créer une demande"}</DialogTitle>
+            <DialogDescription>Ajustez les informations ci-dessous.</DialogDescription>
           </DialogHeader>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               placeholder="Description"
