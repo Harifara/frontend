@@ -77,9 +77,9 @@ export default function Achats() {
           rhApi.getTypeAchats(),
         ]);
 
-        console.log("Achats chargés: ", achatsRes?.data); // <-- vérifie ici
+        console.log("Achats chargés: ", achatsRes); // <-- ça devrait afficher un tableau maintenant
 
-        const achatsMapped = (achatsRes?.data ?? []).map((a: any) => ({
+        const achatsMapped = (achatsRes ?? []).map((a: any) => ({
           ...a,
           montant: Number(a.montant),
           type_achat: a.type_achat
@@ -88,7 +88,7 @@ export default function Achats() {
         }));
 
         setAchats(achatsMapped);
-        setTypeAchats(typesRes?.data ?? typesRes ?? []);
+        setTypeAchats(typesRes ?? []); // idem si typesRes est un tableau direct
       } catch (err) {
         console.error(err);
         toast({
@@ -98,6 +98,7 @@ export default function Achats() {
         });
       }
     };
+
 
 
 
