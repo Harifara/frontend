@@ -214,18 +214,22 @@ export default function Achats() {
             {/* Type d'Achat */}
             <div>
               <Label>Type d'Achat</Label>
-              <Select value={form.type_achat_id ?? ""} onValueChange={(v) => setForm({ ...form, type_achat_id: v || null })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir un type d'achat" />
-                </SelectTrigger>
-                <SelectContent>
-                  {typeAchats.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.type_achat} - {t.nom}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Select
+                value={form.type_achat_id ?? ""}
+                onValueChange={(v) => setForm({ ...form, type_achat_id: v || null })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choisir un type d'achat" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {typeAchats.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.nom} ({t.type_achat})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
 
             </div>
 
