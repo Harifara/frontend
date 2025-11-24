@@ -15,13 +15,11 @@ interface Achat {
   code_achat: string;
   nombre: number;
   montant: number;
-  demande: string | null;
   type_achat: string | null;
 }
 
 export default function Achats() {
   const [achats, setAchats] = useState<Achat[]>([]);
-  const [demandes, setDemandes] = useState<any[]>([]);
   const [typesAchat, setTypesAchat] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -38,7 +36,6 @@ export default function Achats() {
     code_achat: "",
     nombre: 1,
     montant: 0,
-    demande: null,
     type_achat: null,
   });
 
@@ -50,11 +47,9 @@ export default function Achats() {
     try {
       const [ach, dem, type] = await Promise.all([
         rhApi.getAchats(),
-        rhApi.getDemandes(),
         rhApi.getTypesAchat(),
       ]);
       setAchats(ach?.data || []);
-      setDemandes(dem?.data || []);
       setTypesAchat(type?.data || []);
     } catch {
       toast({ title: "Erreur", description: "Impossible de charger les données.", variant: "destructive" });
@@ -67,7 +62,7 @@ export default function Achats() {
       setForm({ ...achat });
     } else {
       setEditingAchat(null);
-      setForm({ article: "", code_achat: "", nombre: 1, montant: 0, demande: null, type_achat: null });
+      setForm({ article: "", code_achat: "", nombre: 1, montant: 0, type_achat: null });
     }
     setIsModalOpen(true);
   };
@@ -90,7 +85,6 @@ export default function Achats() {
       code_achat: form.code_achat,
       nombre: Number(form.nombre),
       montant: Number(form.montant),
-      demande_id: form.demande || null,
       type_achat_id: form.type_achat || null,
     };
 
@@ -194,18 +188,7 @@ export default function Achats() {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label>Demande</Label>
-              <Select value={form.demande ?? ""} onValueChange={(v) => setForm({ ...form, demande: v || null })}>
-                <SelectTrigger><SelectValue placeholder="Choisir une demande" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Aucune</SelectItem>
-                  {demandes.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>{d.reference} — {d.demandeur_nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            
 
             <div>
               <Label>Type d'Achat</Label>
