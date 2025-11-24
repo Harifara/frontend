@@ -34,6 +34,7 @@ interface Employer {
   photo_profil?: string;
   cv?: string;
 }
+const DEFAULT_USER_ICON = "/default-user-icon.png"; // mettre dans public/
 
 
 
@@ -53,8 +54,9 @@ const Employes: React.FC = () => {
 
   const { toast } = useToast();
   const navigate = useNavigate();
-  const getPhotoUrl = (photo?: string) =>
-  photo ? (photo.startsWith("http") ? photo : `${MEDIA_URL.replace(/\/?$/, "/")}${photo}`) : null;
+  const getPhotoUrl = (photo?: string) => 
+  photo ? (photo.startsWith("http") ? photo : `${MEDIA_URL.replace(/\/?$/, "/")}${photo}`) : DEFAULT_USER_ICON;
+
 
  
 
@@ -234,21 +236,11 @@ const Employes: React.FC = () => {
                         className="w-full h-full object-cover"
                         onError={(event) => {
                           const target = event.target as HTMLImageElement;
-                          target.onerror = null; // évite boucle
-                          target.src = "";       // supprime l'image cassée
-                          target.parentElement!.innerHTML = `
-                            <svg xmlns="http://www.w3.org/2000/svg" 
-                                class="w-6 h-6 text-gray-400" 
-                                fill="none" 
-                                viewBox="0 0 24 24" 
-                                stroke="currentColor">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                              <circle cx="12" cy="7" r="4"/>
-                            </svg>
-                          `;
+                          target.onerror = null;              // évite boucle infinie
+                          target.src = DEFAULT_USER_ICON;     // met l’icône par défaut
                         }}
                       />
+
                     </div>
                   </TableCell>
 
