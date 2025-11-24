@@ -18,9 +18,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { stockApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import { Textarea } from "@/components/ui/textarea";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
 interface MouvementStock {
@@ -64,9 +64,10 @@ const MouvementStockManagement: React.FC = () => {
     recepteur_id: "",
     recepteur_type: "magasin",
   });
+
   const { toast } = useToast();
 
-  // ⚡ Simule le magasinier connecté (à remplacer par ton auth réel)
+  // ⚡ Simule le magasinier connecté
   const magasinier_id = "uuid-magasinier-1";
 
   // -----------------------
@@ -92,11 +93,59 @@ const MouvementStockManagement: React.FC = () => {
   }, []);
 
   // -----------------------
-  // CRUD Actions
+  // OPEN MODAL
+  // -----------------------
+  const handleOpenModal = (mvt?: MouvementStock) => {
+    if (mvt) {
+      // Edition
+      setEditingMouvement(mvt);
+      setForm({
+        article: mvt.article,
+        magasin_source: mvt.magasin_source || "",
+        magasin_dest: mvt.magasin_dest || "",
+        quantite: mvt.quantite,
+        type_mouvement: mvt.type_mouvement,
+        commentaire: mvt.commentaire || "",
+        recepteur_id: mvt.recepteur_id || "",
+        recepteur_type: mvt.recepteur_type,
+      });
+    } else {
+      // Nouveau
+      setEditingMouvement(null);
+      setForm({
+        article: "",
+        magasin_source: "",
+        magasin_dest: "",
+        quantite: 0,
+        type_mouvement: "entree",
+        commentaire: "",
+        recepteur_id: "",
+        recepteur_type: "magasin",
+      });
+    }
+    setOpenModal(true);
+  };
+
+  // -----------------------
+  // SAVE
   // -----------------------
   const handleSave = async () => {
     if (!form.article || !form.quantite || Number(form.quantite) <= 0) {
       toast({ title: "Erreur", description: "Veuillez remplir les champs obligatoires et quantité > 0", variant: "destructive" });
+      return;
+    }
+
+    // Validation dynamique selon le type
+    if ((form.type_mouvement === 'entree' || form.type_mouvement === 'retour') && !form.magasin_dest) {
+      toast({ title: "Erreur", description: "Le magasin destinataire est obligatoire", variant: "destructive" });
+      return;
+    }
+    if (form.type_mouvement === 'sortie' && !form.magasin_source) {
+      toast({ title: "Erreur", description: "Le magasin source est obligatoire", variant: "destructive" });
+      return;
+    }
+    if (form.type_mouvement === 'transfert' && (!form.magasin_source || !form.magasin_dest)) {
+      toast({ title: "Erreur", description: "Le magasin source et destination sont obligatoires", variant: "destructive" });
       return;
     }
 
@@ -124,36 +173,13 @@ const MouvementStockManagement: React.FC = () => {
 
       setOpenModal(false);
       setEditingMouvement(null);
-      setForm({
-        article: "",
-        magasin_source: "",
-        magasin_dest: "",
-        quantite: 0,
-        type_mouvement: "entree",
-        commentaire: "",
-        recepteur_id: "",
-        recepteur_type: "magasin",
-      });
       fetchAllData();
     } catch (error: any) {
       toast({ title: "Erreur", description: error.response?.data?.detail || error.message || "Impossible d'enregistrer le mouvement", variant: "destructive" });
     }
   };
 
-  const handleEdit = (mvt: MouvementStock) => {
-    setEditingMouvement(mvt);
-    setForm({
-      article: mvt.article,
-      magasin_source: mvt.magasin_source || "",
-      magasin_dest: mvt.magasin_dest || "",
-      quantite: mvt.quantite,
-      type_mouvement: mvt.type_mouvement,
-      commentaire: mvt.commentaire || "",
-      recepteur_id: mvt.recepteur_id || "",
-      recepteur_type: mvt.recepteur_type,
-    });
-    setOpenModal(true);
-  };
+  const handleEdit = (mvt: MouvementStock) => handleOpenModal(mvt);
 
   const handleDelete = async (mvt: MouvementStock) => {
     if (!confirm(`Supprimer le mouvement de ${articles.find(a => a.id === mvt.article)?.nom || "cet article"} ?`)) return;
@@ -166,28 +192,19 @@ const MouvementStockManagement: React.FC = () => {
     }
   };
 
+  // -----------------------
+  // RENDER
+  // -----------------------
   return (
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Gestion des Mouvements de Stock</h2>
-        <Button onClick={() => {
-          setEditingMouvement(null);
-          setForm({
-            article: "",
-            magasin_source: "",
-            magasin_dest: "",
-            quantite: 0,
-            type_mouvement: "entree",
-            commentaire: "",
-            recepteur_id: "",
-            recepteur_type: "magasin",
-          });
-          setOpenModal(true);
-        }}>
+        <Button onClick={() => handleOpenModal()}>
           <Plus className="mr-2 h-4 w-4" /> Nouveau
         </Button>
       </div>
 
+      {/* Tableau */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -268,25 +285,30 @@ const MouvementStockManagement: React.FC = () => {
               <Input type="number" value={form.quantite} onChange={(e) => setForm({ ...form, quantite: Number(e.target.value) })} />
             </div>
 
-            <div>
-              <Label>Magasin Source</Label>
-              <Select value={form.magasin_source} onValueChange={(val) => setForm({ ...form, magasin_source: val })}>
-                <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
-                <SelectContent>
-                  {magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Champs conditionnels */}
+            {['sortie', 'transfert'].includes(form.type_mouvement) && (
+              <div>
+                <Label>Magasin Source</Label>
+                <Select value={form.magasin_source} onValueChange={(val) => setForm({ ...form, magasin_source: val })}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
+                  <SelectContent>
+                    {magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-            <div>
-              <Label>Magasin Destination</Label>
-              <Select value={form.magasin_dest} onValueChange={(val) => setForm({ ...form, magasin_dest: val })}>
-                <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
-                <SelectContent>
-                  {magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+            {['entree', 'retour', 'transfert'].includes(form.type_mouvement) && (
+              <div>
+                <Label>Magasin Destination</Label>
+                <Select value={form.magasin_dest} onValueChange={(val) => setForm({ ...form, magasin_dest: val })}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
+                  <SelectContent>
+                    {magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div>
               <Label>Commentaire</Label>
