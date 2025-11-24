@@ -80,23 +80,23 @@ const EmployeProfile = () => {
         <CardHeader className="flex flex-col md:flex-row gap-6 items-center">
           {/* Photo de profil */}
           <div className="relative w-32 h-32">
-              <img
-                src={
-                  employe.photo_profil
-                    ? employe.photo_profil.startsWith("http")
-                      ? employe.photo_profil
-                      : `${API_URL.replace(/\/?$/, "/")}${employe.photo_profil}`
-                    : DEFAULT_USER_ICON
-                }
-                alt="Profil"
-                className="w-32 h-32 rounded-full object-cover border-4 border-gray-100 shadow"
-                onError={(e) => {
-                  const target = e.currentTarget as HTMLImageElement;
-                  target.onerror = null; // éviter boucle infinie
-                  target.src = DEFAULT_USER_ICON; // fallback
-                }}
-              />
-            </div>
+            <img
+              src={
+                employe.photo_profil
+                  ? employe.photo_profil.startsWith("http")
+                    ? employe.photo_profil
+                    : `${API_URL.replace(/\/$/, "")}/${employe.photo_profil.replace(/^\/+/, "")}`
+                  : DEFAULT_USER_ICON
+              }
+              alt="Profil"
+              className="w-32 h-32 rounded-full object-cover border-4 border-gray-100 shadow"
+              onError={(e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                target.onerror = null; // éviter boucle infinie
+                target.src = DEFAULT_USER_ICON; // fallback
+              }}
+            />
+          </div>
 
           {/* Infos de base */}
           <div className="space-y-1 text-center md:text-left">
