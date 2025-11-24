@@ -48,7 +48,12 @@ interface Magasin {
   nom: string;
 }
 
-const MouvementStockManagement: React.FC = () => {
+interface User {
+  id: string;
+  role: "responsable_stock" | "magasinier" | "employe";
+}
+
+const MouvementStockManagement: React.FC<{ user: User }> = ({ user }) => {
   const [mouvements, setMouvements] = useState<MouvementStock[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [magasins, setMagasins] = useState<Magasin[]>([]);
@@ -66,7 +71,7 @@ const MouvementStockManagement: React.FC = () => {
   });
 
   const { toast } = useToast();
-  const magasinier_id = "uuid-magasinier-1";
+  const magasinier_id = user.id;
 
   // -----------------------
   // FETCH DATA
@@ -91,10 +96,22 @@ const MouvementStockManagement: React.FC = () => {
   }, []);
 
   // -----------------------
+  // PERMISSIONS
+  // -----------------------
+  const canEdit = (mvt: MouvementStock) => {
+    if (user.role === "responsable_stock") return true;
+    if (user.role === "magasinier") return mvt.magasinier_id === user.id;
+    return false;
+  };
+
+  const canDelete = (mvt: MouvementStock) => user.role === "responsable_stock";
+
+  const canCreate = user.role !== "employe";
+
+  // -----------------------
   // CRUD Actions
   // -----------------------
   const handleSave = async () => {
-    // ⚡ Validation stricte avant envoi
     if (!form.article) {
       toast({ title: "Erreur", description: "Veuillez sélectionner un article", variant: "destructive" });
       return;
@@ -134,19 +151,9 @@ const MouvementStockManagement: React.FC = () => {
         toast({ title: "Succès", description: "Mouvement ajouté avec succès" });
       }
 
-      // Reset formulaire
       setOpenModal(false);
       setEditingMouvement(null);
-      setForm({
-        article: "",
-        magasin_source: "",
-        magasin_dest: "",
-        quantite: 0,
-        type_mouvement: "entree",
-        commentaire: "",
-        recepteur_id: "",
-        recepteur_type: "magasin",
-      });
+      setForm({ article: "", magasin_source: "", magasin_dest: "", quantite: 0, type_mouvement: "entree", commentaire: "", recepteur_id: "", recepteur_type: "magasin" });
       fetchAllData();
     } catch (error: any) {
       toast({ title: "Erreur", description: error.response?.data?.detail || error.message || "Impossible d'enregistrer le mouvement", variant: "destructive" });
@@ -183,13 +190,11 @@ const MouvementStockManagement: React.FC = () => {
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Gestion des Mouvements de Stock</h2>
-        <Button onClick={() => {
-          setEditingMouvement(null);
-          setForm({ article: "", magasin_source: "", magasin_dest: "", quantite: 0, type_mouvement: "entree", commentaire: "", recepteur_id: "", recepteur_type: "magasin" });
-          setOpenModal(true);
-        }}>
-          <Plus className="mr-2 h-4 w-4" /> Nouveau
-        </Button>
+        {canCreate && (
+          <Button onClick={() => { setEditingMouvement(null); setForm({ article: "", magasin_source: "", magasin_dest: "", quantite: 0, type_mouvement: "entree", commentaire: "", recepteur_id: "", recepteur_type: "magasin" }); setOpenModal(true); }}>
+            <Plus className="mr-2 h-4 w-4" /> Nouveau
+          </Button>
+        )}
       </div>
 
       <div className="rounded-md border">
@@ -202,7 +207,7 @@ const MouvementStockManagement: React.FC = () => {
               <TableHead>Magasin Source</TableHead>
               <TableHead>Magasin Destination</TableHead>
               <TableHead>Date</TableHead>
-              <TableHead>Actions</TableHead>
+              {(user.role !== "employe") && <TableHead>Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -215,15 +220,17 @@ const MouvementStockManagement: React.FC = () => {
                   <TableCell>{magasins.find(m => m.id === mvt.magasin_source)?.nom || "—"}</TableCell>
                   <TableCell>{magasins.find(m => m.id === mvt.magasin_dest)?.nom || "—"}</TableCell>
                   <TableCell>{new Date(mvt.date_mouvement).toLocaleString()}</TableCell>
-                  <TableCell className="space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(mvt)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(mvt)}><Trash2 className="h-4 w-4" /></Button>
-                  </TableCell>
+                  {(user.role !== "employe") && (
+                    <TableCell className="space-x-2">
+                      {canEdit(mvt) && <Button variant="outline" size="sm" onClick={() => handleEdit(mvt)}><Pencil className="h-4 w-4" /></Button>}
+                      {canDelete(mvt) && <Button variant="destructive" size="sm" onClick={() => handleDelete(mvt)}><Trash2 className="h-4 w-4" /></Button>}
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-6">Aucun mouvement trouvé.</TableCell>
+                <TableCell colSpan={user.role !== "employe" ? 7 : 6} className="text-center py-6">Aucun mouvement trouvé.</TableCell>
               </TableRow>
             )}
           </TableBody>
@@ -231,66 +238,68 @@ const MouvementStockManagement: React.FC = () => {
       </div>
 
       {/* Modal Ajouter / Modifier */}
-      <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingMouvement ? "Modifier le mouvement" : "Ajouter un mouvement"}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div>
-              <Label>Article</Label>
-              <Select value={form.article} onValueChange={(val) => setForm({ ...form, article: val })}>
-                <SelectTrigger><SelectValue placeholder="Sélectionnez un article" /></SelectTrigger>
-                <SelectContent>{articles.map(a => <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
+      {canCreate && (
+        <Dialog open={openModal} onOpenChange={setOpenModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingMouvement ? "Modifier le mouvement" : "Ajouter un mouvement"}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div>
+                <Label>Article</Label>
+                <Select value={form.article} onValueChange={(val) => setForm({ ...form, article: val })}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionnez un article" /></SelectTrigger>
+                  <SelectContent>{articles.map(a => <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label>Type de mouvement</Label>
-              <Select value={form.type_mouvement} onValueChange={(val) => setForm({ ...form, type_mouvement: val })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="entree">Entrée</SelectItem>
-                  <SelectItem value="sortie">Sortie</SelectItem>
-                  <SelectItem value="retour">Retour</SelectItem>
-                  <SelectItem value="transfert">Transfert</SelectItem>
-                  <SelectItem value="inventaire">Inventaire</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div>
+                <Label>Type de mouvement</Label>
+                <Select value={form.type_mouvement} onValueChange={(val) => setForm({ ...form, type_mouvement: val })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="entree">Entrée</SelectItem>
+                    <SelectItem value="sortie">Sortie</SelectItem>
+                    <SelectItem value="retour">Retour</SelectItem>
+                    <SelectItem value="transfert">Transfert</SelectItem>
+                    <SelectItem value="inventaire">Inventaire</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label>Quantité</Label>
-              <Input type="number" value={form.quantite} onChange={(e) => setForm({ ...form, quantite: Number(e.target.value) })} />
-            </div>
+              <div>
+                <Label>Quantité</Label>
+                <Input type="number" value={form.quantite} onChange={(e) => setForm({ ...form, quantite: Number(e.target.value) })} />
+              </div>
 
-            <div>
-              <Label>Magasin Source</Label>
-              <Select value={form.magasin_source} onValueChange={(val) => setForm({ ...form, magasin_source: val })}>
-                <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
-                <SelectContent>{magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
+              <div>
+                <Label>Magasin Source</Label>
+                <Select value={form.magasin_source} onValueChange={(val) => setForm({ ...form, magasin_source: val })}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
+                  <SelectContent>{magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label>Magasin Destination</Label>
-              <Select value={form.magasin_dest} onValueChange={(val) => setForm({ ...form, magasin_dest: val })}>
-                <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
-                <SelectContent>{magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
+              <div>
+                <Label>Magasin Destination</Label>
+                <Select value={form.magasin_dest} onValueChange={(val) => setForm({ ...form, magasin_dest: val })}>
+                  <SelectTrigger><SelectValue placeholder="Sélectionnez un magasin" /></SelectTrigger>
+                  <SelectContent>{magasins.map(m => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label>Commentaire</Label>
-              <Textarea value={form.commentaire} onChange={(e) => setForm({ ...form, commentaire: e.target.value })} />
+              <div>
+                <Label>Commentaire</Label>
+                <Textarea value={form.commentaire} onChange={(e) => setForm({ ...form, commentaire: e.target.value })} />
+              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenModal(false)}>Annuler</Button>
-            <Button onClick={handleSave}>Enregistrer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpenModal(false)}>Annuler</Button>
+              <Button onClick={handleSave}>Enregistrer</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
