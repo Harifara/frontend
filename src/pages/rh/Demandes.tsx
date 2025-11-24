@@ -47,6 +47,7 @@ const Demandes = () => {
         rhApi.getAchats(),
         rhApi.getPayements(),
       ]);
+
       setDemandes(dataDemandes?.data || []);
       setAchats(dataAchats?.data || []);
       setPayements(dataPayements?.data || []);
@@ -82,8 +83,8 @@ const Demandes = () => {
       setEditingDemande(demande);
       setForm({
         description: demande.description,
-        achatsIds: demande.achats.map(a => a.id),
-        payementsIds: demande.payements.map(p => p.id),
+        achatsIds: demande.achats.map(a => String(a.id)),
+        payementsIds: demande.payements.map(p => String(p.id)),
       });
     } else {
       setEditingDemande(null);
@@ -172,6 +173,7 @@ const Demandes = () => {
         </CardContent>
       </Card>
 
+      {/* Modal création / modification */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -184,6 +186,7 @@ const Demandes = () => {
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               required
             />
+
             <div>
               <label>Achats</label>
               <Select
@@ -195,10 +198,15 @@ const Demandes = () => {
                   <SelectValue placeholder="Sélectionner les achats" />
                 </SelectTrigger>
                 <SelectContent>
-                  {achats.map(a => <SelectItem key={a.id} value={a.id}>{a.article} - {a.montant}</SelectItem>)}
+                  {achats.length > 0 ? achats.map(a => (
+                    <SelectItem key={a.id} value={String(a.id)}>
+                      {a.article} - {a.montant.toLocaleString()} Ar
+                    </SelectItem>
+                  )) : <SelectItem disabled>Aucun achat disponible</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
+
             <div>
               <label>Payements</label>
               <Select
@@ -210,10 +218,15 @@ const Demandes = () => {
                   <SelectValue placeholder="Sélectionner les payements" />
                 </SelectTrigger>
                 <SelectContent>
-                  {payements.map(p => <SelectItem key={p.id} value={p.id}>{p.montant} - {p.status}</SelectItem>)}
+                  {payements.length > 0 ? payements.map(p => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.montant.toLocaleString()} Ar - {p.status}
+                    </SelectItem>
+                  )) : <SelectItem disabled>Aucun payement disponible</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Annuler</Button>
               <Button type="submit">{editingDemande ? "Mettre à jour" : "Créer"}</Button>
