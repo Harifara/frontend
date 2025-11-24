@@ -212,18 +212,42 @@ export default function Achats() {
                 <TableHead className="text-center w-1/5">Actions</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
-              {filteredAchats.length > 0 ? (
-                filteredAchats.map((a) => (
+              {achats && achats.length > 0 ? (
+                achats.map((a) => (
                   <TableRow key={a.id} className="hover:bg-gray-50">
-                    <TableCell className="text-center">{a.article}</TableCell>
-                    <TableCell className="text-center">{a.code_achat}</TableCell>
-                    <TableCell className="text-center">{a.type_achat?.nom || "-"}</TableCell>
-                    <TableCell className="text-center">{a.nombre}</TableCell>
-                    <TableCell className="text-center">{Number(a.montant).toLocaleString()} Ar</TableCell>
-                    <TableCell className="text-center flex justify-center gap-2">
-                      <Button size="sm" variant="outline" onClick={() => handleOpenModal(a)}>Modifier</Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleOpenDeleteModal(a.id!)}>Supprimer</Button>
+                    <TableCell className="text-center">{a.article || "-"}</TableCell>
+                    <TableCell className="text-center">{a.code_achat || "-"}</TableCell>
+
+                    <TableCell className="text-center">
+                      {a.type_achat?.nom || "Non défini"}
+                    </TableCell>
+
+                    <TableCell className="text-center">{a.nombre ?? "-"}</TableCell>
+
+                    <TableCell className="text-center">
+                      {a.montant ? Number(a.montant).toLocaleString() + " Ar" : "-"}
+                    </TableCell>
+
+                    <TableCell className="text-center">
+                      <div className="flex justify-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenModal(a)}
+                        >
+                          Modifier
+                        </Button>
+
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleOpenDeleteModal(a.id)}
+                        >
+                          Supprimer
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))
@@ -236,6 +260,7 @@ export default function Achats() {
               )}
             </TableBody>
           </Table>
+
         </CardContent>
       </Card>
 
