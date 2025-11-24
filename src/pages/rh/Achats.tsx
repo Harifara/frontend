@@ -224,10 +224,11 @@ export default function Achats() {
                 <SelectContent>
                   {typeAchats.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
-                      {t.type_achat} {/* affiche le type d'achat */}
+                      {t.type_achat} - {t.nom} {/* Affiche le type + le nom pour plus de clarté */}
                     </SelectItem>
                   ))}
                 </SelectContent>
+
 
 
               </Select>
