@@ -45,7 +45,7 @@ interface Achat {
   nombre: number;
   montant: number | string;
   type_achat?: TypeAchat | null;
-  type_achat_id?: string | null;
+  type_achat_id?: string;
 }
 
 export default function Achats() {
@@ -63,7 +63,7 @@ export default function Achats() {
     code_achat: "",
     nombre: 1,
     montant: 0,
-    type_achat_id: null,
+    type_achat_id: "", // Toujours string pour Select contrôlé
   });
 
   useEffect(() => {
@@ -102,7 +102,7 @@ export default function Achats() {
       setEditingAchat(achat);
       setForm({
         ...achat,
-        type_achat_id: achat.type_achat?.id ?? null,
+        type_achat_id: achat.type_achat?.id ?? "",
       });
     } else {
       setEditingAchat(null);
@@ -111,7 +111,7 @@ export default function Achats() {
         code_achat: "",
         nombre: 1,
         montant: 0,
-        type_achat_id: null,
+        type_achat_id: "",
       });
     }
     setIsModalOpen(true);
@@ -193,7 +193,6 @@ export default function Achats() {
 
   return (
     <div className="p-8 space-y-6">
-
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Achats</h1>
         <Button onClick={() => handleOpenModal()}>Ajouter un Achat</Button>
@@ -222,7 +221,6 @@ export default function Achats() {
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
             </TableHeader>
-
             <TableBody>
               {filteredAchats.length > 0 ? (
                 filteredAchats.map((a) => (
@@ -234,7 +232,7 @@ export default function Achats() {
                     </TableCell>
                     <TableCell className="text-center">{a.nombre}</TableCell>
                     <TableCell className="text-center">
-                      {a.montant.toLocaleString()} Ar
+                      {Number(a.montant).toLocaleString()} Ar
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex justify-center gap-2">
@@ -270,16 +268,19 @@ export default function Achats() {
 
       {/* MODAL AJOUT / MODIF */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-[500px]" aria-describedby="dialog-description">
           <DialogHeader>
             <DialogTitle>{editingAchat ? "Modifier l'Achat" : "Créer un Achat"}</DialogTitle>
           </DialogHeader>
+          <p id="dialog-description">
+            {editingAchat ? "Modifier les informations de l'achat." : "Remplir le formulaire pour créer un achat."}
+          </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <Label>Type d'Achat</Label>
               <Select
-                value={form.type_achat_id ?? undefined}
+                value={form.type_achat_id}
                 onValueChange={(v) => setForm({ ...form, type_achat_id: v })}
               >
                 <SelectTrigger>
@@ -337,9 +338,7 @@ export default function Achats() {
               <Button variant="outline" type="button" onClick={handleCloseModal}>
                 Annuler
               </Button>
-              <Button type="submit">
-                {editingAchat ? "Mettre à jour" : "Créer"}
-              </Button>
+              <Button type="submit">{editingAchat ? "Mettre à jour" : "Créer"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -347,11 +346,11 @@ export default function Achats() {
 
       {/* MODAL SUPPRESSION */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+        <DialogContent className="sm:max-w-[400px]" aria-describedby="delete-dialog-description">
           <DialogHeader>
             <DialogTitle>Confirmation</DialogTitle>
           </DialogHeader>
-          <p>Voulez-vous vraiment supprimer cet achat ?</p>
+          <p id="delete-dialog-description">Voulez-vous vraiment supprimer cet achat ?</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
               Annuler
