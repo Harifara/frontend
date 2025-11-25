@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { stockApi } from "@/lib/api";
-import { v4 as uuidv4 } from "uuid";
 
 interface Props {
   open: boolean;
@@ -45,42 +44,40 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
     if ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId) return alert("Magasin destination requis");
 
     const payload: any = {
-        type_mouvement: type,
-        article_id: articleId,
-        quantite,
-        commentaire,
-        created_by: currentUserId,   // Obligatoire
-        statut: "valide",            // ⚠️ Obligatoire pour POST
+      type_mouvement: type,
+      article_id: articleId,
+      quantite,
+      commentaire,
+      created_by: currentUserId, // Obligatoire
+      statut: editingMouvement ? editingMouvement.statut : "valide", // ⚠️ Obligatoire pour POST
     };
 
     if (["entree", "retour"].includes(type)) payload.magasin_dest_id = magasinDestId;
     if (type === "sortie") payload.magasin_source_id = magasinSourceId;
     if (type === "transfert") {
-        payload.magasin_source_id = magasinSourceId;
-        payload.magasin_dest_id = magasinDestId;
+      payload.magasin_source_id = magasinSourceId;
+      payload.magasin_dest_id = magasinDestId;
     }
 
-    // Pour modification, on garde les champs existants
+    // Pour modification
     if (editingMouvement) {
-        if (editingMouvement.statut) payload.statut = editingMouvement.statut;
-        if (editingMouvement.validated_by) payload.validated_by = editingMouvement.validated_by;
+      if (editingMouvement.validated_by) payload.validated_by = editingMouvement.validated_by;
     }
 
     try {
-        if (editingMouvement) await stockApi.updateMouvement(editingMouvement.id, payload);
-        else await stockApi.createMouvement(payload);
-        onSaved();
-        onClose();
+      if (editingMouvement) await stockApi.updateMouvement(editingMouvement.id, payload);
+      else await stockApi.createMouvement(payload);
+      onSaved();
+      onClose();
     } catch (err: any) {
-        console.error("Erreur enregistrement :", err);
-        if (err.response?.data) {
+      console.error("Erreur enregistrement :", err);
+      if (err.response?.data) {
         alert("Erreur lors de l'enregistrement : " + JSON.stringify(err.response.data));
-        } else {
+      } else {
         alert("Erreur lors de l'enregistrement du mouvement");
-        }
+      }
     }
-    };
-
+  };
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
