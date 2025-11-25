@@ -34,7 +34,7 @@ interface Magasin {
 
 interface District {
   id: string;
-  name: string; // Correspond à l'API RH
+  name: string;
 }
 
 const MagasinManagement: React.FC = () => {
@@ -54,28 +54,22 @@ const MagasinManagement: React.FC = () => {
     is_active: true,
   });
 
-  // ======================================================
-  // 🔐 Permissions côté frontend
-  // ======================================================
+  // Permissions côté frontend
   const canCreate = userRole === "responsable_stock" || userRole === "admin";
   const canEdit = userRole === "responsable_stock" || userRole === "admin";
-  const canDelete = userRole === "admin"; // tu peux ajouter responsable_stock si tu veux
+  const canDelete = userRole === "admin";
 
-  // ======================================================
-  // 👤 Charger utilisateur
-  // ======================================================
+  // Charger utilisateur
   const fetchUser = async () => {
     try {
-      const user = await rhApi.getMe(); // { id, username, role, ... }
+      const user = await rhApi.getMe();
       setUserRole(user.role);
     } catch (err) {
       console.error("Erreur lors de la récupération de l'utilisateur");
     }
   };
 
-  // ======================================================
-  // 📌 Charger districts
-  // ======================================================
+  // Charger districts
   const fetchDistricts = async () => {
     try {
       const data = await rhApi.getDistricts();
@@ -91,9 +85,7 @@ const MagasinManagement: React.FC = () => {
     }
   };
 
-  // ======================================================
-  // 🏬 Charger magasins
-  // ======================================================
+  // Charger magasins
   const fetchMagasins = async (districtList: District[]) => {
     try {
       const data = await stockApi.getMagasins();
@@ -113,9 +105,7 @@ const MagasinManagement: React.FC = () => {
     }
   };
 
-  // ======================================================
-  // 🚀 Chargement initial
-  // ======================================================
+  // Chargement initial
   useEffect(() => {
     const load = async () => {
       await fetchUser();
@@ -125,9 +115,7 @@ const MagasinManagement: React.FC = () => {
     load();
   }, []);
 
-  // ======================================================
-  // 🧱 Ouvrir modal
-  // ======================================================
+  // Ouvrir modal
   const openModal = (magasin?: Magasin) => {
     if (magasin) {
       setSelectedMagasin(magasin);
@@ -151,9 +139,7 @@ const MagasinManagement: React.FC = () => {
     setModalOpen(true);
   };
 
-  // ======================================================
-  // 💾 Sauvegarde
-  // ======================================================
+  // Sauvegarde
   const handleSave = async () => {
     if (!formData.nom || !formData.adresse || !formData.district_id) {
       toast({
@@ -168,9 +154,7 @@ const MagasinManagement: React.FC = () => {
       nom: formData.nom,
       adresse: formData.adresse,
       district_id: formData.district_id,
-      capacite_max: formData.capacite_max
-        ? Number(formData.capacite_max)
-        : null,
+      capacite_max: formData.capacite_max ? Number(formData.capacite_max) : null,
       is_active: formData.is_active,
     };
 
@@ -193,9 +177,7 @@ const MagasinManagement: React.FC = () => {
     }
   };
 
-  // ======================================================
-  // 🗑️ Suppression
-  // ======================================================
+  // Suppression
   const handleDelete = async () => {
     if (!selectedMagasin) return;
 
@@ -213,9 +195,7 @@ const MagasinManagement: React.FC = () => {
     }
   };
 
-  // ======================================================
-  // 🖼️ Rendu
-  // ======================================================
+  // Rendu
   return (
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center">
@@ -237,7 +217,9 @@ const MagasinManagement: React.FC = () => {
             <TableHead>District</TableHead>
             <TableHead>Capacité max</TableHead>
             <TableHead>Statut</TableHead>
-            <TableHead className="text-center">Actions</TableHead>
+            {canEdit || canDelete ? (
+              <TableHead className="text-center">Actions</TableHead>
+            ) : null}
           </TableRow>
         </TableHeader>
 
@@ -250,30 +232,31 @@ const MagasinManagement: React.FC = () => {
               <TableCell>{m.capacite_max ?? "-"}</TableCell>
               <TableCell>{m.is_active ? "Actif" : "Inactif"}</TableCell>
 
-              <TableCell className="text-center space-x-2">
-                {canEdit && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openModal(m)}
-                  >
-                    Modifier
-                  </Button>
-                )}
-
-                {canDelete && (
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedMagasin(m);
-                      setDeleteModalOpen(true);
-                    }}
-                  >
-                    Supprimer
-                  </Button>
-                )}
-              </TableCell>
+              {(canEdit || canDelete) && (
+                <TableCell className="text-center space-x-2">
+                  {canEdit && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openModal(m)}
+                    >
+                      Modifier
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedMagasin(m);
+                        setDeleteModalOpen(true);
+                      }}
+                    >
+                      Supprimer
+                    </Button>
+                  )}
+                </TableCell>
+              )}
             </TableRow>
           ))}
         </TableBody>
@@ -355,15 +338,13 @@ const MagasinManagement: React.FC = () => {
               </select>
             </div>
 
-            <Button
-              onClick={handleSave}
-              disabled={!canEdit}
-              className="w-full"
-            >
-              {selectedMagasin
-                ? "Enregistrer les modifications"
-                : "Créer le magasin"}
-            </Button>
+            {canEdit && (
+              <Button onClick={handleSave} className="w-full">
+                {selectedMagasin
+                  ? "Enregistrer les modifications"
+                  : "Créer le magasin"}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
@@ -378,20 +359,15 @@ const MagasinManagement: React.FC = () => {
           <p>Voulez-vous vraiment supprimer ce magasin ?</p>
 
           <DialogFooter className="flex justify-end space-x-2 mt-4">
-            <Button
-              variant="outline"
-              onClick={() => setDeleteModalOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>
               Annuler
             </Button>
 
-            <Button
-              variant="destructive"
-              onClick={handleDelete}
-              disabled={!canDelete}
-            >
-              Supprimer
-            </Button>
+            {canDelete && (
+              <Button variant="destructive" onClick={handleDelete}>
+                Supprimer
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
