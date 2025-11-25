@@ -39,11 +39,12 @@ interface Article {
 export default function DemandesReapproPage() {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedDemande, setSelectedDemande] = useState<Demande | null>(null);
+  const [showModal, setShowModal] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+  const [selectedDemande, setSelectedDemande] = useState<Demande | null>(null);
   const [commentaire, setCommentaire] = useState("");
 
-  // 🔹 Formulaire nouvelle demande
+  // Formulaire création
   const [magasins, setMagasins] = useState<Magasin[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [magasinId, setMagasinId] = useState<string>("");
@@ -118,75 +119,36 @@ export default function DemandesReapproPage() {
     }
     try {
       const payload = {
+        numero: `DR-${Date.now()}`,
         magasin: magasinId,
         article: articleId,
         quantite_demandee: quantite,
         priorite,
         motif,
-        demandeur_id: "UUID_DU_MAGASINIER", // remplace par l'utilisateur connecté
+        demandeur_id: "VRAI_UUID_UTILISATEUR_CONNECTE", // remplacer par l'UUID réel
       };
       await stockApi.createDemande(payload);
-      alert("Demande créée avec succès !");
+      setShowModal(false);
       setMagasinId("");
       setArticleId("");
       setQuantite(1);
       setPriorite("normale");
       setMotif("");
       fetchDemandes();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Erreur lors de la création de la demande");
+      alert(`Erreur lors de la création de la demande : ${error.message || error}`);
     }
   };
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Demandes de Réapprovisionnement</h1>
-
-      {/* 🔹 Formulaire création */}
-      <div className="p-4 mb-6 border rounded-md shadow-sm">
-        <h2 className="text-xl font-semibold mb-2">Nouvelle Demande</h2>
-        <Select value={magasinId} onValueChange={setMagasinId} className="mb-2 w-full">
-          <SelectTrigger>
-            <SelectValue placeholder="Sélectionnez un magasin" />
-          </SelectTrigger>
-          <SelectContent>
-            {magasins.map((m) => (
-              <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={articleId} onValueChange={setArticleId} className="mb-2 w-full">
-          <SelectTrigger>
-            <SelectValue placeholder="Sélectionnez un article" />
-          </SelectTrigger>
-          <SelectContent>
-            {articles.map((a) => (
-              <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Input type="number" min={1} value={quantite} onChange={(e) => setQuantite(Number(e.target.value))} placeholder="Quantité" className="mb-2 w-full" />
-
-        <Select value={priorite} onValueChange={setPriorite} className="mb-2 w-full">
-          <SelectTrigger>
-            <SelectValue placeholder="Priorité" />
-          </SelectTrigger>
-          <SelectContent>
-            {priorites.map((p) => (
-              <SelectItem key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Input type="text" value={motif} onChange={(e) => setMotif(e.target.value)} placeholder="Motif" className="mb-2 w-full" />
-
-        <Button onClick={handleCreateDemande}>Créer la demande</Button>
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Demandes de Réapprovisionnement</h1>
+        <Button onClick={() => setShowModal(true)}>Nouvelle Demande</Button>
       </div>
 
-      {/* 🔹 Table des demandes */}
+      {/* Table des demandes */}
       {loading ? (
         <p>Chargement...</p>
       ) : (
@@ -225,7 +187,56 @@ export default function DemandesReapproPage() {
         </Table>
       )}
 
-      {/* 🔹 Dialog pour le rejet */}
+      {/* Modal création */}
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nouvelle Demande</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            <Select value={magasinId} onValueChange={setMagasinId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionnez un magasin" />
+              </SelectTrigger>
+              <SelectContent>
+                {magasins.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={articleId} onValueChange={setArticleId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionnez un article" />
+              </SelectTrigger>
+              <SelectContent>
+                {articles.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Input type="number" min={1} value={quantite} onChange={(e) => setQuantite(Number(e.target.value))} placeholder="Quantité" />
+            <Select value={priorite} onValueChange={setPriorite}>
+              <SelectTrigger>
+                <SelectValue placeholder="Priorité" />
+              </SelectTrigger>
+              <SelectContent>
+                {priorites.map((p) => (
+                  <SelectItem key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input type="text" value={motif} onChange={(e) => setMotif(e.target.value)} placeholder="Motif" />
+          </div>
+          <DialogFooter className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowModal(false)}>Annuler</Button>
+            <Button onClick={handleCreateDemande}>Créer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog pour le rejet */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>

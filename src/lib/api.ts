@@ -797,11 +797,19 @@ deleteMouvement: async (id: string) =>
 
 
 
-getDemandes: async () => {
+  // ====================
+  // DEMANDES DE RÉAPPROVISIONNEMENT
+  // ====================
+  getDemandes: async () => {
     return stockApi._call(`${API_BASE_URL}/stock/demandes-reapprovisionnement/`);
   },
 
   createDemande: async (payload: any) => {
+    // ⚠️ Ajouter numero si absent
+    if (!payload.numero) payload.numero = `DR-${Date.now()}`;
+    // ⚠️ Ajouter UUID valide si absent
+    if (!payload.demandeur_id) payload.demandeur_id = "00000000-0000-0000-0000-000000000000";
+
     return stockApi._call(`${API_BASE_URL}/stock/demandes-reapprovisionnement/`, {
       method: "POST",
       body: JSON.stringify(payload),
