@@ -23,6 +23,13 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
   const [magasins, setMagasins] = useState<{id: string; nom: string}[]>([]);
   const [commentaire, setCommentaire] = useState(editingMouvement?.commentaire || "");
 
+  // Réinitialiser les magasins quand le type change
+  useEffect(() => {
+    setMagasinSourceId("");
+    setMagasinDestId("");
+  }, [type]);
+
+  // Récupérer articles et magasins
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -61,6 +68,7 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
       case "sortie":
         if (!magasinSourceId) return alert("Magasin source requis.");
         payload.magasin_source_id = magasinSourceId;
+
         if (magasinDestId) {
           payload.recepteur_type = "magasin";
           payload.recepteur_id = magasinDestId;
@@ -110,6 +118,7 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
         </DialogHeader>
 
         <div className="space-y-4 mt-4">
+          {/* Type de mouvement */}
           <Select value={type} onValueChange={setType}>
             <SelectTrigger><SelectValue placeholder="Type de mouvement" /></SelectTrigger>
             <SelectContent>
@@ -120,6 +129,7 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
             </SelectContent>
           </Select>
 
+          {/* Article */}
           <Select value={articleId} onValueChange={setArticleId}>
             <SelectTrigger><SelectValue placeholder="Article" /></SelectTrigger>
             <SelectContent>
@@ -129,6 +139,7 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
             </SelectContent>
           </Select>
 
+          {/* Quantité */}
           <Input
             type="number"
             placeholder="Quantité"
@@ -136,28 +147,37 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
             onChange={(e) => setQuantite(parseInt(e.target.value))}
           />
 
+          {/* Magasin Source (sortie / transfert) */}
           {["sortie", "transfert"].includes(type) && (
-            <Select value={magasinSourceId} onValueChange={setMagasinSourceId}>
-              <SelectTrigger><SelectValue placeholder="Magasin Source" /></SelectTrigger>
-              <SelectContent>
-                {magasins.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div>
+              <Select value={magasinSourceId} onValueChange={setMagasinSourceId}>
+                <SelectTrigger><SelectValue placeholder="Magasin Source" /></SelectTrigger>
+                <SelectContent>
+                  {magasins.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {type === "sortie" && <p className="text-sm text-gray-500">Sélectionnez le magasin source pour cette sortie.</p>}
+            </div>
           )}
 
-          {["entree", "retour", "transfert"].includes(type) && (
-            <Select value={magasinDestId} onValueChange={setMagasinDestId}>
-              <SelectTrigger><SelectValue placeholder="Magasin Destination" /></SelectTrigger>
-              <SelectContent>
-                {magasins.map((m) => (
-                  <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Magasin Destination (entree / retour / transfert / sortie vers magasin) */}
+          {["entree", "retour", "transfert", "sortie"].includes(type) && (
+            <div>
+              <Select value={magasinDestId} onValueChange={setMagasinDestId}>
+                <SelectTrigger><SelectValue placeholder="Magasin Destination" /></SelectTrigger>
+                <SelectContent>
+                  {magasins.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {type !== "transfert" && <p className="text-sm text-gray-500">Optionnel pour une sortie vers un magasin.</p>}
+            </div>
           )}
 
+          {/* Commentaire */}
           <Input
             placeholder="Commentaire"
             value={commentaire}
