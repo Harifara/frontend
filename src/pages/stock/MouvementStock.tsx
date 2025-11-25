@@ -49,8 +49,8 @@ export default function MouvementsStock() {
 
   return (
     <div>
-      <div className="flex justify-between mb-4">
-        <h1 className="text-2xl font-bold">Mouvements de Stock</h1>
+      <div className="flex justify-between mb-6">
+        <h1 className="text-3xl font-bold">Mouvements de Stock</h1>
         <Button onClick={handleAdd}>Ajouter Mouvement</Button>
       </div>
 
@@ -58,37 +58,30 @@ export default function MouvementsStock() {
       {error && <p className="text-red-500">{error}</p>}
       {!loading && mouvements.length === 0 && <p>Aucun mouvement trouvé.</p>}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="space-y-8">
         {!loading &&
           Object.entries(mouvementsParType).map(([type, mouvements]) => (
-            <Card key={type} className="border">
-              <CardHeader>
-                <CardTitle>{type}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
+            <div key={type}>
+              <h2 className="text-xl font-semibold mb-4">{type}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                 {mouvements.map((m: any) => (
-                  <div
-                    key={m.id}
-                    className="p-2 border rounded flex justify-between items-center"
-                  >
-                    <div>
-                      <p><strong>Article:</strong> {m.article?.nom || "-"}</p>
+                  <Card key={m.id} className="shadow-lg border rounded-lg hover:shadow-xl transition duration-200">
+                    <CardHeader className="bg-gray-100">
+                      <CardTitle>{m.article?.nom || "Article inconnu"}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-1">
                       <p><strong>Quantité:</strong> {m.quantite}</p>
                       <p><strong>Source:</strong> {m.magasin_source?.nom || "-"}</p>
                       <p><strong>Destination:</strong> {m.magasin_dest?.nom || "-"}</p>
                       <p><strong>Date:</strong> {new Date(m.date_mouvement).toLocaleString()}</p>
+                    </CardContent>
+                    <div className="p-2 flex justify-end">
+                      <Button size="sm" variant="outline" onClick={() => handleEdit(m)}>Modifier</Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEdit(m)}
-                    >
-                      Modifier
-                    </Button>
-                  </div>
+                  </Card>
                 ))}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
       </div>
 
