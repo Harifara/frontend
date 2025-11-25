@@ -19,8 +19,8 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
   const [articleId, setArticleId] = useState(editingMouvement?.article?.id || "");
   const [magasinSourceId, setMagasinSourceId] = useState(editingMouvement?.magasin_source?.id || "");
   const [magasinDestId, setMagasinDestId] = useState(editingMouvement?.magasin_dest?.id || "");
-  const [articles, setArticles] = useState<{id: string; nom: string}[]>([]);
-  const [magasins, setMagasins] = useState<{id: string; nom: string}[]>([]);
+  const [articles, setArticles] = useState<{ id: string; nom: string }[]>([]);
+  const [magasins, setMagasins] = useState<{ id: string; nom: string }[]>([]);
   const [commentaire, setCommentaire] = useState(editingMouvement?.commentaire || "");
   const [reference, setReference] = useState(editingMouvement?.reference || "");
   const [transporteur, setTransporteur] = useState(editingMouvement?.transporteur || "");
@@ -41,10 +41,14 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
     fetchData();
   }, []);
 
+  // Masquer certains champs selon le type
   useEffect(() => {
     if (type === "sortie") {
       setRecepteurType("autre");
       setRecepteurId(null);
+      setMagasinDestId("");
+    } else if (type === "entree" || type === "retour") {
+      setMagasinSourceId("");
     }
   }, [type]);
 
@@ -143,16 +147,20 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
             </Select>
           )}
 
-          {/* Recepteur */}
-          <Select value={recepteurType} onValueChange={setRecepteurType}>
-            <SelectTrigger><SelectValue placeholder="Type de récepteur" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="autre">Autre</SelectItem>
-              <SelectItem value="employe">Employé</SelectItem>
-              <SelectItem value="magasin">Magasin</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input placeholder="ID du récepteur (facultatif)" value={recepteurId || ""} onChange={e => setRecepteurId(e.target.value || null)} />
+          {/* Recepteur (facultatif pour sortie) */}
+          {type !== "sortie" && (
+            <>
+              <Select value={recepteurType} onValueChange={setRecepteurType}>
+                <SelectTrigger><SelectValue placeholder="Type de récepteur" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="autre">Autre</SelectItem>
+                  <SelectItem value="employe">Employé</SelectItem>
+                  <SelectItem value="magasin">Magasin</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input placeholder="ID du récepteur (facultatif)" value={recepteurId || ""} onChange={e => setRecepteurId(e.target.value || null)} />
+            </>
+          )}
 
           {/* Commentaire */}
           <Input placeholder="Commentaire" value={commentaire} onChange={e => setCommentaire(e.target.value)} />
