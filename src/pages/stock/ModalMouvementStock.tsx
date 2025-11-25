@@ -50,7 +50,7 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
       payload.magasin_source_id = magasinSourceId;
       payload.magasin_dest_id = magasinDestId;
     }
-
+    console.log("Payload envoyé :", payload);
     try {
       if (editingMouvement) {
         await stockApi.updateMouvement(editingMouvement.id, payload);
