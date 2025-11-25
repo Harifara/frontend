@@ -48,18 +48,34 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
       return alert("Magasin destination requis.");
 
     const payload: any = {
-      type_mouvement: type,
-      article_id: articleId,
-      quantite,
-      commentaire,
-      created_by: currentUserId,
-      statut: editingMouvement?.statut || "valide",
+    type_mouvement: type,
+    article_id: articleId,
+    quantite,
+    commentaire,
+    created_by: currentUserId,
+    statut: editingMouvement?.statut || "valide",
 
-      /* ✅ Correction IMPORTANTE :
-         éviter recepteur NULL qui casse le backend */
-      recepteur_type: "autre",
-      recepteur_id: null,
+    recepteur_type: "autre",
+    recepteur_id: null,
     };
+
+    if (type === "entree" || type === "retour") {
+    payload.magasin_dest_id = magasinDestId;
+    }
+
+    if (type === "sortie") {
+    payload.magasin_source_id = magasinSourceId;
+    payload.recepteur_type = "autre"; // ou "magasin" si tu veux un magasin précis
+    payload.recepteur_id = null;      // ou l'ID du magasin
+    }
+
+    if (type === "transfert") {
+    payload.magasin_source_id = magasinSourceId;
+    payload.magasin_dest_id = magasinDestId;
+    payload.recepteur_type = "autre";
+    payload.recepteur_id = null;
+    }
+
 
     if (["entree", "retour"].includes(type)) payload.magasin_dest_id = magasinDestId;
     if (type === "sortie") {
