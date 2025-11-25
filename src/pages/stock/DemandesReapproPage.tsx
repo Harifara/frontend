@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { demandesApi } from "@/lib/demandesApi";
 import { stockApi } from "@/lib/api";
 import {
   Table,
@@ -59,7 +58,7 @@ export default function DemandesReapproPage() {
   const fetchDemandes = async () => {
     setLoading(true);
     try {
-      const data = await demandesApi.getDemandes();
+      const data = await stockApi.getDemandes();
       setDemandes(data);
     } catch (error) {
       console.error(error);
@@ -87,7 +86,7 @@ export default function DemandesReapproPage() {
   // 🔹 Actions
   const handleValider = async (demande: Demande) => {
     try {
-      await demandesApi.valider(demande.id);
+      await stockApi.validerDemande(demande.id);
       fetchDemandes();
     } catch (error) {
       console.error(error);
@@ -102,7 +101,7 @@ export default function DemandesReapproPage() {
   const submitRejet = async () => {
     if (!selectedDemande) return;
     try {
-      await demandesApi.rejeter(selectedDemande.id, commentaire);
+      await stockApi.rejeterDemande(selectedDemande.id, commentaire);
       setShowDialog(false);
       setCommentaire("");
       setSelectedDemande(null);
@@ -126,7 +125,7 @@ export default function DemandesReapproPage() {
         motif,
         demandeur_id: "UUID_DU_MAGASINIER", // remplace par l'utilisateur connecté
       };
-      await demandesApi.createDemande(payload);
+      await stockApi.createDemande(payload);
       alert("Demande créée avec succès !");
       setMagasinId("");
       setArticleId("");
