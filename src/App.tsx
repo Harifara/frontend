@@ -39,7 +39,8 @@ import Categories from "./pages/stock/Categories";
 import Articles from "./pages/stock/Articles";
 import Magasins from "./pages/stock/Magasins";
 import StockManagement from "./pages/stock/StockManagement";
-import MouvementStockManagement from "./pages/stock/MouvementStockManagement";
+import MouvementStock from "./pages/stock/MouvementStock";
+import ModalMouvementStock from "./pages/stock/ModalMouvementStock";
 
 const queryClient = new QueryClient();
 
@@ -111,7 +112,8 @@ const App = () => (
               <Route path="/stock/magasins" element={<Magasins />} />
               <Route path="/stock/articles" element={<Articles />} />
               <Route path="/stock/gestion-stock" element={<StockManagement />} />
-              <Route path="/stock/mouvement-stock" element={<MouvementStockManagement />} />
+              <Route path="/stock/ModalMouvementStock" element={<ModalMouvementStock />} />
+              <Route path="/stock/mouvement-stock" element={<MouvementStock />} />
               </Route>
               
 
