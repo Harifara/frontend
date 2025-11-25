@@ -598,6 +598,15 @@ export const stockApi = {
     return res.json();
   },
 
+  me: async () => {
+      const token = await ensureKongToken();
+      const res = await fetch(`${API_BASE_URL}/auth/me/`, {
+        headers: getHeaders(token),
+      });
+      return res.json();
+    },
+
+
   // ====================
   // CATEGORIES
   // ====================
@@ -802,41 +811,45 @@ getDemandes: async () => {
     const res = await fetch(`${API_BASE_URL}/stock/demandes-reapprovisionnement/`, {
       headers: getHeaders(token),
     });
+
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
 
-  createDemande: async (data) => {
+  createDemande: async (payload: any) => {
     const token = await ensureKongToken();
     const res = await fetch(`${API_BASE_URL}/stock/demandes-reapprovisionnement/`, {
       method: "POST",
       headers: getHeaders(token),
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
+
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
 
-  validerDemande: async (id) => {
+  validerDemande: async (id: string) => {
     const token = await ensureKongToken();
     const res = await fetch(`${API_BASE_URL}/stock/demandes-reapprovisionnement/${id}/valider/`, {
       method: "POST",
       headers: getHeaders(token),
     });
+
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
 
-  rejeterDemande: async (id, commentaire) => {
+  rejeterDemande: async (id: string, commentaire: string) => {
     const token = await ensureKongToken();
     const res = await fetch(`${API_BASE_URL}/stock/demandes-reapprovisionnement/${id}/rejeter/`, {
       method: "POST",
       headers: getHeaders(token),
       body: JSON.stringify({ commentaire }),
     });
+
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
-
+  
 };
 
