@@ -62,7 +62,11 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
     };
 
     if (["entree", "retour"].includes(type)) payload.magasin_dest_id = magasinDestId;
-    if (type === "sortie") payload.magasin_source_id = magasinSourceId;
+    if (type === "sortie") {
+        payload.magasin_source_id = magasinSourceId;
+        payload.recepteur_type = "autre"; // ou "magasin" si c’est un magasin
+        payload.recepteur_id = null;      // ou ID du magasin
+        }
     if (type === "transfert") {
       payload.magasin_source_id = magasinSourceId;
       payload.magasin_dest_id = magasinDestId;
