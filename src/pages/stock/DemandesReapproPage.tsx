@@ -188,7 +188,7 @@ export default function DemandesReapproPage() {
         </Table>
       )}
 
-      {/* Création modal */}
+      {/* Modal création demande */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent>
           <DialogHeader>
@@ -200,7 +200,9 @@ export default function DemandesReapproPage() {
                 <SelectValue placeholder="Magasin" />
               </SelectTrigger>
               <SelectContent>
-                {magasins.map((m) => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                {magasins.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -209,18 +211,33 @@ export default function DemandesReapproPage() {
                 <SelectValue placeholder="Article" />
               </SelectTrigger>
               <SelectContent>
-                {articles.map((a) => <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>)}
+                {articles.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
-            <Input type="number" min={1} value={quantite} onChange={(e) => setQuantite(Number(e.target.value))} placeholder="Quantité" />
+            <Input
+              type="number"
+              min={1}
+              value={quantite}
+              onChange={(e) => setQuantite(Number(e.target.value))}
+              placeholder="Quantité"
+            />
+
             <Select value={priorite} onValueChange={setPriorite}>
               <SelectTrigger><SelectValue placeholder="Priorité" /></SelectTrigger>
               <SelectContent>
-                {priorites.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                {priorites.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
               </SelectContent>
             </Select>
-            <Input type="text" value={motif} onChange={(e) => setMotif(e.target.value)} placeholder="Motif" />
+
+            <Input
+              type="text"
+              value={motif}
+              onChange={(e) => setMotif(e.target.value)}
+              placeholder="Motif"
+            />
           </div>
 
           <DialogFooter>
@@ -230,13 +247,17 @@ export default function DemandesReapproPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Rejet modal */}
+      {/* Modal rejet demande */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rejeter la demande</DialogTitle>
           </DialogHeader>
-          <Input placeholder="Commentaire" value={commentaire} onChange={(e) => setCommentaire(e.target.value)} />
+          <Input
+            placeholder="Commentaire"
+            value={commentaire}
+            onChange={(e) => setCommentaire(e.target.value)}
+          />
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDialog(false)}>Annuler</Button>
             <Button variant="destructive" onClick={submitRejet}>Rejeter</Button>
