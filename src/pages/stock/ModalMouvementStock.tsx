@@ -20,15 +20,19 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
   const [magasinSourceId, setMagasinSourceId] = useState(editingMouvement?.magasin_source?.id || "");
   const [magasinDestId, setMagasinDestId] = useState(editingMouvement?.magasin_dest?.id || "");
   const [recepteurType, setRecepteurType] = useState(editingMouvement?.recepteur_type || "autre");
+  const [recepteurId, setRecepteurId] = useState(editingMouvement?.recepteur_id || null);
   const [articles, setArticles] = useState<{id: string; nom: string}[]>([]);
   const [magasins, setMagasins] = useState<{id: string; nom: string}[]>([]);
   const [commentaire, setCommentaire] = useState(editingMouvement?.commentaire || "");
 
-  // Réinitialiser les magasins quand le type change
+  // Réinitialiser les magasins et recepteur quand le type change
   useEffect(() => {
     setMagasinSourceId("");
     setMagasinDestId("");
-    if (type !== "sortie") setRecepteurType("autre"); // Receveur visible seulement pour sortie
+    if (type !== "sortie") {
+      setRecepteurType("autre");
+      setRecepteurId(null);
+    }
   }, [type]);
 
   // Récupérer articles et magasins
@@ -71,11 +75,15 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
       case "sortie":
         if (!magasinSourceId) return alert("Magasin source requis.");
         payload.magasin_source_id = magasinSourceId;
+
+        // Receveur
         payload.recepteur_type = recepteurType;
-        // Si recepteur = magasin, utiliser magasinDestId
         if (recepteurType === "magasin") {
           if (!magasinDestId) return alert("Magasin destination requis pour recepteur magasin.");
           payload.recepteur_id = magasinDestId;
+        } else if (recepteurType === "employe") {
+          if (!recepteurId) return alert("Recepteur employé requis.");
+          payload.recepteur_id = recepteurId;
         } else {
           payload.recepteur_id = null;
         }
@@ -112,7 +120,8 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
     !quantite ||
     ((type === "sortie" || type === "transfert") && !magasinSourceId) ||
     ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId) ||
-    (type === "sortie" && recepteurType === "magasin" && !magasinDestId);
+    (type === "sortie" && recepteurType === "magasin" && !magasinDestId) ||
+    (type === "sortie" && recepteurType === "employe" && !recepteurId);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -153,16 +162,14 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
 
           {/* Magasin Source (sortie / transfert) */}
           {["sortie", "transfert"].includes(type) && (
-            <div>
-              <Select value={magasinSourceId} onValueChange={setMagasinSourceId}>
-                <SelectTrigger><SelectValue placeholder="Magasin Source" /></SelectTrigger>
-                <SelectContent>
-                  {magasins.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Select value={magasinSourceId} onValueChange={setMagasinSourceId}>
+              <SelectTrigger><SelectValue placeholder="Magasin Source" /></SelectTrigger>
+              <SelectContent>
+                {magasins.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
 
           {/* Recepteur Type (uniquement pour sortie) */}
@@ -177,18 +184,16 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
             </Select>
           )}
 
-          {/* Magasin Destination (entree / retour / transfert / sortie vers magasin) */}
-          {["entree", "retour", "transfert", "sortie"].includes(type) && (
-            <div>
-              <Select value={magasinDestId} onValueChange={setMagasinDestId}>
-                <SelectTrigger><SelectValue placeholder="Magasin Destination" /></SelectTrigger>
-                <SelectContent>
-                  {magasins.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Magasin Destination */}
+          {(["entree", "retour", "transfert"].includes(type) || (type === "sortie" && recepteurType === "magasin")) && (
+            <Select value={magasinDestId} onValueChange={setMagasinDestId}>
+              <SelectTrigger><SelectValue placeholder="Magasin Destination" /></SelectTrigger>
+              <SelectContent>
+                {magasins.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
 
           {/* Commentaire */}
