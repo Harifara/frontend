@@ -576,6 +576,28 @@ getDemandes: async () => fetchWithLog(`${API_BASE_URL}/rh/demandes/`, {
 // ------------------------
 export const stockApi = {
 
+
+   // ==========================
+  // ⭐ UTILITAIRES GLOBAUX
+  // ==========================
+  _call: async (url: string, options: any = {}) => {
+    const token = await ensureKongToken();
+    const res = await fetch(url, {
+      headers: getHeaders(token),
+      ...options,
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || "Erreur API");
+    }
+
+    // DELETE ne retourne pas JSON
+    if (options.method === "DELETE") return true;
+
+    return res.json();
+  },
+
   // ====================
   // CATEGORIES
   // ====================
