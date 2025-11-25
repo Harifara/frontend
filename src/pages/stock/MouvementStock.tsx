@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { stockApi } from "@/lib/api"; // <-- Corrigé ici
+import { stockApi } from "@/lib/api"; // <-- API corrigée
 import ModalMouvementStock from "./ModalMouvementStock";
 
 export default function MouvementsStock() {
@@ -9,14 +9,17 @@ export default function MouvementsStock() {
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
   const [editingMouvement, setEditingMouvement] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchMouvements = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await stockApi.getMouvements();
       setMouvements(data);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("Erreur récupération mouvements :", err);
+      setError("Impossible de récupérer les mouvements. Veuillez réessayer plus tard.");
     } finally {
       setLoading(false);
     }
@@ -43,42 +46,52 @@ export default function MouvementsStock() {
         <Button onClick={handleAdd}>Ajouter Mouvement</Button>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Article</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Quantité</TableHead>
-            <TableHead>Magasin Source</TableHead>
-            <TableHead>Magasin Dest</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {mouvements.map((m) => (
-            <TableRow key={m.id}>
-              <TableCell>{m.article?.nom}</TableCell>
-              <TableCell>{m.type_mouvement}</TableCell>
-              <TableCell>{m.quantite}</TableCell>
-              <TableCell>{m.magasin_source?.nom || "-"}</TableCell>
-              <TableCell>{m.magasin_dest?.nom || "-"}</TableCell>
-              <TableCell>{new Date(m.date_mouvement).toLocaleString()}</TableCell>
-              <TableCell>
-                <Button variant="outline" size="sm" onClick={() => handleEdit(m)}>
-                  Modifier
-                </Button>
-              </TableCell>
+      {loading && <p className="text-gray-500">Chargement des mouvements...</p>}
+      {error && <p className="text-red-500">{error}</p>}
+
+      {!loading && mouvements.length === 0 && <p>Aucun mouvement trouvé.</p>}
+
+      {!loading && mouvements.length > 0 && (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Article</TableHead>
+              <TableHead>Type</TableHead>
+              <TableHead>Quantité</TableHead>
+              <TableHead>Magasin Source</TableHead>
+              <TableHead>Magasin Dest</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Actions</TableHead>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {mouvements.map((m) => (
+              <TableRow key={m.id}>
+                <TableCell>{m.article?.nom || "-"}</TableCell>
+                <TableCell>{m.type_mouvement}</TableCell>
+                <TableCell>{m.quantite}</TableCell>
+                <TableCell>{m.magasin_source?.nom || "-"}</TableCell>
+                <TableCell>{m.magasin_dest?.nom || "-"}</TableCell>
+                <TableCell>{new Date(m.date_mouvement).toLocaleString()}</TableCell>
+                <TableCell>
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(m)}>
+                    Modifier
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
 
       {openModal && (
         <ModalMouvementStock
           open={openModal}
           onClose={() => setOpenModal(false)}
-          onSaved={fetchMouvements}
+          onSaved={() => {
+            fetchMouvements();
+            setOpenModal(false);
+          }}
           editingMouvement={editingMouvement}
         />
       )}
