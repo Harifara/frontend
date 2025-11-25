@@ -41,57 +41,46 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
     if (!articleId) return alert("Veuillez sélectionner un article.");
     if (!quantite || quantite <= 0) return alert("Quantité invalide.");
 
-    if ((type === "sortie" || type === "transfert") && !magasinSourceId)
-      return alert("Magasin source requis.");
-
-    if ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId)
-      return alert("Magasin destination requis.");
-
     const payload: any = {
-    type_mouvement: type,
-    article_id: articleId,
-    quantite,
-    commentaire,
-    created_by: currentUserId,
-    statut: editingMouvement?.statut || "valide",
-
-    recepteur_type: "autre",
-    recepteur_id: null,
+      type_mouvement: type,
+      article_id: articleId,
+      quantite,
+      commentaire,
+      created_by: currentUserId,
+      statut: editingMouvement?.statut || "valide",
     };
 
-    if (type === "entree" || type === "retour") {
-    payload.magasin_dest_id = magasinDestId;
-    }
+    // Gestion des champs selon le type
+    switch(type) {
+      case "entree":
+      case "retour":
+        if (!magasinDestId) return alert("Magasin destination requis.");
+        payload.magasin_dest_id = magasinDestId;
+        break;
 
-    if (type === "sortie") {
-    payload.magasin_source_id = magasinSourceId;
-    payload.recepteur_type = "autre"; // ou "magasin" si tu veux un magasin précis
-    payload.recepteur_id = null;      // ou l'ID du magasin
-    }
-
-    if (type === "transfert") {
-    payload.magasin_source_id = magasinSourceId;
-    payload.magasin_dest_id = magasinDestId;
-    payload.recepteur_type = "autre";
-    payload.recepteur_id = null;
-    }
-
-
-    if (["entree", "retour"].includes(type)) payload.magasin_dest_id = magasinDestId;
-    if (type === "sortie") {
+      case "sortie":
+        if (!magasinSourceId) return alert("Magasin source requis.");
         payload.magasin_source_id = magasinSourceId;
-        payload.recepteur_type = "autre"; // ou "magasin" si c’est un magasin
-        payload.recepteur_id = null;      // ou ID du magasin
+        if (magasinDestId) {
+          payload.recepteur_type = "magasin";
+          payload.recepteur_id = magasinDestId;
+        } else {
+          payload.recepteur_type = "autre";
+          payload.recepteur_id = null;
         }
-    if (type === "transfert") {
-      payload.magasin_source_id = magasinSourceId;
-      payload.magasin_dest_id = magasinDestId;
+        break;
+
+      case "transfert":
+        if (!magasinSourceId || !magasinDestId) return alert("Source et destination requises.");
+        payload.magasin_source_id = magasinSourceId;
+        payload.magasin_dest_id = magasinDestId;
+        payload.recepteur_type = "autre";
+        payload.recepteur_id = null;
+        break;
+
+      default:
+        return alert("Type de mouvement inconnu.");
     }
-
-    if (editingMouvement && editingMouvement.validated_by)
-      payload.validated_by = editingMouvement.validated_by;
-
-    console.log("Payload envoyé:", payload);
 
     try {
       if (editingMouvement) {
@@ -103,11 +92,7 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
       onClose();
     } catch (err: any) {
       console.error("Erreur enregistrement :", err);
-      if (err.response?.data) {
-        alert("Erreur : " + JSON.stringify(err.response.data));
-      } else {
-        alert("Erreur lors de l'enregistrement du mouvement");
-      }
+      alert("Erreur lors de l'enregistrement du mouvement");
     }
   };
 
