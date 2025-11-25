@@ -38,24 +38,18 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
   }, []);
 
   const handleSave = async () => {
-    // ==========================
-    // Validation côté frontend
-    // ==========================
     if (!articleId) return alert("Veuillez sélectionner un article.");
     if (!quantite || quantite <= 0) return alert("Quantité invalide.");
     if ((type === "sortie" || type === "transfert") && !magasinSourceId) return alert("Magasin source requis.");
     if ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId) return alert("Magasin destination requis.");
 
-    // ==========================
-    // Préparer le payload
-    // ==========================
     const payload: any = {
       type_mouvement: type,
       article_id: articleId,
       quantite,
       commentaire,
       created_by: currentUserId,
-      statut: "valide",
+      statut: editingMouvement?.statut || "valide",
     };
 
     if (["entree", "retour"].includes(type)) payload.magasin_dest_id = magasinDestId;
@@ -65,17 +59,10 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
       payload.magasin_dest_id = magasinDestId;
     }
 
-    // Garder les champs existants pour modification
-    if (editingMouvement) {
-      if (editingMouvement.statut) payload.statut = editingMouvement.statut;
-      if (editingMouvement.validated_by) payload.validated_by = editingMouvement.validated_by;
-    }
+    if (editingMouvement && editingMouvement.validated_by) payload.validated_by = editingMouvement.validated_by;
 
     console.log("Payload envoyé:", payload);
 
-    // ==========================
-    // Envoi au backend
-    // ==========================
     try {
       if (editingMouvement) {
         await stockApi.updateMouvement(editingMouvement.id, payload);
@@ -93,6 +80,11 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
       }
     }
   };
+
+  const isDisabled = !articleId ||
+                       !quantite ||
+                       ((type === "sortie" || type === "transfert") && !magasinSourceId) ||
+                       ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -153,7 +145,9 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Annuler</Button>
-          <Button onClick={handleSave}>{editingMouvement ? "Modifier" : "Ajouter"}</Button>
+          <Button onClick={handleSave} disabled={isDisabled}>
+            {editingMouvement ? "Modifier" : "Ajouter"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
