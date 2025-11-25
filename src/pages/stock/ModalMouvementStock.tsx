@@ -19,6 +19,7 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
   const [articleId, setArticleId] = useState(editingMouvement?.article?.id || "");
   const [magasinSourceId, setMagasinSourceId] = useState(editingMouvement?.magasin_source?.id || "");
   const [magasinDestId, setMagasinDestId] = useState(editingMouvement?.magasin_dest?.id || "");
+  const [recepteurType, setRecepteurType] = useState(editingMouvement?.recepteur_type || "autre");
   const [articles, setArticles] = useState<{id: string; nom: string}[]>([]);
   const [magasins, setMagasins] = useState<{id: string; nom: string}[]>([]);
   const [commentaire, setCommentaire] = useState(editingMouvement?.commentaire || "");
@@ -27,6 +28,7 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
   useEffect(() => {
     setMagasinSourceId("");
     setMagasinDestId("");
+    if (type !== "sortie") setRecepteurType("autre"); // Receveur visible seulement pour sortie
   }, [type]);
 
   // Récupérer articles et magasins
@@ -55,9 +57,10 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
       commentaire,
       created_by: currentUserId,
       statut: editingMouvement?.statut || "valide",
+      recepteur_type: recepteurType,
+      recepteur_id: null,
     };
 
-    // Gestion des champs selon le type
     switch(type) {
       case "entree":
       case "retour":
@@ -68,12 +71,12 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
       case "sortie":
         if (!magasinSourceId) return alert("Magasin source requis.");
         payload.magasin_source_id = magasinSourceId;
-
-        if (magasinDestId) {
-          payload.recepteur_type = "magasin";
+        payload.recepteur_type = recepteurType;
+        // Si recepteur = magasin, utiliser magasinDestId
+        if (recepteurType === "magasin") {
+          if (!magasinDestId) return alert("Magasin destination requis pour recepteur magasin.");
           payload.recepteur_id = magasinDestId;
         } else {
-          payload.recepteur_type = "autre";
           payload.recepteur_id = null;
         }
         break;
@@ -108,7 +111,8 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
     !articleId ||
     !quantite ||
     ((type === "sortie" || type === "transfert") && !magasinSourceId) ||
-    ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId);
+    ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId) ||
+    (type === "sortie" && recepteurType === "magasin" && !magasinDestId);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -158,8 +162,19 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
                   ))}
                 </SelectContent>
               </Select>
-              {type === "sortie" && <p className="text-sm text-gray-500">Sélectionnez le magasin source pour cette sortie.</p>}
             </div>
+          )}
+
+          {/* Recepteur Type (uniquement pour sortie) */}
+          {type === "sortie" && (
+            <Select value={recepteurType} onValueChange={setRecepteurType}>
+              <SelectTrigger><SelectValue placeholder="Recepteur" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="autre">Autre</SelectItem>
+                <SelectItem value="magasin">Magasin</SelectItem>
+                <SelectItem value="employe">Employé</SelectItem>
+              </SelectContent>
+            </Select>
           )}
 
           {/* Magasin Destination (entree / retour / transfert / sortie vers magasin) */}
@@ -173,7 +188,6 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
                   ))}
                 </SelectContent>
               </Select>
-              {type !== "transfert" && <p className="text-sm text-gray-500">Optionnel pour une sortie vers un magasin.</p>}
             </div>
           )}
 
