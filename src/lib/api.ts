@@ -805,25 +805,14 @@ deleteMouvement: async (id: string) =>
   }),
 
 
-
-getDemandes: async () => {
-    const token = await ensureKongToken();
-    const res = await fetch(`${API_BASE_URL}/stock/demandes-reapprovisionnement/`, {
-      headers: getHeaders(token),
-    });
-
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  },
-
-  createDemande: async (payload: any) => {
+createDemande: async (payload: any) => {
+    // payload doit contenir : magasin_id, article_id, quantite_demandee, priorite, motif
     const token = await ensureKongToken();
     const res = await fetch(`${API_BASE_URL}/stock/demandes-reapprovisionnement/`, {
       method: "POST",
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
-
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
@@ -834,7 +823,6 @@ getDemandes: async () => {
       method: "POST",
       headers: getHeaders(token),
     });
-
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
@@ -846,10 +834,9 @@ getDemandes: async () => {
       headers: getHeaders(token),
       body: JSON.stringify({ commentaire }),
     });
-
     if (!res.ok) throw new Error(await res.text());
     return res.json();
   },
-  
+
 };
 
