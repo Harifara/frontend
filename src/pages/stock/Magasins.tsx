@@ -22,7 +22,6 @@ import { toast } from "@/components/ui/use-toast";
 import { stockApi, rhApi } from "@/lib/api";
 import { MapPin } from "lucide-react";
 
-
 interface Magasin {
   id: string;
   nom: string;
@@ -41,6 +40,8 @@ interface District {
 const MagasinManagement: React.FC = () => {
   const [magasins, setMagasins] = useState<Magasin[]>([]);
   const [districts, setDistricts] = useState<District[]>([]);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedMagasin, setSelectedMagasin] = useState<Magasin | null>(null);
@@ -53,7 +54,28 @@ const MagasinManagement: React.FC = () => {
     is_active: true,
   });
 
-  // Charger les districts
+  // ======================================================
+  // 🔐 Permissions côté frontend
+  // ======================================================
+  const canCreate = userRole === "responsable_stock" || userRole === "admin";
+  const canEdit = userRole === "responsable_stock" || userRole === "admin";
+  const canDelete = userRole === "admin"; // tu peux ajouter responsable_stock si tu veux
+
+  // ======================================================
+  // 👤 Charger utilisateur
+  // ======================================================
+  const fetchUser = async () => {
+    try {
+      const user = await rhApi.getMe(); // { id, username, role, ... }
+      setUserRole(user.role);
+    } catch (err) {
+      console.error("Erreur lors de la récupération de l'utilisateur");
+    }
+  };
+
+  // ======================================================
+  // 📌 Charger districts
+  // ======================================================
   const fetchDistricts = async () => {
     try {
       const data = await rhApi.getDistricts();
@@ -62,43 +84,50 @@ const MagasinManagement: React.FC = () => {
     } catch (err: any) {
       toast({
         title: "Erreur",
-        description: err.message || "Impossible de charger les districts.",
+        description: "Impossible de charger les districts.",
         variant: "destructive",
       });
       return [];
     }
   };
 
-  // Charger les magasins et enrichir avec le nom du district
+  // ======================================================
+  // 🏬 Charger magasins
+  // ======================================================
   const fetchMagasins = async (districtList: District[]) => {
     try {
       const data = await stockApi.getMagasins();
       const enriched = data.map((m: Magasin) => ({
         ...m,
         district_name:
-          districtList.find((d) => d.id.toString() === m.district_id.toString())?.name ||
-          "Nom manquant",
+          districtList.find((d) => d.id.toString() === m.district_id.toString())
+            ?.name || "Nom manquant",
       }));
       setMagasins(enriched);
     } catch (err: any) {
       toast({
         title: "Erreur",
-        description: err.message || "Impossible de charger les magasins.",
+        description: "Impossible de charger les magasins.",
         variant: "destructive",
       });
     }
   };
 
-  // Charger tout au démarrage
+  // ======================================================
+  // 🚀 Chargement initial
+  // ======================================================
   useEffect(() => {
-    const loadData = async () => {
+    const load = async () => {
+      await fetchUser();
       const districtList = await fetchDistricts();
       await fetchMagasins(districtList);
     };
-    loadData();
+    load();
   }, []);
 
-  // Ouvrir modal ajout / modification
+  // ======================================================
+  // 🧱 Ouvrir modal
+  // ======================================================
   const openModal = (magasin?: Magasin) => {
     if (magasin) {
       setSelectedMagasin(magasin);
@@ -122,7 +151,9 @@ const MagasinManagement: React.FC = () => {
     setModalOpen(true);
   };
 
-  // Sauvegarder magasin
+  // ======================================================
+  // 💾 Sauvegarde
+  // ======================================================
   const handleSave = async () => {
     if (!formData.nom || !formData.adresse || !formData.district_id) {
       toast({
@@ -137,7 +168,9 @@ const MagasinManagement: React.FC = () => {
       nom: formData.nom,
       adresse: formData.adresse,
       district_id: formData.district_id,
-      capacite_max: formData.capacite_max ? Number(formData.capacite_max) : null,
+      capacite_max: formData.capacite_max
+        ? Number(formData.capacite_max)
+        : null,
       is_active: formData.is_active,
     };
 
@@ -154,36 +187,45 @@ const MagasinManagement: React.FC = () => {
     } catch (err: any) {
       toast({
         title: "Erreur",
-        description: err.message || "Échec de la sauvegarde.",
+        description: "Échec de la sauvegarde.",
         variant: "destructive",
       });
     }
   };
 
-  // Supprimer magasin
+  // ======================================================
+  // 🗑️ Suppression
+  // ======================================================
   const handleDelete = async () => {
     if (!selectedMagasin) return;
+
     try {
       await stockApi.deleteMagasin(selectedMagasin.id);
-      toast({ title: "Succès", description: "Magasin supprimé avec succès." });
+      toast({ title: "Succès", description: "Magasin supprimé." });
       fetchMagasins(districts);
       setDeleteModalOpen(false);
     } catch (err: any) {
       toast({
         title: "Erreur",
-        description: err.message || "Échec de la suppression.",
+        description: "Suppression impossible.",
         variant: "destructive",
       });
     }
   };
 
+  // ======================================================
+  // 🖼️ Rendu
+  // ======================================================
   return (
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center">
         <h2 className="text-xl font-semibold flex items-center gap-2">
           <MapPin className="w-6 h-6" /> Gestion des magasins
         </h2>
-        <Button onClick={() => openModal()}>Ajouter un magasin</Button>
+
+        {canCreate && (
+          <Button onClick={() => openModal()}>Ajouter un magasin</Button>
+        )}
       </div>
 
       {/* Tableau */}
@@ -198,6 +240,7 @@ const MagasinManagement: React.FC = () => {
             <TableHead className="text-center">Actions</TableHead>
           </TableRow>
         </TableHeader>
+
         <TableBody>
           {magasins.map((m) => (
             <TableRow key={m.id}>
@@ -206,15 +249,30 @@ const MagasinManagement: React.FC = () => {
               <TableCell>{m.district_name}</TableCell>
               <TableCell>{m.capacite_max ?? "-"}</TableCell>
               <TableCell>{m.is_active ? "Actif" : "Inactif"}</TableCell>
+
               <TableCell className="text-center space-x-2">
-                <Button variant="outline" size="sm" onClick={() => openModal(m)}>Modifier</Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => { setSelectedMagasin(m); setDeleteModalOpen(true); }}
-                >
-                  Supprimer
-                </Button>
+                {canEdit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openModal(m)}
+                  >
+                    Modifier
+                  </Button>
+                )}
+
+                {canDelete && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedMagasin(m);
+                      setDeleteModalOpen(true);
+                    }}
+                  >
+                    Supprimer
+                  </Button>
+                )}
               </TableCell>
             </TableRow>
           ))}
@@ -225,53 +283,86 @@ const MagasinManagement: React.FC = () => {
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>{selectedMagasin ? "Modifier le magasin" : "Ajouter un magasin"}</DialogTitle>
+            <DialogTitle>
+              {selectedMagasin ? "Modifier le magasin" : "Ajouter un magasin"}
+            </DialogTitle>
           </DialogHeader>
+
           <div className="space-y-3">
             <div>
               <Label>Nom</Label>
-              <Input value={formData.nom} onChange={(e) => setFormData({ ...formData, nom: e.target.value })} />
+              <Input
+                value={formData.nom}
+                onChange={(e) =>
+                  setFormData({ ...formData, nom: e.target.value })
+                }
+              />
             </div>
+
             <div>
               <Label>Adresse</Label>
-              <Input value={formData.adresse} onChange={(e) => setFormData({ ...formData, adresse: e.target.value })} />
+              <Input
+                value={formData.adresse}
+                onChange={(e) =>
+                  setFormData({ ...formData, adresse: e.target.value })
+                }
+              />
             </div>
+
             <div>
               <Label>District</Label>
               <select
                 value={formData.district_id}
-                onChange={(e) => setFormData({ ...formData, district_id: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, district_id: e.target.value })
+                }
                 className="w-full border rounded p-2"
               >
                 <option value="">Sélectionner un district</option>
-                {districts.map(d => (
+                {districts.map((d) => (
                   <option key={d.id} value={d.id.toString()}>
-                    {d.name || "Nom manquant"}
+                    {d.name}
                   </option>
                 ))}
               </select>
             </div>
+
             <div>
               <Label>Capacité maximale</Label>
               <Input
                 type="number"
                 value={formData.capacite_max}
-                onChange={(e) => setFormData({ ...formData, capacite_max: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, capacite_max: e.target.value })
+                }
               />
             </div>
+
             <div>
               <Label>Statut</Label>
               <select
                 value={formData.is_active ? "true" : "false"}
-                onChange={(e) => setFormData({ ...formData, is_active: e.target.value === "true" })}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    is_active: e.target.value === "true",
+                  })
+                }
                 className="w-full border rounded p-2"
               >
                 <option value="true">Actif</option>
                 <option value="false">Inactif</option>
               </select>
             </div>
-            <Button onClick={handleSave} className="w-full">
-              {selectedMagasin ? "Enregistrer les modifications" : "Créer le magasin"}
+
+            <Button
+              onClick={handleSave}
+              disabled={!canEdit}
+              className="w-full"
+            >
+              {selectedMagasin
+                ? "Enregistrer les modifications"
+                : "Créer le magasin"}
             </Button>
           </div>
         </DialogContent>
@@ -283,10 +374,24 @@ const MagasinManagement: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
           </DialogHeader>
+
           <p>Voulez-vous vraiment supprimer ce magasin ?</p>
+
           <DialogFooter className="flex justify-end space-x-2 mt-4">
-            <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>Annuler</Button>
-            <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteModalOpen(false)}
+            >
+              Annuler
+            </Button>
+
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={!canDelete}
+            >
+              Supprimer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
