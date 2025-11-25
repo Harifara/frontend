@@ -1,23 +1,22 @@
 import React, { useEffect, useState } from "react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { MouvementsStockApi } from "@/lib/api"; // <-- API wrapper axios/fetch
+import { stockApi } from "@/lib/api"; // <-- Corrigé ici
 import ModalMouvementStock from "./ModalMouvementStock";
 
 export default function MouvementsStock() {
-  const [mouvements, setMouvements] = useState([]);
+  const [mouvements, setMouvements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [openModal, setOpenModal] = useState(false);
-  const [editingMouvement, setEditingMouvement] = useState(null);
+  const [editingMouvement, setEditingMouvement] = useState<any>(null);
 
   const fetchMouvements = async () => {
     setLoading(true);
     try {
-      const data = await MouvementsStockApi.getAll();
+      const data = await stockApi.getMouvements();
       setMouvements(data);
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -57,7 +56,7 @@ export default function MouvementsStock() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {mouvements.map((m: any) => (
+          {mouvements.map((m) => (
             <TableRow key={m.id}>
               <TableCell>{m.article?.nom}</TableCell>
               <TableCell>{m.type_mouvement}</TableCell>
@@ -66,7 +65,9 @@ export default function MouvementsStock() {
               <TableCell>{m.magasin_dest?.nom || "-"}</TableCell>
               <TableCell>{new Date(m.date_mouvement).toLocaleString()}</TableCell>
               <TableCell>
-                <Button variant="outline" size="sm" onClick={() => handleEdit(m)}>Modifier</Button>
+                <Button variant="outline" size="sm" onClick={() => handleEdit(m)}>
+                  Modifier
+                </Button>
               </TableCell>
             </TableRow>
           ))}

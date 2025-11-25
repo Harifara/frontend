@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MouvementsStockApi, MagasinApi, ArticleApi } from "@/lib/api";
+import { stockApi } from "@/lib/api"; // <-- Corrigé ici
 
 interface Props {
   open: boolean;
@@ -18,16 +18,20 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
   const [articleId, setArticleId] = useState(editingMouvement?.article?.id || "");
   const [magasinSourceId, setMagasinSourceId] = useState(editingMouvement?.magasin_source?.id || "");
   const [magasinDestId, setMagasinDestId] = useState(editingMouvement?.magasin_dest?.id || "");
-  const [articles, setArticles] = useState([]);
-  const [magasins, setMagasins] = useState([]);
+  const [articles, setArticles] = useState<any[]>([]);
+  const [magasins, setMagasins] = useState<any[]>([]);
   const [commentaire, setCommentaire] = useState(editingMouvement?.commentaire || "");
 
   useEffect(() => {
     const fetchData = async () => {
-      const arts = await ArticleApi.getAll();
-      const mags = await MagasinApi.getAll();
-      setArticles(arts);
-      setMagasins(mags);
+      try {
+        const arts = await stockApi.getArticles();
+        const mags = await stockApi.getMagasins();
+        setArticles(arts);
+        setMagasins(mags);
+      } catch (err) {
+        console.error(err);
+      }
     };
     fetchData();
   }, []);
@@ -40,7 +44,6 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
       commentaire,
     };
 
-    // Champs selon type
     if (["entree", "retour"].includes(type)) payload.magasin_dest_id = magasinDestId;
     if (type === "sortie") payload.magasin_source_id = magasinSourceId;
     if (type === "transfert") {
@@ -50,9 +53,9 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
 
     try {
       if (editingMouvement) {
-        await MouvementsStockApi.update(editingMouvement.id, payload);
+        await stockApi.updateMouvement(editingMouvement.id, payload);
       } else {
-        await MouvementsStockApi.create(payload);
+        await stockApi.createMouvement(payload);
       }
       onSaved();
       onClose();
@@ -88,7 +91,11 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
               <SelectValue placeholder="Article" />
             </SelectTrigger>
             <SelectContent>
-              {articles.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>)}
+              {articles.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.nom}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -99,14 +106,17 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
             onChange={(e) => setQuantite(parseInt(e.target.value))}
           />
 
-          {/* Champs conditionnels selon type */}
           {["sortie", "transfert"].includes(type) && (
             <Select value={magasinSourceId} onValueChange={setMagasinSourceId}>
               <SelectTrigger>
                 <SelectValue placeholder="Magasin Source" />
               </SelectTrigger>
               <SelectContent>
-                {magasins.map((m: any) => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                {magasins.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.nom}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )}
@@ -117,20 +127,22 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
                 <SelectValue placeholder="Magasin Destination" />
               </SelectTrigger>
               <SelectContent>
-                {magasins.map((m: any) => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                {magasins.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.nom}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )}
 
-          <Input
-            placeholder="Commentaire"
-            value={commentaire}
-            onChange={(e) => setCommentaire(e.target.value)}
-          />
+          <Input placeholder="Commentaire" value={commentaire} onChange={(e) => setCommentaire(e.target.value)} />
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Annuler</Button>
+          <Button variant="outline" onClick={onClose}>
+            Annuler
+          </Button>
           <Button onClick={handleSave}>{editingMouvement ? "Modifier" : "Ajouter"}</Button>
         </DialogFooter>
       </DialogContent>
