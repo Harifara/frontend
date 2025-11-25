@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { stockApi } from "@/lib/api"; // <-- API corrigée
+import { stockApi } from "@/lib/api";
 
 interface Props {
   open: boolean;
@@ -37,34 +37,20 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
   }, []);
 
   const handleSave = async () => {
-    // ✅ Vérifications avant envoi
     if (!articleId) return alert("Veuillez sélectionner un article");
     if (!quantite || quantite <= 0) return alert("Quantité invalide");
     if ((type === "sortie" || type === "transfert") && !magasinSourceId) return alert("Magasin source requis");
     if ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId) return alert("Magasin destination requis");
 
-    const payload: any = {
-      type_mouvement: type,
-      article_id: articleId,
-      quantite,
-      commentaire,
-    };
+    const payload: any = { type_mouvement: type, article_id: articleId, quantite, commentaire };
 
     if (["entree", "retour"].includes(type)) payload.magasin_dest_id = magasinDestId;
     if (type === "sortie") payload.magasin_source_id = magasinSourceId;
-    if (type === "transfert") {
-      payload.magasin_source_id = magasinSourceId;
-      payload.magasin_dest_id = magasinDestId;
-    }
-
-    console.log("Payload envoyé :", payload);
+    if (type === "transfert") { payload.magasin_source_id = magasinSourceId; payload.magasin_dest_id = magasinDestId; }
 
     try {
-      if (editingMouvement) {
-        await stockApi.updateMouvement(editingMouvement.id, payload);
-      } else {
-        await stockApi.createMouvement(payload);
-      }
+      if (editingMouvement) await stockApi.updateMouvement(editingMouvement.id, payload);
+      else await stockApi.createMouvement(payload);
       onSaved();
       onClose();
     } catch (err) {
@@ -82,41 +68,27 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
 
         <div className="space-y-4 mt-4">
           <Select value={type} onValueChange={setType}>
-            <SelectTrigger>
-              <SelectValue placeholder="Type de mouvement" />
-            </SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Type de mouvement" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="entree">Entrée</SelectItem>
               <SelectItem value="sortie">Sortie</SelectItem>
               <SelectItem value="retour">Retour</SelectItem>
               <SelectItem value="transfert">Transfert</SelectItem>
-              <SelectItem value="inventaire">Inventaire</SelectItem>
             </SelectContent>
           </Select>
 
           <Select value={articleId} onValueChange={setArticleId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Article" />
-            </SelectTrigger>
+            <SelectTrigger><SelectValue placeholder="Article" /></SelectTrigger>
             <SelectContent>
-              {articles.map((a) => (
-                <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>
-              ))}
+              {articles.map((a) => <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>)}
             </SelectContent>
           </Select>
 
-          <Input
-            type="number"
-            placeholder="Quantité"
-            value={quantite}
-            onChange={(e) => setQuantite(parseInt(e.target.value))}
-          />
+          <Input type="number" placeholder="Quantité" value={quantite} onChange={(e) => setQuantite(parseInt(e.target.value))} />
 
           {["sortie", "transfert"].includes(type) && (
             <Select value={magasinSourceId} onValueChange={setMagasinSourceId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Magasin Source" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Magasin Source" /></SelectTrigger>
               <SelectContent>
                 {magasins.map((m) => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
               </SelectContent>
@@ -125,20 +97,14 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
 
           {["entree", "retour", "transfert"].includes(type) && (
             <Select value={magasinDestId} onValueChange={setMagasinDestId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Magasin Destination" />
-              </SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Magasin Destination" /></SelectTrigger>
               <SelectContent>
                 {magasins.map((m) => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
               </SelectContent>
             </Select>
           )}
 
-          <Input
-            placeholder="Commentaire"
-            value={commentaire}
-            onChange={(e) => setCommentaire(e.target.value)}
-          />
+          <Input placeholder="Commentaire" value={commentaire} onChange={(e) => setCommentaire(e.target.value)} />
         </div>
 
         <DialogFooter>

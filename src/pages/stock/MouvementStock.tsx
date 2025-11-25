@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { stockApi } from "@/lib/api"; // <-- API corrigée
+import { stockApi } from "@/lib/api";
 import ModalMouvementStock from "./ModalMouvementStock";
 
 export default function MouvementsStock() {
@@ -48,7 +48,6 @@ export default function MouvementsStock() {
 
       {loading && <p className="text-gray-500">Chargement des mouvements...</p>}
       {error && <p className="text-red-500">{error}</p>}
-
       {!loading && mouvements.length === 0 && <p>Aucun mouvement trouvé.</p>}
 
       {!loading && mouvements.length > 0 && (
@@ -74,9 +73,7 @@ export default function MouvementsStock() {
                 <TableCell>{m.magasin_dest?.nom || "-"}</TableCell>
                 <TableCell>{new Date(m.date_mouvement).toLocaleString()}</TableCell>
                 <TableCell>
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(m)}>
-                    Modifier
-                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(m)}>Modifier</Button>
                 </TableCell>
               </TableRow>
             ))}
