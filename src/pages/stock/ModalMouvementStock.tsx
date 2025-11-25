@@ -38,18 +38,24 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
   }, []);
 
   const handleSave = async () => {
-    if (!articleId) return alert("Veuillez sélectionner un article");
-    if (!quantite || quantite <= 0) return alert("Quantité invalide");
-    if ((type === "sortie" || type === "transfert") && !magasinSourceId) return alert("Magasin source requis");
-    if ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId) return alert("Magasin destination requis");
+    // ==========================
+    // Validation côté frontend
+    // ==========================
+    if (!articleId) return alert("Veuillez sélectionner un article.");
+    if (!quantite || quantite <= 0) return alert("Quantité invalide.");
+    if ((type === "sortie" || type === "transfert") && !magasinSourceId) return alert("Magasin source requis.");
+    if ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId) return alert("Magasin destination requis.");
 
+    // ==========================
+    // Préparer le payload
+    // ==========================
     const payload: any = {
       type_mouvement: type,
       article_id: articleId,
       quantite,
       commentaire,
-      created_by: currentUserId, // Obligatoire
-      statut: editingMouvement ? editingMouvement.statut : "valide", // ⚠️ Obligatoire pour POST
+      created_by: currentUserId,
+      statut: "valide",
     };
 
     if (["entree", "retour"].includes(type)) payload.magasin_dest_id = magasinDestId;
@@ -59,14 +65,23 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
       payload.magasin_dest_id = magasinDestId;
     }
 
-    // Pour modification
+    // Garder les champs existants pour modification
     if (editingMouvement) {
+      if (editingMouvement.statut) payload.statut = editingMouvement.statut;
       if (editingMouvement.validated_by) payload.validated_by = editingMouvement.validated_by;
     }
 
+    console.log("Payload envoyé:", payload);
+
+    // ==========================
+    // Envoi au backend
+    // ==========================
     try {
-      if (editingMouvement) await stockApi.updateMouvement(editingMouvement.id, payload);
-      else await stockApi.createMouvement(payload);
+      if (editingMouvement) {
+        await stockApi.updateMouvement(editingMouvement.id, payload);
+      } else {
+        await stockApi.createMouvement(payload);
+      }
       onSaved();
       onClose();
     } catch (err: any) {
@@ -104,7 +119,12 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
             </SelectContent>
           </Select>
 
-          <Input type="number" placeholder="Quantité" value={quantite} onChange={(e) => setQuantite(parseInt(e.target.value))} />
+          <Input
+            type="number"
+            placeholder="Quantité"
+            value={quantite}
+            onChange={(e) => setQuantite(parseInt(e.target.value))}
+          />
 
           {["sortie", "transfert"].includes(type) && (
             <Select value={magasinSourceId} onValueChange={setMagasinSourceId}>
@@ -124,7 +144,11 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
             </Select>
           )}
 
-          <Input placeholder="Commentaire" value={commentaire} onChange={(e) => setCommentaire(e.target.value)} />
+          <Input
+            placeholder="Commentaire"
+            value={commentaire}
+            onChange={(e) => setCommentaire(e.target.value)}
+          />
         </div>
 
         <DialogFooter>
