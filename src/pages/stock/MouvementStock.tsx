@@ -66,16 +66,17 @@ export default function MouvementsStock() {
       <div className="space-y-4">
         {!loading &&
           Object.entries(mouvementsParType).map(([type, mouvements]) => (
-            <div key={type} className="border rounded shadow-sm">
+            <Card key={type} className="border shadow-sm rounded-lg">
               <button
                 onClick={() => toggleType(type)}
                 className="w-full text-left p-4 bg-gray-100 font-semibold flex justify-between items-center"
               >
                 <span>{type}</span>
+                <span>{mouvements.length} mouvement{mouvements.length > 1 ? "s" : ""}</span>
                 <span>{expandedTypes[type] ? "▲" : "▼"}</span>
               </button>
               {expandedTypes[type] && (
-                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <CardContent className="p-4 space-y-3">
                   {mouvements.map((m: any) => (
                     <Card key={m.id} className="shadow-md hover:shadow-lg transition p-3">
                       <CardHeader>
@@ -92,9 +93,9 @@ export default function MouvementsStock() {
                       </div>
                     </Card>
                   ))}
-                </div>
+                </CardContent>
               )}
-            </div>
+            </Card>
           ))}
       </div>
 
