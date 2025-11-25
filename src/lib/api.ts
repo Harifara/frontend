@@ -797,4 +797,33 @@ deleteMouvement: async (id: string) =>
 
 };
 
+export const demandesApi = {
+  // 🔹 Récupérer toutes les demandes
+  getDemandes: async () => {
+    return stockApi._call(`${process.env.NEXT_PUBLIC_API_URL}/stock/demandes-reapprovisionnement/`);
+  },
+
+  // 🔹 Créer une nouvelle demande
+  createDemande: async (payload: any) => {
+    return stockApi._call(`${process.env.NEXT_PUBLIC_API_URL}/stock/demandes-reapprovisionnement/`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // 🔹 Valider une demande
+  valider: async (id: string) => {
+    return stockApi._call(`${process.env.NEXT_PUBLIC_API_URL}/stock/demandes-reapprovisionnement/${id}/valider/`, {
+      method: "POST",
+    });
+  },
+
+  // 🔹 Rejeter une demande avec commentaire
+  rejeter: async (id: string, commentaire: string) => {
+    return stockApi._call(`${process.env.NEXT_PUBLIC_API_URL}/stock/demandes-reapprovisionnement/${id}/rejeter/`, {
+      method: "POST",
+      body: JSON.stringify({ commentaire }),
+    });
+  },
+};
 
