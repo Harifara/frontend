@@ -25,7 +25,7 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
   const [magasins, setMagasins] = useState<{id: string; nom: string}[]>([]);
   const [commentaire, setCommentaire] = useState(editingMouvement?.commentaire || "");
 
-  // Réinitialiser les magasins et recepteur quand le type change
+  // Reset magasin et recepteur quand type change
   useEffect(() => {
     setMagasinSourceId("");
     setMagasinDestId("");
@@ -35,7 +35,7 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
     }
   }, [type]);
 
-  // Récupérer articles et magasins
+  // Fetch articles & magasins
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -76,8 +76,9 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
         if (!magasinSourceId) return alert("Magasin source requis.");
         payload.magasin_source_id = magasinSourceId;
 
-        // Receveur
+        // Recepteur obligatoire pour sortie
         payload.recepteur_type = recepteurType;
+
         if (recepteurType === "magasin") {
           if (!magasinDestId) return alert("Magasin destination requis pour recepteur magasin.");
           payload.recepteur_id = magasinDestId;
@@ -160,7 +161,7 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
             onChange={(e) => setQuantite(parseInt(e.target.value))}
           />
 
-          {/* Magasin Source (sortie / transfert) */}
+          {/* Magasin Source */}
           {["sortie", "transfert"].includes(type) && (
             <Select value={magasinSourceId} onValueChange={setMagasinSourceId}>
               <SelectTrigger><SelectValue placeholder="Magasin Source" /></SelectTrigger>
@@ -172,7 +173,7 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
             </Select>
           )}
 
-          {/* Recepteur Type (uniquement pour sortie) */}
+          {/* Recepteur Type */}
           {type === "sortie" && (
             <Select value={recepteurType} onValueChange={setRecepteurType}>
               <SelectTrigger><SelectValue placeholder="Recepteur" /></SelectTrigger>
