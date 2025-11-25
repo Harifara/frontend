@@ -4,15 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { stockApi } from "@/lib/api";
+import { v4 as uuidv4 } from "uuid";
 
 interface Props {
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
   editingMouvement?: any;
+  currentUserId: string; // ID du magasinier connecté
 }
 
-export default function ModalMouvementStock({ open, onClose, onSaved, editingMouvement }: Props) {
+export default function ModalMouvementStock({ open, onClose, onSaved, editingMouvement, currentUserId }: Props) {
   const [type, setType] = useState(editingMouvement?.type_mouvement || "entree");
   const [quantite, setQuantite] = useState(editingMouvement?.quantite || 0);
   const [articleId, setArticleId] = useState(editingMouvement?.article?.id || "");
@@ -42,20 +44,40 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
     if ((type === "sortie" || type === "transfert") && !magasinSourceId) return alert("Magasin source requis");
     if ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId) return alert("Magasin destination requis");
 
-    const payload: any = { type_mouvement: type, article_id: articleId, quantite, commentaire };
+    // Payload complet
+    const payload: any = {
+      type_mouvement: type,
+      article_id: articleId,
+      quantite,
+      commentaire,
+      created_by: currentUserId, // obligatoire
+    };
 
     if (["entree", "retour"].includes(type)) payload.magasin_dest_id = magasinDestId;
     if (type === "sortie") payload.magasin_source_id = magasinSourceId;
-    if (type === "transfert") { payload.magasin_source_id = magasinSourceId; payload.magasin_dest_id = magasinDestId; }
+    if (type === "transfert") {
+      payload.magasin_source_id = magasinSourceId;
+      payload.magasin_dest_id = magasinDestId;
+    }
+
+    // Pour modification
+    if (editingMouvement) {
+      if (editingMouvement.statut) payload.statut = editingMouvement.statut;
+      if (editingMouvement.validated_by) payload.validated_by = editingMouvement.validated_by;
+    }
 
     try {
       if (editingMouvement) await stockApi.updateMouvement(editingMouvement.id, payload);
       else await stockApi.createMouvement(payload);
       onSaved();
       onClose();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erreur enregistrement :", err);
-      alert("Erreur lors de l'enregistrement du mouvement");
+      if (err.response?.data) {
+        alert("Erreur lors de l'enregistrement : " + JSON.stringify(err.response.data));
+      } else {
+        alert("Erreur lors de l'enregistrement du mouvement");
+      }
     }
   };
 
