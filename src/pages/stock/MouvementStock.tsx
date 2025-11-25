@@ -10,6 +10,7 @@ export default function MouvementsStock() {
   const [openModal, setOpenModal] = useState(false);
   const [editingMouvement, setEditingMouvement] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expandedTypes, setExpandedTypes] = useState<{ [key: string]: boolean }>({});
 
   const fetchMouvements = async () => {
     setLoading(true);
@@ -47,6 +48,10 @@ export default function MouvementsStock() {
     return acc;
   }, {});
 
+  const toggleType = (type: string) => {
+    setExpandedTypes((prev) => ({ ...prev, [type]: !prev[type] }));
+  };
+
   return (
     <div>
       <div className="flex justify-between mb-6">
@@ -58,29 +63,37 @@ export default function MouvementsStock() {
       {error && <p className="text-red-500">{error}</p>}
       {!loading && mouvements.length === 0 && <p>Aucun mouvement trouvé.</p>}
 
-      <div className="space-y-8">
+      <div className="space-y-4">
         {!loading &&
           Object.entries(mouvementsParType).map(([type, mouvements]) => (
-            <div key={type}>
-              <h2 className="text-xl font-semibold mb-4">{type}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {mouvements.map((m: any) => (
-                  <Card key={m.id} className="shadow-lg border rounded-lg hover:shadow-xl transition duration-200">
-                    <CardHeader className="bg-gray-100">
-                      <CardTitle>{m.article?.nom || "Article inconnu"}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-1">
-                      <p><strong>Quantité:</strong> {m.quantite}</p>
-                      <p><strong>Source:</strong> {m.magasin_source?.nom || "-"}</p>
-                      <p><strong>Destination:</strong> {m.magasin_dest?.nom || "-"}</p>
-                      <p><strong>Date:</strong> {new Date(m.date_mouvement).toLocaleString()}</p>
-                    </CardContent>
-                    <div className="p-2 flex justify-end">
-                      <Button size="sm" variant="outline" onClick={() => handleEdit(m)}>Modifier</Button>
-                    </div>
-                  </Card>
-                ))}
-              </div>
+            <div key={type} className="border rounded shadow-sm">
+              <button
+                onClick={() => toggleType(type)}
+                className="w-full text-left p-4 bg-gray-100 font-semibold flex justify-between items-center"
+              >
+                <span>{type}</span>
+                <span>{expandedTypes[type] ? "▲" : "▼"}</span>
+              </button>
+              {expandedTypes[type] && (
+                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {mouvements.map((m: any) => (
+                    <Card key={m.id} className="shadow-md hover:shadow-lg transition p-3">
+                      <CardHeader>
+                        <CardTitle>{m.article?.nom || "Article inconnu"}</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-1">
+                        <p><strong>Quantité:</strong> {m.quantite}</p>
+                        <p><strong>Source:</strong> {m.magasin_source?.nom || "-"}</p>
+                        <p><strong>Destination:</strong> {m.magasin_dest?.nom || "-"}</p>
+                        <p><strong>Date:</strong> {new Date(m.date_mouvement).toLocaleString()}</p>
+                      </CardContent>
+                      <div className="flex justify-end mt-2">
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(m)}>Modifier</Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
       </div>
