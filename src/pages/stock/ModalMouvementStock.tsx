@@ -10,7 +10,7 @@ interface Props {
   onClose: () => void;
   onSaved: () => void;
   editingMouvement?: any;
-  currentUserId: string; // ID du magasinier connecté
+  currentUserId: string;
 }
 
 export default function ModalMouvementStock({ open, onClose, onSaved, editingMouvement, currentUserId }: Props) {
@@ -40,8 +40,12 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
   const handleSave = async () => {
     if (!articleId) return alert("Veuillez sélectionner un article.");
     if (!quantite || quantite <= 0) return alert("Quantité invalide.");
-    if ((type === "sortie" || type === "transfert") && !magasinSourceId) return alert("Magasin source requis.");
-    if ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId) return alert("Magasin destination requis.");
+
+    if ((type === "sortie" || type === "transfert") && !magasinSourceId)
+      return alert("Magasin source requis.");
+
+    if ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId)
+      return alert("Magasin destination requis.");
 
     const payload: any = {
       type_mouvement: type,
@@ -50,6 +54,11 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
       commentaire,
       created_by: currentUserId,
       statut: editingMouvement?.statut || "valide",
+
+      /* ✅ Correction IMPORTANTE :
+         éviter recepteur NULL qui casse le backend */
+      recepteur_type: "autre",
+      recepteur_id: null,
     };
 
     if (["entree", "retour"].includes(type)) payload.magasin_dest_id = magasinDestId;
@@ -59,7 +68,8 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
       payload.magasin_dest_id = magasinDestId;
     }
 
-    if (editingMouvement && editingMouvement.validated_by) payload.validated_by = editingMouvement.validated_by;
+    if (editingMouvement && editingMouvement.validated_by)
+      payload.validated_by = editingMouvement.validated_by;
 
     console.log("Payload envoyé:", payload);
 
@@ -74,17 +84,18 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
     } catch (err: any) {
       console.error("Erreur enregistrement :", err);
       if (err.response?.data) {
-        alert("Erreur lors de l'enregistrement : " + JSON.stringify(err.response.data));
+        alert("Erreur : " + JSON.stringify(err.response.data));
       } else {
         alert("Erreur lors de l'enregistrement du mouvement");
       }
     }
   };
 
-  const isDisabled = !articleId ||
-                       !quantite ||
-                       ((type === "sortie" || type === "transfert") && !magasinSourceId) ||
-                       ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId);
+  const isDisabled =
+    !articleId ||
+    !quantite ||
+    ((type === "sortie" || type === "transfert") && !magasinSourceId) ||
+    ((type === "entree" || type === "retour" || type === "transfert") && !magasinDestId);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -107,7 +118,9 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
           <Select value={articleId} onValueChange={setArticleId}>
             <SelectTrigger><SelectValue placeholder="Article" /></SelectTrigger>
             <SelectContent>
-              {articles.map((a) => <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>)}
+              {articles.map((a) => (
+                <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
@@ -122,7 +135,9 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
             <Select value={magasinSourceId} onValueChange={setMagasinSourceId}>
               <SelectTrigger><SelectValue placeholder="Magasin Source" /></SelectTrigger>
               <SelectContent>
-                {magasins.map((m) => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                {magasins.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )}
@@ -131,7 +146,9 @@ export default function ModalMouvementStock({ open, onClose, onSaved, editingMou
             <Select value={magasinDestId} onValueChange={setMagasinDestId}>
               <SelectTrigger><SelectValue placeholder="Magasin Destination" /></SelectTrigger>
               <SelectContent>
-                {magasins.map((m) => <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>)}
+                {magasins.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           )}
