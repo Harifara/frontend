@@ -797,36 +797,45 @@ deleteMouvement: async (id: string) =>
 
 
 
-  // ====================
-  // DEMANDES DE RÉAPPROVISIONNEMENT
-  // ====================
-  getDemandes: async () => {
-    return stockApi._call(`${API_BASE_URL}/stock/demandes-reapprovisionnement/`);
-  },
-
-  createDemande: async (payload: any) => {
-    // ⚠️ Ajouter numero si absent
-    if (!payload.numero) payload.numero = `DR-${Date.now()}`;
-    // ⚠️ Ajouter UUID valide si absent
-    if (!payload.demandeur_id) payload.demandeur_id = "00000000-0000-0000-0000-000000000000";
-
-    return stockApi._call(`${API_BASE_URL}/stock/demandes-reapprovisionnement/`, {
-      method: "POST",
-      body: JSON.stringify(payload),
+getDemandes: async () => {
+    const token = await ensureKongToken();
+    const res = await fetch(`${API_BASE_URL}/stock/demandes-reapprovisionnement/`, {
+      headers: getHeaders(token),
     });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   },
 
-  validerDemande: async (id: string) => {
-    return stockApi._call(`${API_BASE_URL}/stock/demandes-reapprovisionnement/${id}/valider/`, {
+  createDemande: async (data) => {
+    const token = await ensureKongToken();
+    const res = await fetch(`${API_BASE_URL}/stock/demandes-reapprovisionnement/`, {
       method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify(data),
     });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   },
 
-  rejeterDemande: async (id: string, commentaire: string) => {
-    return stockApi._call(`${API_BASE_URL}/stock/demandes-reapprovisionnement/${id}/rejeter/`, {
+  validerDemande: async (id) => {
+    const token = await ensureKongToken();
+    const res = await fetch(`${API_BASE_URL}/stock/demandes-reapprovisionnement/${id}/valider/`, {
       method: "POST",
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  rejeterDemande: async (id, commentaire) => {
+    const token = await ensureKongToken();
+    const res = await fetch(`${API_BASE_URL}/stock/demandes-reapprovisionnement/${id}/rejeter/`, {
+      method: "POST",
+      headers: getHeaders(token),
       body: JSON.stringify({ commentaire }),
     });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   },
 
 };
