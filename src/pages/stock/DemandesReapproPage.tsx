@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 
 // --------------------
-// ⚙️ Interfaces
+// Interfaces
 // --------------------
 interface Demande {
   id: string;
@@ -53,7 +53,7 @@ interface Article {
 }
 
 // --------------------
-// ⚙️ Composant
+// Composant
 // --------------------
 export default function DemandesReapproPage() {
   const [demandes, setDemandes] = useState<Demande[]>([]);
@@ -67,16 +67,16 @@ export default function DemandesReapproPage() {
 
   const [magasins, setMagasins] = useState<Magasin[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
-  const [magasinId, setMagasinId] = useState("");
-  const [articleId, setArticleId] = useState("");
-  const [quantite, setQuantite] = useState(1);
-  const [priorite, setPriorite] = useState("normale");
-  const [motif, setMotif] = useState("");
+  const [magasinId, setMagasinId] = useState<string>("");
+  const [articleId, setArticleId] = useState<string>("");
+  const [quantite, setQuantite] = useState<number>(1);
+  const [priorite, setPriorite] = useState<string>("normale");
+  const [motif, setMotif] = useState<string>("");
 
   const priorites = ["faible", "normale", "haute", "urgente"];
 
   // -------------------------
-  // 🔹 Charger les demandes
+  // Charger les demandes
   // -------------------------
   const fetchDemandes = async () => {
     try {
@@ -91,7 +91,7 @@ export default function DemandesReapproPage() {
   };
 
   // -------------------------
-  // 🔹 Charger magasins + articles
+  // Charger magasins + articles
   // -------------------------
   const fetchMagasinsArticles = async () => {
     try {
@@ -111,7 +111,7 @@ export default function DemandesReapproPage() {
   }, []);
 
   // -------------------------
-  // 🔹 Valider demande
+  // Valider demande
   // -------------------------
   const handleValider = async (demande: Demande) => {
     try {
@@ -119,11 +119,12 @@ export default function DemandesReapproPage() {
       fetchDemandes();
     } catch (error) {
       console.error("Erreur validation demande :", error);
+      alert("Erreur validation demande");
     }
   };
 
   // -------------------------
-  // 🔹 Ouvrir modal rejet
+  // Ouvrir modal rejet
   // -------------------------
   const handleRejeter = (demande: Demande) => {
     setSelectedDemande(demande);
@@ -143,11 +144,12 @@ export default function DemandesReapproPage() {
       fetchDemandes();
     } catch (error) {
       console.error("Erreur rejet demande :", error);
+      alert("Erreur rejet demande");
     }
   };
 
   // -------------------------
-  // 🔹 Créer demande
+  // Créer demande
   // -------------------------
   const handleCreateDemande = async () => {
     if (!magasinId || !articleId || !quantite || !motif) {
@@ -182,7 +184,7 @@ export default function DemandesReapproPage() {
   };
 
   // -------------------------
-  // 🔹 Rendu UI
+  // Rendu UI
   // -------------------------
   return (
     <div className="p-4">
