@@ -209,12 +209,13 @@ export default function DemandesReapproPage() {
             </TableRow>
           </TableHeader>
 
+          // src/pages/stock/DemandesReapproPage.tsx
           <TableBody>
             {demandes.map((d) => (
               <TableRow key={d.id}>
                 <TableCell>{d.numero}</TableCell>
-                <TableCell>{d.magasin.nom}</TableCell>
-                <TableCell>{d.article.nom}</TableCell>
+                <TableCell>{d.magasin?.nom || "-"}</TableCell>
+                <TableCell>{d.article?.nom || "-"}</TableCell>
                 <TableCell>{d.quantite_demandee}</TableCell>
                 <TableCell>{d.statut}</TableCell>
                 <TableCell>{d.priorite}</TableCell>
@@ -223,10 +224,7 @@ export default function DemandesReapproPage() {
                   {d.statut === "en_attente" && (
                     <>
                       <Button onClick={() => handleValider(d)}>Valider</Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => handleRejeter(d)}
-                      >
+                      <Button variant="destructive" onClick={() => handleRejeter(d)}>
                         Rejeter
                       </Button>
                     </>
@@ -235,6 +233,7 @@ export default function DemandesReapproPage() {
               </TableRow>
             ))}
           </TableBody>
+
         </Table>
       )}
 
