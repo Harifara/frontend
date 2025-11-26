@@ -30,8 +30,8 @@ import {
 interface Demande {
   id: string;
   numero: string;
-  magasin_id: string;
-  article_id: string;
+  magasin?: { id: string; nom: string };
+  article?: { id: string; nom: string };
   quantite_demandee: number;
   quantite_approuvee?: number;
   statut: string;
@@ -82,7 +82,6 @@ export default function DemandesReapproPage() {
     try {
       setLoading(true);
       const res = await stockApi.getDemandes();
-      // console.log("Demandes reçues :", res);
       setDemandes(res);
     } catch (error) {
       console.error("Erreur récupération demandes :", error);
@@ -212,8 +211,8 @@ export default function DemandesReapproPage() {
             {demandes.map((d) => (
               <TableRow key={d.id}>
                 <TableCell>{d.numero}</TableCell>
-                <TableCell>{magasins.find((m) => m.id === d.magasin_id)?.nom || "-"}</TableCell>
-                <TableCell>{articles.find((a) => a.id === d.article_id)?.nom || "-"}</TableCell>
+                <TableCell>{d.magasin?.nom || "-"}</TableCell>
+                <TableCell>{d.article?.nom || "-"}</TableCell>
                 <TableCell>{d.quantite_demandee}</TableCell>
                 <TableCell>{d.statut}</TableCell>
                 <TableCell>{d.priorite}</TableCell>
