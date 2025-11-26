@@ -55,15 +55,12 @@ export default function DemandesReapproPage() {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Modals
   const [showModal, setShowModal] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
 
-  // Rejet
   const [selectedDemande, setSelectedDemande] = useState<Demande | null>(null);
   const [commentaire, setCommentaire] = useState("");
 
-  // Formulaire création
   const [magasins, setMagasins] = useState<Magasin[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [magasinId, setMagasinId] = useState("");
@@ -79,13 +76,17 @@ export default function DemandesReapproPage() {
   // -------------------------
   const fetchDemandes = async () => {
     try {
+      console.log("[fetchDemandes] Début récupération demandes...");
       setLoading(true);
       const res = await stockApi.getDemandes();
+      console.log("[fetchDemandes] Données reçues :", res);
       setDemandes(res);
     } catch (error) {
-      console.error("Erreur récupération demandes :", error);
+      console.error("[fetchDemandes] Erreur récupération demandes :", error);
+    } finally {
+      setLoading(false);
+      console.log("[fetchDemandes] Fin récupération demandes");
     }
-    setLoading(false);
   };
 
   // -------------------------
@@ -93,18 +94,21 @@ export default function DemandesReapproPage() {
   // -------------------------
   const fetchMagasinsArticles = async () => {
     try {
+      console.log("[fetchMagasinsArticles] Début récupération magasins/articles...");
       const mags = await stockApi.getMagasins();
-      setMagasins(mags); // mags EST déja un tableau JSON
+      console.log("[fetchMagasinsArticles] Magasins reçus :", mags);
+      setMagasins(mags);
 
       const arts = await stockApi.getArticles();
-      setArticles(arts); // arts EST déjà un tableau JSON
+      console.log("[fetchMagasinsArticles] Articles reçus :", arts);
+      setArticles(arts);
     } catch (error) {
-      console.error("Erreur récupération magasins/articles :", error);
+      console.error("[fetchMagasinsArticles] Erreur récupération magasins/articles :", error);
     }
   };
 
-
   useEffect(() => {
+    console.log("[useEffect] Chargement initial...");
     fetchDemandes();
     fetchMagasinsArticles();
   }, []);
@@ -114,10 +118,12 @@ export default function DemandesReapproPage() {
   // -------------------------
   const handleValider = async (demande: Demande) => {
     try {
+      console.log("[handleValider] Validation demande :", demande);
       await stockApi.validerDemande(demande.id);
+      console.log("[handleValider] Validation réussie, rafraîchissement...");
       fetchDemandes();
     } catch (error) {
-      console.error(error);
+      console.error("[handleValider] Erreur validation demande :", error);
     }
   };
 
@@ -125,6 +131,7 @@ export default function DemandesReapproPage() {
   // 🔹 Ouvrir modal rejet
   // -------------------------
   const handleRejeter = (demande: Demande) => {
+    console.log("[handleRejeter] Ouverture modal pour :", demande);
     setSelectedDemande(demande);
     setShowDialog(true);
   };
@@ -133,16 +140,18 @@ export default function DemandesReapproPage() {
     if (!selectedDemande) return;
 
     try {
+      console.log("[submitRejet] Rejet de la demande :", selectedDemande, "avec commentaire :", commentaire);
       await stockApi.rejeterDemande(selectedDemande.id, {
         commentaire_validation: commentaire,
       });
 
+      console.log("[submitRejet] Rejet effectué, mise à jour UI");
       setShowDialog(false);
       setCommentaire("");
       setSelectedDemande(null);
       fetchDemandes();
     } catch (error) {
-      console.error(error);
+      console.error("[submitRejet] Erreur rejet demande :", error);
     }
   };
 
@@ -150,8 +159,11 @@ export default function DemandesReapproPage() {
   // 🔹 Créer demande
   // -------------------------
   const handleCreateDemande = async () => {
+    console.log("[handleCreateDemande] Création demande avec :", { magasinId, articleId, quantite, priorite, motif });
+
     if (!magasinId || !articleId || !quantite || !motif) {
       alert("Veuillez remplir tous les champs !");
+      console.warn("[handleCreateDemande] Champs incomplets");
       return;
     }
 
@@ -163,12 +175,13 @@ export default function DemandesReapproPage() {
         priorite,
         motif,
       };
+      console.log("[handleCreateDemande] Payload :", payload);
 
       await stockApi.createDemande(payload);
+      console.log("[handleCreateDemande] Demande créée avec succès");
 
       setShowModal(false);
 
-      // Reset form
       setMagasinId("");
       setArticleId("");
       setQuantite(1);
@@ -177,7 +190,7 @@ export default function DemandesReapproPage() {
 
       fetchDemandes();
     } catch (error: any) {
-      console.error(error);
+      console.error("[handleCreateDemande] Erreur création demande :", error);
       alert(`Erreur : ${error.message || error}`);
     }
   };
@@ -192,7 +205,6 @@ export default function DemandesReapproPage() {
         <Button onClick={() => setShowModal(true)}>Nouvelle Demande</Button>
       </div>
 
-      {/* TABLE */}
       {loading ? (
         <p>Chargement...</p>
       ) : (
@@ -209,7 +221,6 @@ export default function DemandesReapproPage() {
             </TableRow>
           </TableHeader>
 
-          // src/pages/stock/DemandesReapproPage.tsx
           <TableBody>
             {demandes.map((d) => (
               <TableRow key={d.id}>
@@ -233,13 +244,9 @@ export default function DemandesReapproPage() {
               </TableRow>
             ))}
           </TableBody>
-
         </Table>
       )}
 
-      {/* ------------------------------ */}
-      {/* MODAL CRÉATION DEMANDE         */}
-      {/* ------------------------------ */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent>
           <DialogHeader>
@@ -247,7 +254,6 @@ export default function DemandesReapproPage() {
           </DialogHeader>
 
           <div className="flex flex-col gap-3">
-            {/* Magasin */}
             <Select value={magasinId} onValueChange={setMagasinId}>
               <SelectTrigger>
                 <SelectValue placeholder="Choisir un magasin" />
@@ -261,7 +267,6 @@ export default function DemandesReapproPage() {
               </SelectContent>
             </Select>
 
-            {/* Article */}
             <Select value={articleId} onValueChange={setArticleId}>
               <SelectTrigger>
                 <SelectValue placeholder="Choisir un article" />
@@ -275,7 +280,6 @@ export default function DemandesReapproPage() {
               </SelectContent>
             </Select>
 
-            {/* Quantité */}
             <Input
               type="number"
               min={1}
@@ -284,7 +288,6 @@ export default function DemandesReapproPage() {
               placeholder="Quantité demandée"
             />
 
-            {/* Priorité */}
             <Select value={priorite} onValueChange={setPriorite}>
               <SelectTrigger>
                 <SelectValue placeholder="Priorité" />
@@ -298,7 +301,6 @@ export default function DemandesReapproPage() {
               </SelectContent>
             </Select>
 
-            {/* Motif */}
             <Input
               type="text"
               value={motif}
@@ -316,9 +318,6 @@ export default function DemandesReapproPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ------------------------------ */}
-      {/* MODAL REJET DEMANDE            */}
-      {/* ------------------------------ */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>
