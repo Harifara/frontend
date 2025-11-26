@@ -168,8 +168,43 @@ export default function PageDemandesAchat() {
       <p>Chargement...</p>
     ) : (
       <Table>
-        {/* ...TableHeader et TableBody inchangés */}
-      </Table>
+          <TableHeader>
+            <TableRow>
+              <TableCell>Numéro</TableCell>
+              <TableCell>Article</TableCell>
+              <TableCell>Quantité</TableCell>
+              <TableCell>Montant Estimé</TableCell>
+              <TableCell>Statut Finance</TableCell>
+              <TableCell>Commentaire Finance</TableCell>
+              <TableCell>Statut Réception</TableCell>
+              <TableCell>Date Réception</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {demandes.map((d) => (
+              <TableRow key={d.id}>
+                <TableCell>{d.numero}</TableCell>
+                <TableCell>{d.article?.nom || "-"}</TableCell>
+                <TableCell>{d.quantite}</TableCell>
+                <TableCell>{d.montant_estime}</TableCell>
+                <TableCell>{d.statut}</TableCell>
+                <TableCell>{d.commentaire_finance || "-"}</TableCell>
+                <TableCell>{d.statut_reception}</TableCell>
+                <TableCell>{d.date_reception || "-"}</TableCell>
+                <TableCell className="space-x-2">
+                  {d.statut === "en_attente" && (
+                    <>
+                      <Button onClick={() => handleValider(d)}>Valider</Button>
+                      <Button variant="destructive" onClick={() => handleRejeter(d)}>Rejeter</Button>
+                    </>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
     )}
 
     {/* Modal pour commentaire rejet */}
