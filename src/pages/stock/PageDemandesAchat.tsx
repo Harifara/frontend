@@ -1,0 +1,228 @@
+import React, { useEffect, useState } from "react";
+import { stockApi } from "@/lib/api";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+} from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+
+// --------------------
+// Interfaces
+// --------------------
+interface DemandeAchat {
+  id: string;
+  numero: string;
+  article?: { id: string; nom: string };
+  quantite: number;
+  montant_estime: number;
+  statut: string;
+  demandeur_id: string;
+  finance_valideur_id?: string;
+  justification: string;
+  commentaire_finance?: string;
+  date_validation_finance?: string;
+  statut_reception: string;
+  date_reception?: string;
+  magasin_reception_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// --------------------
+// Composant
+// --------------------
+export default function PageDemandesAchat() {
+  const [demandes, setDemandes] = useState<DemandeAchat[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [showDialog, setShowDialog] = useState(false);
+  const [selectedDemande, setSelectedDemande] = useState<DemandeAchat | null>(null);
+  const [commentaire, setCommentaire] = useState("");
+
+  const [articles, setArticles] = useState<{ id: string; nom: string }[]>([]);
+  const [articleId, setArticleId] = useState("");
+  const [quantite, setQuantite] = useState(1);
+  const [montant, setMontant] = useState(0);
+  const [justification, setJustification] = useState("");
+
+  // -------------------------
+  // Charger les demandes et articles
+  // -------------------------
+  const fetchDemandes = async () => {
+    try {
+      setLoading(true);
+      const res = await stockApi.getDemandesAchat();
+      setDemandes(res);
+    } catch (error) {
+      console.error("Erreur récupération demandes achat :", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchArticles = async () => {
+    try {
+      const arts = await stockApi.getArticles();
+      setArticles(arts);
+    } catch (error) {
+      console.error("Erreur récupération articles :", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchDemandes();
+    fetchArticles();
+  }, []);
+
+  // -------------------------
+  // Valider ou rejeter
+  // -------------------------
+  const handleValider = async (demande: DemandeAchat) => {
+    try {
+      await stockApi.validerDemandeAchat(demande.id);
+      fetchDemandes();
+    } catch (error) {
+      console.error("Erreur validation :", error);
+    }
+  };
+
+  const handleRejeter = (demande: DemandeAchat) => {
+    setSelectedDemande(demande);
+    setShowDialog(true);
+  };
+
+  const submitRejet = async () => {
+    if (!selectedDemande) return;
+
+    try {
+      await stockApi.rejeterDemandeAchat(selectedDemande.id, commentaire);
+      setShowDialog(false);
+      setCommentaire("");
+      setSelectedDemande(null);
+      fetchDemandes();
+    } catch (error) {
+      console.error("Erreur rejet demande :", error);
+    }
+  };
+
+  // -------------------------
+  // Créer nouvelle demande
+  // -------------------------
+  const handleCreateDemande = async () => {
+    if (!articleId || !quantite || !montant || !justification) {
+      alert("Veuillez remplir tous les champs !");
+      return;
+    }
+
+    try {
+      await stockApi.createDemandeAchat({
+        article: articleId,
+        quantite,
+        montant_estime: montant,
+        justification,
+      });
+
+      setArticleId("");
+      setQuantite(1);
+      setMontant(0);
+      setJustification("");
+      fetchDemandes();
+    } catch (error: any) {
+      console.error("Erreur création demande :", error);
+      alert(`Erreur : ${error.message || error}`);
+    }
+  };
+
+  // -------------------------
+  // Rendu
+  // -------------------------
+  return (
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Demandes d'Achat</h1>
+        <Button onClick={handleCreateDemande}>Nouvelle Demande</Button>
+      </div>
+
+      {loading ? (
+        <p>Chargement...</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableCell>Numéro</TableCell>
+              <TableCell>Article</TableCell>
+              <TableCell>Quantité</TableCell>
+              <TableCell>Montant Estimé</TableCell>
+              <TableCell>Statut Finance</TableCell>
+              <TableCell>Commentaire Finance</TableCell>
+              <TableCell>Statut Réception</TableCell>
+              <TableCell>Date Réception</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {demandes.map((d) => (
+              <TableRow key={d.id}>
+                <TableCell>{d.numero}</TableCell>
+                <TableCell>{d.article?.nom || "-"}</TableCell>
+                <TableCell>{d.quantite}</TableCell>
+                <TableCell>{d.montant_estime}</TableCell>
+                <TableCell>{d.statut}</TableCell>
+                <TableCell>{d.commentaire_finance || "-"}</TableCell>
+                <TableCell>{d.statut_reception}</TableCell>
+                <TableCell>{d.date_reception || "-"}</TableCell>
+                <TableCell className="space-x-2">
+                  {d.statut === "en_attente" && (
+                    <>
+                      <Button onClick={() => handleValider(d)}>Valider</Button>
+                      <Button variant="destructive" onClick={() => handleRejeter(d)}>Rejeter</Button>
+                    </>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
+
+      {/* Modal pour commentaire rejet */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rejeter la demande</DialogTitle>
+          </DialogHeader>
+
+          <Input
+            placeholder="Commentaire de rejet"
+            value={commentaire}
+            onChange={(e) => setCommentaire(e.target.value)}
+          />
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowDialog(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={submitRejet}>Rejeter</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

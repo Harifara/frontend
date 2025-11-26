@@ -62,6 +62,7 @@ const navigation = [
   { name: "Gestion de stock", href: "/stock/gestion-stock", icon: ClipboardList, roles: ["admin", "responsable_stock", "magasinier"] },
   { name: "Mouvements de stock", href: "/stock/mouvement-stock", icon: ClipboardList, roles: ["admin", "responsable_stock", "magasinier"] },
   { name: "Demandes de réapprovisionnement", href: "/stock/demandes-reappro", icon: ClipboardList, roles: ["admin", "responsable_stock", "magasinier"] },
+  { name: "Demandes d'achat", href: "/stock/demandes-achat", icon: ClipboardList, roles: ["admin", "responsable_stock", "magasinier"] },
 ];
 
 // Fonction pour initiales utilisateur

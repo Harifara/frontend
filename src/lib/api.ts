@@ -881,5 +881,50 @@ rejeterDemande: async (id: string, commentaire: string) => {
   return res.json();
 },
 
+getDemandesAchat: async () => {
+    const token = await ensureKongToken();
+    const res = await fetch(`${API_BASE_URL}/stock/demandes-achat/`, { headers: getHeaders(token) });
+    if (!res.ok) throw new Error("Erreur lors de la récupération des demandes d'achat");
+    return res.json();
+  },
+
+  createDemandeAchat: async (payload: {
+    article: string;
+    quantite: number;
+    montant_estime: number;
+    justification: string;
+    demandeur_id?: string;
+  }) => {
+    const token = await ensureKongToken();
+    const res = await fetch(`${API_BASE_URL}/stock/demandes-achat/`, {
+      method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error("Erreur lors de la création de la demande d'achat");
+    return res.json();
+  },
+
+  validerDemandeAchat: async (id: string) => {
+    const token = await ensureKongToken();
+    const res = await fetch(`${API_BASE_URL}/stock/demandes-achat/${cleanUUID(id)}/valider_finance/`, {
+      method: "POST",
+      headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error("Erreur lors de la validation de la demande d'achat");
+    return res.json();
+  },
+
+  rejeterDemandeAchat: async (id: string, commentaire: string = "") => {
+    const token = await ensureKongToken();
+    const res = await fetch(`${API_BASE_URL}/stock/demandes-achat/${cleanUUID(id)}/rejeter_finance/`, {
+      method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify({ commentaire }),
+    });
+    if (!res.ok) throw new Error("Erreur lors du rejet de la demande d'achat");
+    return res.json();
+  },
+
 };
 

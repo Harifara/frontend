@@ -41,6 +41,7 @@ import Magasins from "./pages/stock/Magasins";
 import StockManagement from "./pages/stock/StockManagement";
 import MouvementStock from "./pages/stock/MouvementStock";
 import DemandesReapproPage from "./pages/stock/DemandesReapproPage";
+import PageDemandesAchat from "./pages/stock/PageDemandesAchat";
 
 
 const queryClient = new QueryClient();
@@ -115,6 +116,7 @@ const App = () => (
               <Route path="/stock/gestion-stock" element={<StockManagement />} />
               <Route path="/stock/mouvement-stock" element={<MouvementStock />} />
               <Route path="/stock/demandes-reappro" element={<DemandesReapproPage />} />
+              <Route path="/stock/demandes-achat" element={<PageDemandesAchat />} />
               </Route>
               
 
