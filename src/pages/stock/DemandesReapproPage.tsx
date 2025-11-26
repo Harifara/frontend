@@ -30,8 +30,8 @@ import {
 interface Demande {
   id: string;
   numero: string;
-  magasin: { id: string; nom: string };
-  article: { id: string; nom: string };
+  magasin_id: string;
+  article_id: string;
   quantite_demandee: number;
   quantite_approuvee?: number;
   statut: string;
@@ -39,6 +39,7 @@ interface Demande {
   motif: string;
   commentaire_validation?: string;
   created_at: string;
+  updated_at: string;
 }
 
 interface Magasin {
@@ -51,6 +52,9 @@ interface Article {
   nom: string;
 }
 
+// --------------------
+// ⚙️ Composant
+// --------------------
 export default function DemandesReapproPage() {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,16 +80,14 @@ export default function DemandesReapproPage() {
   // -------------------------
   const fetchDemandes = async () => {
     try {
-      console.log("[fetchDemandes] Début récupération demandes...");
       setLoading(true);
       const res = await stockApi.getDemandes();
-      console.log("[fetchDemandes] Données reçues :", res);
+      // console.log("Demandes reçues :", res);
       setDemandes(res);
     } catch (error) {
-      console.error("[fetchDemandes] Erreur récupération demandes :", error);
+      console.error("Erreur récupération demandes :", error);
     } finally {
       setLoading(false);
-      console.log("[fetchDemandes] Fin récupération demandes");
     }
   };
 
@@ -94,21 +96,17 @@ export default function DemandesReapproPage() {
   // -------------------------
   const fetchMagasinsArticles = async () => {
     try {
-      console.log("[fetchMagasinsArticles] Début récupération magasins/articles...");
       const mags = await stockApi.getMagasins();
-      console.log("[fetchMagasinsArticles] Magasins reçus :", mags);
       setMagasins(mags);
 
       const arts = await stockApi.getArticles();
-      console.log("[fetchMagasinsArticles] Articles reçus :", arts);
       setArticles(arts);
     } catch (error) {
-      console.error("[fetchMagasinsArticles] Erreur récupération magasins/articles :", error);
+      console.error("Erreur récupération magasins/articles :", error);
     }
   };
 
   useEffect(() => {
-    console.log("[useEffect] Chargement initial...");
     fetchDemandes();
     fetchMagasinsArticles();
   }, []);
@@ -118,12 +116,10 @@ export default function DemandesReapproPage() {
   // -------------------------
   const handleValider = async (demande: Demande) => {
     try {
-      console.log("[handleValider] Validation demande :", demande);
       await stockApi.validerDemande(demande.id);
-      console.log("[handleValider] Validation réussie, rafraîchissement...");
       fetchDemandes();
     } catch (error) {
-      console.error("[handleValider] Erreur validation demande :", error);
+      console.error("Erreur validation demande :", error);
     }
   };
 
@@ -131,7 +127,6 @@ export default function DemandesReapproPage() {
   // 🔹 Ouvrir modal rejet
   // -------------------------
   const handleRejeter = (demande: Demande) => {
-    console.log("[handleRejeter] Ouverture modal pour :", demande);
     setSelectedDemande(demande);
     setShowDialog(true);
   };
@@ -140,18 +135,15 @@ export default function DemandesReapproPage() {
     if (!selectedDemande) return;
 
     try {
-      console.log("[submitRejet] Rejet de la demande :", selectedDemande, "avec commentaire :", commentaire);
       await stockApi.rejeterDemande(selectedDemande.id, {
         commentaire_validation: commentaire,
       });
-
-      console.log("[submitRejet] Rejet effectué, mise à jour UI");
       setShowDialog(false);
       setCommentaire("");
       setSelectedDemande(null);
       fetchDemandes();
     } catch (error) {
-      console.error("[submitRejet] Erreur rejet demande :", error);
+      console.error("Erreur rejet demande :", error);
     }
   };
 
@@ -159,11 +151,8 @@ export default function DemandesReapproPage() {
   // 🔹 Créer demande
   // -------------------------
   const handleCreateDemande = async () => {
-    console.log("[handleCreateDemande] Création demande avec :", { magasinId, articleId, quantite, priorite, motif });
-
     if (!magasinId || !articleId || !quantite || !motif) {
       alert("Veuillez remplir tous les champs !");
-      console.warn("[handleCreateDemande] Champs incomplets");
       return;
     }
 
@@ -175,10 +164,8 @@ export default function DemandesReapproPage() {
         priorite,
         motif,
       };
-      console.log("[handleCreateDemande] Payload :", payload);
 
       await stockApi.createDemande(payload);
-      console.log("[handleCreateDemande] Demande créée avec succès");
 
       setShowModal(false);
 
@@ -190,7 +177,7 @@ export default function DemandesReapproPage() {
 
       fetchDemandes();
     } catch (error: any) {
-      console.error("[handleCreateDemande] Erreur création demande :", error);
+      console.error("Erreur création demande :", error);
       alert(`Erreur : ${error.message || error}`);
     }
   };
@@ -225,12 +212,11 @@ export default function DemandesReapproPage() {
             {demandes.map((d) => (
               <TableRow key={d.id}>
                 <TableCell>{d.numero}</TableCell>
-                <TableCell>{d.magasin?.nom || "-"}</TableCell>
-                <TableCell>{d.article?.nom || "-"}</TableCell>
+                <TableCell>{magasins.find((m) => m.id === d.magasin_id)?.nom || "-"}</TableCell>
+                <TableCell>{articles.find((a) => a.id === d.article_id)?.nom || "-"}</TableCell>
                 <TableCell>{d.quantite_demandee}</TableCell>
                 <TableCell>{d.statut}</TableCell>
                 <TableCell>{d.priorite}</TableCell>
-
                 <TableCell className="space-x-2">
                   {d.statut === "en_attente" && (
                     <>
@@ -247,6 +233,7 @@ export default function DemandesReapproPage() {
         </Table>
       )}
 
+      {/* Modal création */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent>
           <DialogHeader>
@@ -318,6 +305,7 @@ export default function DemandesReapproPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Modal rejet */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>
