@@ -804,58 +804,82 @@ deleteMouvement: async (id: string) =>
     headers: getHeaders(await ensureKongToken()),
   }),
 
+// ==========================
+// ⭐ DEMANDES DE REAPPRO
+// ==========================
 
- getDemandes: async () => {
-    const token = await ensureKongToken();
-    const res = await fetch(
-      `${API_BASE_URL}/stock/demandes-reapprovisionnement/`,
-      {
-        headers: getHeaders(token),
-      }
-    );
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  },
+getDemandes: async () => {
+  const token = await ensureKongToken();
+  const res = await fetch(
+    `${API_BASE_URL}/stock/demandes-reapprovisionnement/`,
+    {
+      headers: getHeaders(token),
+    }
+  );
 
-  createDemande: async (payload: any) => {
-    const token = await ensureKongToken();
-    const res = await fetch(
-      `${API_BASE_URL}/stock/demandes-reapprovisionnement/`,
-      {
-        method: "POST",
-        headers: getHeaders(token),
-        body: JSON.stringify(payload),
-      }
-    );
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  },
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Erreur lors de la récupération des demandes");
+  }
 
-  validerDemande: async (id: string) => {
-    const token = await ensureKongToken();
-    const res = await fetch(
-      `${API_BASE_URL}/stock/demandes-reapprovisionnement/${id}/valider/`,
-      {
-        method: "POST",
-        headers: getHeaders(token),
-      }
-    );
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  },
+  return res.json();
+},
 
-  rejeterDemande: async (id: string, commentaire: string) => {
-    const token = await ensureKongToken();
-    const res = await fetch(
-      `${API_BASE_URL}/stock/demandes-reapprovisionnement/${id}/rejeter/`,
-      {
-        method: "POST",
-        headers: getHeaders(token),
-        body: JSON.stringify({ commentaire }),
-      }
-    );
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  },
+createDemande: async (payload: any) => {
+  const token = await ensureKongToken();
+  const res = await fetch(
+    `${API_BASE_URL}/stock/demandes-reapprovisionnement/`,
+    {
+      method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Erreur lors de la création de la demande");
+  }
+
+  return res.json();
+},
+
+validerDemande: async (id: string) => {
+  const token = await ensureKongToken();
+  const res = await fetch(
+    `${API_BASE_URL}/stock/demandes-reapprovisionnement/${cleanUUID(id)}/valider/`,
+    {
+      method: "POST",
+      headers: getHeaders(token),
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Erreur lors de la validation de la demande");
+  }
+
+  return res.json();
+},
+
+rejeterDemande: async (id: string, commentaire: string) => {
+  const token = await ensureKongToken();
+  const res = await fetch(
+    `${API_BASE_URL}/stock/demandes-reapprovisionnement/${cleanUUID(id)}/rejeter/`,
+    {
+      method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify({ commentaire }),
+    }
+  );
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Erreur lors du rejet de la demande");
+  }
+
+  return res.json();
+},
+
 };
 
