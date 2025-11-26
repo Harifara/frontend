@@ -54,6 +54,8 @@ export default function PageDemandesAchat() {
   const [loading, setLoading] = useState(true);
 
   const [showDialog, setShowDialog] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+
   const [selectedDemande, setSelectedDemande] = useState<DemandeAchat | null>(null);
   const [commentaire, setCommentaire] = useState("");
 
@@ -144,6 +146,7 @@ export default function PageDemandesAchat() {
       setQuantite(1);
       setMontant(0);
       setJustification("");
+      setShowCreate(false);
       fetchDemandes();
     } catch (error: any) {
       console.error("Erreur création demande :", error);
@@ -158,7 +161,7 @@ export default function PageDemandesAchat() {
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Demandes d'Achat</h1>
-        <Button onClick={handleCreateDemande}>Nouvelle Demande</Button>
+        <Button onClick={() => setShowCreate(true)}>Nouvelle Demande</Button>
       </div>
 
       {loading ? (
@@ -220,6 +223,53 @@ export default function PageDemandesAchat() {
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setShowDialog(false)}>Annuler</Button>
             <Button variant="destructive" onClick={submitRejet}>Rejeter</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal pour créer nouvelle demande */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nouvelle Demande d'Achat</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <Select value={articleId} onValueChange={setArticleId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner un article" />
+              </SelectTrigger>
+              <SelectContent>
+                {articles.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Input
+              type="number"
+              placeholder="Quantité"
+              value={quantite}
+              onChange={(e) => setQuantite(Number(e.target.value))}
+            />
+
+            <Input
+              type="number"
+              placeholder="Montant estimé"
+              value={montant}
+              onChange={(e) => setMontant(Number(e.target.value))}
+            />
+
+            <Input
+              placeholder="Justification"
+              value={justification}
+              onChange={(e) => setJustification(e.target.value)}
+            />
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowCreate(false)}>Annuler</Button>
+            <Button onClick={handleCreateDemande}>Créer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
