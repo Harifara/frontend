@@ -81,7 +81,7 @@ export default function DemandesReapproPage() {
     try {
       setLoading(true);
       const res = await stockApi.getDemandes();
-      setDemandes(res.data);
+      setDemandes(res);
     } catch (error) {
       console.error("Erreur récupération demandes :", error);
     }
@@ -94,14 +94,15 @@ export default function DemandesReapproPage() {
   const fetchMagasinsArticles = async () => {
     try {
       const mags = await stockApi.getMagasins();
-      setMagasins(mags.data);
+      setMagasins(mags); // mags EST déja un tableau JSON
 
       const arts = await stockApi.getArticles();
-      setArticles(arts.data); // <-- FIX important
+      setArticles(arts); // arts EST déjà un tableau JSON
     } catch (error) {
       console.error("Erreur récupération magasins/articles :", error);
     }
   };
+
 
   useEffect(() => {
     fetchDemandes();
