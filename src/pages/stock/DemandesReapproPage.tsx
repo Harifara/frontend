@@ -1,6 +1,15 @@
 // --------------------
 // Composant DemandesReapproPage
 // --------------------
+import React, { useState, useEffect } from "react";
+import { stockApi } from "@/lib/api";
+import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+
+
 export default function DemandesReapproPage() {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [loading, setLoading] = useState(true);
