@@ -21,7 +21,9 @@ import {
   Bar,
 } from "recharts";
 
-// Données fictives
+// =============================
+// 📊 Données fictives
+// =============================
 const stockData = [
   { name: "Jan", stock: 400 },
   { name: "Feb", stock: 300 },
@@ -53,15 +55,28 @@ const recentAffectations = [
 export default function Dashboard() {
   const { user } = useAuth();
 
+  // =============================
+  // 🔐 Rôles utilisateur
+  // =============================
+  const role = user?.role;
+
+  const isAdmin = role === "admin";
+  const isRH = role === "responsable_rh";
+  const isStock = role === "responsable_stock";
+  const isMagasinier = role === "magasinier";
+
   return (
     <div className="p-6 flex-1 bg-gray-100 min-h-screen">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">
-        Bonjour, {user?.full_name || user?.username}
+        Bonjour, {user?.full_name || user?.username || "Utilisateur"}
       </h1>
 
-      {/* Cartes KPI */}
+      {/* =============================
+          CARDS KPI
+      ============================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {(user.role === "admin" || user.role === "responsable_rh") && (
+
+        {(isAdmin || isRH) && (
           <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200 hover:shadow-lg transition">
             <div className="flex items-center">
               <Users className="w-8 h-8 text-green-700 mr-3" />
@@ -73,7 +88,7 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {(user.role === "admin" || user.role === "responsable_rh") && (
+        {(isAdmin || isRH) && (
           <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200 hover:shadow-lg transition">
             <div className="flex items-center">
               <ClipboardList className="w-8 h-8 text-yellow-700 mr-3" />
@@ -85,7 +100,7 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {(user.role === "admin" || user.role === "responsable_stock") && (
+        {(isAdmin || isStock) && (
           <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200 hover:shadow-lg transition">
             <div className="flex items-center">
               <Warehouse className="w-8 h-8 text-blue-700 mr-3" />
@@ -97,7 +112,7 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {(user.role === "admin" || user.role === "responsable_stock" || user.role === "magasinier") && (
+        {(isAdmin || isStock || isMagasinier) && (
           <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200 hover:shadow-lg transition">
             <div className="flex items-center">
               <FileText className="w-8 h-8 text-purple-700 mr-3" />
@@ -111,9 +126,12 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Graphiques */}
+      {/* =============================
+          GRAPHIQUES
+      ============================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {(user.role === "admin" || user.role === "responsable_stock" || user.role === "magasinier") && (
+
+        {(isAdmin || isStock || isMagasinier) && (
           <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Stock par mois</h2>
             <ResponsiveContainer width="100%" height={250}>
@@ -127,7 +145,7 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {(user.role === "admin" || user.role === "responsable_rh") && (
+        {(isAdmin || isRH) && (
           <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Évolution des employés</h2>
             <ResponsiveContainer width="100%" height={250}>
@@ -142,7 +160,9 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Alertes */}
+      {/* =============================
+          ALERTES STOCK
+      ============================= */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {recentStockMovements.map((item, idx) => (
           <Card key={idx} className="p-4 bg-red-50 border border-red-200 rounded-2xl shadow flex items-center">
@@ -159,8 +179,11 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Tableaux */}
+      {/* =============================
+          TABLEAUX
+      ============================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
         <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200">
           <h3 className="text-md font-semibold text-gray-800 mb-2">Dernières affectations</h3>
           <table className="w-full text-sm text-gray-700">
@@ -191,6 +214,7 @@ export default function Dashboard() {
             <li>Lucien Rabe - 1 jour</li>
           </ul>
         </Card>
+
       </div>
     </div>
   );
