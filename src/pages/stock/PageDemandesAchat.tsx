@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { stockApi } from "@/lib/api";
+
 import {
   Table,
   TableHeader,
@@ -7,6 +8,7 @@ import {
   TableRow,
   TableCell,
 } from "@/components/ui/table";
+
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,7 +17,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+
 import { Input } from "@/components/ui/input";
+
 import {
   Select,
   SelectTrigger,
@@ -24,9 +28,9 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 
-// --------------------
-// Interfaces
-// --------------------
+// -------------------------
+// Interfaces de données
+// -------------------------
 interface DemandeAchat {
   id: string;
   numero: string;
@@ -46,35 +50,32 @@ interface DemandeAchat {
   updated_at: string;
 }
 
-// --------------------
-// Composant
-// --------------------
 export default function PageDemandesAchat() {
   const [demandes, setDemandes] = useState<DemandeAchat[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [articles, setArticles] = useState<{ id: string; nom: string }[]>([]);
 
-  const [showDialog, setShowDialog] = useState(false);
-  const [showCreate, setShowCreate] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const [selectedDemande, setSelectedDemande] = useState<DemandeAchat | null>(null);
   const [commentaire, setCommentaire] = useState("");
+  const [showDialog, setShowDialog] = useState(false);
 
-  const [articles, setArticles] = useState<{ id: string; nom: string }[]>([]);
+  const [showCreate, setShowCreate] = useState(false);
   const [articleId, setArticleId] = useState("");
   const [quantite, setQuantite] = useState(1);
   const [montant, setMontant] = useState(0);
   const [justification, setJustification] = useState("");
 
-  // -------------------------
-  // Charger les demandes et articles
-  // -------------------------
+  // -------------------------------------------------------
+  // Charger les données
+  // -------------------------------------------------------
   const fetchDemandes = async () => {
     try {
       setLoading(true);
       const res = await stockApi.getDemandesAchat();
       setDemandes(res);
-    } catch (error) {
-      console.error("Erreur récupération demandes achat :", error);
+    } catch (err) {
+      console.error("Erreur récupération demandes :", err);
     } finally {
       setLoading(false);
     }
@@ -84,8 +85,8 @@ export default function PageDemandesAchat() {
     try {
       const arts = await stockApi.getArticles();
       setArticles(arts);
-    } catch (error) {
-      console.error("Erreur récupération articles :", error);
+    } catch (err) {
+      console.error("Erreur récupération articles :", err);
     }
   };
 
@@ -94,15 +95,15 @@ export default function PageDemandesAchat() {
     fetchArticles();
   }, []);
 
-  // -------------------------
-  // Valider ou rejeter
-  // -------------------------
+  // -------------------------------------------------------
+  // Valider / Rejeter
+  // -------------------------------------------------------
   const handleValider = async (demande: DemandeAchat) => {
     try {
       await stockApi.validerDemandeAchat(demande.id);
       fetchDemandes();
-    } catch (error) {
-      console.error("Erreur validation :", error);
+    } catch (err) {
+      console.error("Erreur validation :", err);
     }
   };
 
@@ -112,7 +113,10 @@ export default function PageDemandesAchat() {
   };
 
   const submitRejet = async () => {
-    if (!selectedDemande) return;
+    if (!selectedDemande || !commentaire) {
+      alert("Le commentaire est obligatoire.");
+      return;
+    }
 
     try {
       await stockApi.rejeterDemandeAchat(selectedDemande.id, commentaire);
@@ -120,14 +124,14 @@ export default function PageDemandesAchat() {
       setCommentaire("");
       setSelectedDemande(null);
       fetchDemandes();
-    } catch (error) {
-      console.error("Erreur rejet demande :", error);
+    } catch (err) {
+      console.error("Erreur rejet :", err);
     }
   };
 
-  // -------------------------
-  // Créer nouvelle demande
-  // -------------------------
+  // -------------------------------------------------------
+  // Créer une nouvelle demande
+  // -------------------------------------------------------
   const handleCreateDemande = async () => {
     if (!articleId || !quantite || !montant || !justification) {
       alert("Veuillez remplir tous les champs !");
@@ -147,27 +151,30 @@ export default function PageDemandesAchat() {
       setMontant(0);
       setJustification("");
       setShowCreate(false);
+
       fetchDemandes();
-    } catch (error: any) {
-      console.error("Erreur création demande :", error);
-      alert(`Erreur : ${error.message || error}`);
+    } catch (err: any) {
+      console.error("Erreur création :", err);
+      alert(err.message || "Erreur !");
     }
   };
 
-  // -------------------------
-  // Rendu
-  // -------------------------
+  // -------------------------------------------------------
+  // Affichage
+  // -------------------------------------------------------
   return (
-  <div className="p-4">
-    <div className="flex justify-between items-center mb-4">
-      <h1 className="text-2xl font-bold">Demandes d'Achat</h1>
-      <Button onClick={() => setShowCreate(true)}>Nouvelle Demande</Button>
-    </div>
+    <div className="p-4">
+      {/* Header */}
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold">Demandes d'Achat</h1>
+        <Button onClick={() => setShowCreate(true)}>Nouvelle Demande</Button>
+      </div>
 
-    {loading ? (
-      <p>Chargement...</p>
-    ) : (
-      <Table>
+      {/* Table */}
+      {loading ? (
+        <p>Chargement...</p>
+      ) : (
+        <Table>
           <TableHeader>
             <TableRow>
               <TableCell>Numéro</TableCell>
@@ -193,11 +200,17 @@ export default function PageDemandesAchat() {
                 <TableCell>{d.commentaire_finance || "-"}</TableCell>
                 <TableCell>{d.statut_reception}</TableCell>
                 <TableCell>{d.date_reception || "-"}</TableCell>
+
                 <TableCell className="space-x-2">
                   {d.statut === "en_attente" && (
                     <>
                       <Button onClick={() => handleValider(d)}>Valider</Button>
-                      <Button variant="destructive" onClick={() => handleRejeter(d)}>Rejeter</Button>
+                      <Button
+                        variant="destructive"
+                        onClick={() => handleRejeter(d)}
+                      >
+                        Rejeter
+                      </Button>
                     </>
                   )}
                 </TableCell>
@@ -205,74 +218,84 @@ export default function PageDemandesAchat() {
             ))}
           </TableBody>
         </Table>
-    )}
+      )}
 
-    {/* Modal pour commentaire rejet */}
-    <Dialog open={showDialog} onOpenChange={setShowDialog}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Rejeter la demande</DialogTitle>
-        </DialogHeader>
-
-        <Input
-          placeholder="Commentaire de rejet"
-          value={commentaire}
-          onChange={(e) => setCommentaire(e.target.value)}
-        />
-
-        <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={() => setShowDialog(false)}>Annuler</Button>
-          <Button variant="destructive" onClick={submitRejet}>Rejeter</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    {/* Modal pour créer nouvelle demande */}
-    <Dialog open={showCreate} onOpenChange={setShowCreate}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Nouvelle Demande d'Achat</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-3">
-          <Select value={articleId} onValueChange={setArticleId}>
-            <SelectTrigger>
-              <SelectValue placeholder="Sélectionner un article" />
-            </SelectTrigger>
-            <SelectContent>
-              {articles.map((a) => (
-                <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {/* Modal rejet */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rejeter la demande</DialogTitle>
+          </DialogHeader>
 
           <Input
-            type="number"
-            placeholder="Quantité"
-            value={quantite}
-            onChange={(e) => setQuantite(Number(e.target.value))}
+            placeholder="Commentaire de rejet"
+            value={commentaire}
+            onChange={(e) => setCommentaire(e.target.value)}
           />
 
-          <Input
-            type="number"
-            placeholder="Montant estimé"
-            value={montant}
-            onChange={(e) => setMontant(Number(e.target.value))}
-          />
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowDialog(false)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={submitRejet}>
+              Rejeter
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-          <Input
-            placeholder="Justification"
-            value={justification}
-            onChange={(e) => setJustification(e.target.value)}
-          />
-        </div>
+      {/* Modal création */}
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nouvelle Demande d'Achat</DialogTitle>
+          </DialogHeader>
 
-        <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={() => setShowCreate(false)}>Annuler</Button>
-          <Button onClick={handleCreateDemande}>Créer</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  </div>
-);
+          <div className="space-y-3">
+            <Select value={articleId} onValueChange={setArticleId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sélectionner un article" />
+              </SelectTrigger>
+              <SelectContent>
+                {articles.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.nom}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Input
+              type="number"
+              placeholder="Quantité"
+              value={quantite}
+              min={1}
+              onChange={(e) => setQuantite(Number(e.target.value))}
+            />
+
+            <Input
+              type="number"
+              placeholder="Montant estimé"
+              value={montant}
+              min={0}
+              onChange={(e) => setMontant(Number(e.target.value))}
+            />
+
+            <Input
+              placeholder="Justification"
+              value={justification}
+              onChange={(e) => setJustification(e.target.value)}
+            />
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowCreate(false)}>
+              Annuler
+            </Button>
+            <Button onClick={handleCreateDemande}>Créer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
