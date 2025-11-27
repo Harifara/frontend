@@ -73,13 +73,15 @@ export default function PageDemandesAchat() {
     try {
       setLoading(true);
       const res = await stockApi.getDemandesAchat();
-      setDemandes(res);
+      console.log("API Response:", res);
+      setDemandes(res.results || []);
     } catch (err) {
       console.error("Erreur récupération demandes :", err);
     } finally {
       setLoading(false);
     }
   };
+
 
   const fetchArticles = async () => {
     try {
