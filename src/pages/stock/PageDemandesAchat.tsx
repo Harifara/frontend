@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { stockApi } from "@/lib/api";
-
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -45,20 +44,18 @@ export default function PageDemandesAchat() {
   const [commentaire, setCommentaire] = useState("");
   const [showDialog, setShowDialog] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-
   const [articleId, setArticleId] = useState("");
   const [quantite, setQuantite] = useState(1);
   const [montant, setMontant] = useState(0);
   const [justification, setJustification] = useState("");
 
   // -------------------------
-  // Fetch demandes
+  // Fetch données
   // -------------------------
   const fetchDemandes = async () => {
     setLoading(true);
     try {
       const res = await stockApi.getDemandesAchat();
-      // Gestion de pagination ou liste simple
       setDemandes(res.results || res);
       console.log("Demandes chargées:", res);
     } catch (err) {
@@ -106,7 +103,6 @@ export default function PageDemandesAchat() {
       alert("Le commentaire est obligatoire.");
       return;
     }
-
     try {
       await stockApi.rejeterDemandeAchat(selectedDemande.id, commentaire);
       setShowDialog(false);
@@ -123,7 +119,6 @@ export default function PageDemandesAchat() {
       alert("Veuillez remplir tous les champs !");
       return;
     }
-
     try {
       await stockApi.createDemandeAchat({
         article_id: articleId,
@@ -131,13 +126,11 @@ export default function PageDemandesAchat() {
         montant_estime: montant,
         justification,
       });
-
       setArticleId("");
       setQuantite(1);
       setMontant(0);
       setJustification("");
       setShowCreate(false);
-
       fetchDemandes();
     } catch (err: any) {
       console.error("Erreur création :", err);
