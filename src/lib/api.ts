@@ -931,6 +931,13 @@ getDemandesAchat: async () => {
   if (!response.ok) throw new Error("Impossible de récupérer le stock");
   return response.json();
 },
+getStocksAutresMagasinsRaw: async (articleId: string) => {
+  const response = await fetch(`${API_BASE_URL}/stock/stocks-autres-magasins/${articleId}`);
+  if (!response.ok) throw new Error("Impossible de récupérer le stock (Raw)");
+  return response.text(); // ou response.json() selon ce que tu veux
+},
+
+
 
 
 };

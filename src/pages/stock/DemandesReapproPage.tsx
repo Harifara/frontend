@@ -96,6 +96,10 @@ export default function DemandesReapproPage() {
 
   const submitRejet = async () => {
     if (!selectedDemande) return;
+    if (!commentaire.trim()) {
+      alert("Veuillez saisir un commentaire pour le rejet.");
+      return;
+    }
     try {
       await stockApi.rejeterDemande(selectedDemande.id, { commentaire_validation: commentaire });
       setShowDialog(false);
@@ -146,12 +150,11 @@ export default function DemandesReapproPage() {
   const handleVerifierStock = async (demande: Demande) => {
     setSelectedDemande(demande);
     try {
-      // Récupération brute pour vérifier le format
       const resRaw = await stockApi.getStocksAutresMagasinsRaw(demande.article?.id || "");
       let res;
       try {
         res = JSON.parse(resRaw);
-      } catch (err) {
+      } catch {
         console.error("Réponse non JSON reçue :", resRaw);
         alert("Erreur : la réponse de l'API n'est pas au format JSON. Vérifiez l'API.");
         return;
@@ -164,7 +167,6 @@ export default function DemandesReapproPage() {
       alert("Impossible de vérifier le stock.");
     }
   };
-
 
   const handleCreerTransfert = async (magasinSourceId: string) => {
     if (!selectedDemande) return;
@@ -234,7 +236,7 @@ export default function DemandesReapproPage() {
                 <TableCell>{d.magasin?.nom || "-"}</TableCell>
                 <TableCell>{d.article?.nom || "-"}</TableCell>
                 <TableCell>{d.quantite_demandee}</TableCell>
-                <TableCell>{d.quantite_approuvee || "-"}</TableCell>
+                <TableCell>{d.quantite_approuvee ?? "-"}</TableCell>
                 <TableCell>{d.statut}</TableCell>
                 <TableCell>{d.priorite}</TableCell>
                 <TableCell>{d.motif}</TableCell>
