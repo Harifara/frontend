@@ -146,7 +146,17 @@ export default function DemandesReapproPage() {
   const handleVerifierStock = async (demande: Demande) => {
     setSelectedDemande(demande);
     try {
-      const res = await stockApi.getStocksAutresMagasins(demande.article?.id || "");
+      // Récupération brute pour vérifier le format
+      const resRaw = await stockApi.getStocksAutresMagasinsRaw(demande.article?.id || "");
+      let res;
+      try {
+        res = JSON.parse(resRaw);
+      } catch (err) {
+        console.error("Réponse non JSON reçue :", resRaw);
+        alert("Erreur : la réponse de l'API n'est pas au format JSON. Vérifiez l'API.");
+        return;
+      }
+
       setStocksAutresMagasins(res);
       setShowStockModal(true);
     } catch (error) {
@@ -154,6 +164,7 @@ export default function DemandesReapproPage() {
       alert("Impossible de vérifier le stock.");
     }
   };
+
 
   const handleCreerTransfert = async (magasinSourceId: string) => {
     if (!selectedDemande) return;
