@@ -926,5 +926,12 @@ getDemandesAchat: async () => {
     return res.json();
   },
 
+  getStocksAutresMagasins: async (articleId: string) => {
+  const response = await fetch(`/api/stock/stocks-autres-magasins/${articleId}`);
+  if (!response.ok) throw new Error("Impossible de récupérer le stock");
+  return response.json();
+},
+
+
 };
 
