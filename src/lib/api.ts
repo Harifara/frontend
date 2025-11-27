@@ -936,21 +936,22 @@ getStocksAutresMagasins: async (articleId: string) => {
 },
 
 getStocksAutresMagasinsRaw: async (articleId: string) => {
-  try {
-    const token = await ensureKongToken();
-    const res = await fetch(`${API_BASE_URL}/stock/stocks-autres-magasins/${cleanUUID(articleId)}`, {
-      headers: getHeaders(token),
-    });
+    try {
+      const token = await ensureKongToken();
+      const res = await fetch(`${API_BASE_URL}/stock/stocks-autres-magasins/${cleanUUID(articleId)}`, {
+        headers: getHeaders(token),
+      });
 
-    if (res.status === 404) return null; // ou un objet vide : {}
-    if (!res.ok) throw new Error("Impossible de récupérer le stock (Raw)");
+      if (res.status === 404) return []; // ← retourne un tableau vide au lieu de null
+      if (!res.ok) throw new Error("Impossible de récupérer le stock (Raw)");
 
-    return res.text(); 
-  } catch (err) {
-    console.error("Erreur getStocksAutresMagasinsRaw:", err);
-    return null;
-  }
-},
+      return await res.json(); // ou res.text() selon ton backend
+    } catch (err) {
+      console.error("Erreur getStocksAutresMagasinsRaw:", err);
+      return []; // ← tableau vide pour éviter crash frontend
+    }
+  };
+
 
 
 

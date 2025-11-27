@@ -39,7 +39,7 @@ export default function DemandesReapproPage() {
   const [motif, setMotif] = useState("");
 
   const [stocksAutresMagasins, setStocksAutresMagasins] = useState<
-    { magasin: string; quantite: number }[]
+    { magasin: string; quantite: number; magasin_id?: string }[]
   >([]);
 
   const priorites = ["faible", "normale", "haute", "urgente"];
@@ -149,13 +149,18 @@ export default function DemandesReapproPage() {
   // --------------------
   const handleVerifierStock = async (demande: Demande) => {
     setSelectedDemande(demande);
+    if (!demande.article?.id) return;
+
     try {
-      const resRaw = await stockApi.getStocksAutresMagasinsRaw(demande.article?.id || "");
-      let res;
+      const resRaw = await stockApi.getStocksAutresMagasinsRaw(demande.article.id);
+
+      // parser JSON de manière sécurisée
+      let res: { magasin: string; quantite: number; magasin_id?: string }[] = [];
       try {
-        res = JSON.parse(resRaw);
-      } catch {
-        console.error("Réponse non JSON reçue :", resRaw);
+        res = resRaw ? JSON.parse(resRaw) : [];
+        if (!Array.isArray(res)) res = [];
+      } catch (err) {
+        console.error("Réponse non JSON reçue :", resRaw, err);
         alert("Erreur : la réponse de l'API n'est pas au format JSON. Vérifiez l'API.");
         return;
       }
@@ -165,6 +170,8 @@ export default function DemandesReapproPage() {
     } catch (error) {
       console.error("Erreur vérification stock :", error);
       alert("Impossible de vérifier le stock.");
+      setStocksAutresMagasins([]);
+      setShowStockModal(true);
     }
   };
 
@@ -359,14 +366,16 @@ export default function DemandesReapproPage() {
             <DialogTitle>Vérifier stock autres magasins</DialogTitle>
           </DialogHeader>
 
-          {stocksAutresMagasins.length ? (
+          {stocksAutresMagasins && stocksAutresMagasins.length > 0 ? (
             <div className="space-y-2">
               {stocksAutresMagasins.map((s) => (
                 <div key={s.magasin} className="flex justify-between items-center">
                   <span>
                     {s.magasin} : {s.quantite} unités disponibles
                   </span>
-                  <Button onClick={() => handleCreerTransfert(s.magasin)}>Créer Transfert</Button>
+                  <Button onClick={() => handleCreerTransfert(s.magasin_id || s.magasin)}>
+                    Créer Transfert
+                  </Button>
                 </div>
               ))}
             </div>
