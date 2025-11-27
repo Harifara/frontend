@@ -1,5 +1,7 @@
 import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
+
+// Icons
 import {
   Users,
   ClipboardList,
@@ -7,9 +9,12 @@ import {
   FileText,
   AlertCircle,
 } from "lucide-react";
+
+// UI Components
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 
+// Charts
 import {
   LineChart,
   Line,
@@ -21,9 +26,9 @@ import {
   Bar,
 } from "recharts";
 
-// =============================
-// 📊 Données fictives
-// =============================
+/* ======================================================
+   📊 Données fictives (tu pourras les remplacer par ton API)
+====================================================== */
 const stockData = [
   { name: "Jan", stock: 400 },
   { name: "Feb", stock: 300 },
@@ -52,14 +57,14 @@ const recentAffectations = [
   { employe: "Paul Martin", magasin: "Magasin C", date: "08/11/2025" },
 ];
 
+/* ======================================================
+   💻 DASHBOARD
+====================================================== */
 export default function Dashboard() {
   const { user } = useAuth();
 
-  // =============================
-  // 🔐 Rôles utilisateur
-  // =============================
+  // Rôles
   const role = user?.role;
-
   const isAdmin = role === "admin";
   const isRH = role === "responsable_rh";
   const isStock = role === "responsable_stock";
@@ -71,17 +76,17 @@ export default function Dashboard() {
         Bonjour, {user?.full_name || user?.username || "Utilisateur"}
       </h1>
 
-      {/* =============================
-          CARDS KPI
-      ============================= */}
+      {/* ======================================================
+          🧮 KPI CARDS
+      ====================================================== */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 
         {(isAdmin || isRH) && (
-          <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200 hover:shadow-lg transition">
+          <Card className="p-4 bg-white shadow rounded-2xl border hover:shadow-lg transition">
             <div className="flex items-center">
               <Users className="w-8 h-8 text-green-700 mr-3" />
               <div>
-                <p className="text-xl font-semibold text-gray-900">120</p>
+                <p className="text-xl font-semibold">120</p>
                 <p className="text-sm text-gray-600">Employés</p>
               </div>
             </div>
@@ -89,11 +94,11 @@ export default function Dashboard() {
         )}
 
         {(isAdmin || isRH) && (
-          <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200 hover:shadow-lg transition">
+          <Card className="p-4 bg-white shadow rounded-2xl border hover:shadow-lg transition">
             <div className="flex items-center">
               <ClipboardList className="w-8 h-8 text-yellow-700 mr-3" />
               <div>
-                <p className="text-xl font-semibold text-gray-900">8</p>
+                <p className="text-xl font-semibold">8</p>
                 <p className="text-sm text-gray-600">Congés en attente</p>
               </div>
             </div>
@@ -101,11 +106,11 @@ export default function Dashboard() {
         )}
 
         {(isAdmin || isStock) && (
-          <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200 hover:shadow-lg transition">
+          <Card className="p-4 bg-white shadow rounded-2xl border hover:shadow-lg transition">
             <div className="flex items-center">
               <Warehouse className="w-8 h-8 text-blue-700 mr-3" />
               <div>
-                <p className="text-xl font-semibold text-gray-900">5</p>
+                <p className="text-xl font-semibold">5</p>
                 <p className="text-sm text-gray-600">Magasins</p>
               </div>
             </div>
@@ -113,11 +118,11 @@ export default function Dashboard() {
         )}
 
         {(isAdmin || isStock || isMagasinier) && (
-          <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200 hover:shadow-lg transition">
+          <Card className="p-4 bg-white shadow rounded-2xl border hover:shadow-lg transition">
             <div className="flex items-center">
               <FileText className="w-8 h-8 text-purple-700 mr-3" />
-              <div>
-                <p className="text-xl font-semibold text-gray-900">320</p>
+              <div className="w-full">
+                <p className="text-xl font-semibold">320</p>
                 <p className="text-sm text-gray-600">Articles en stock</p>
                 <Progress value={75} className="mt-2 h-2 rounded-full" />
               </div>
@@ -126,14 +131,14 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* =============================
-          GRAPHIQUES
-      ============================= */}
+      {/* ======================================================
+          📈 GRAPHIQUES
+      ====================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-
+        
         {(isAdmin || isStock || isMagasinier) && (
-          <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Stock par mois</h2>
+          <Card className="p-4 bg-white shadow rounded-2xl border">
+            <h2 className="text-lg font-semibold mb-4">Stock par mois</h2>
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={stockData}>
                 <XAxis dataKey="name" stroke="#4B5563" />
@@ -146,8 +151,10 @@ export default function Dashboard() {
         )}
 
         {(isAdmin || isRH) && (
-          <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Évolution des employés</h2>
+          <Card className="p-4 bg-white shadow rounded-2xl border">
+            <h2 className="text-lg font-semibold mb-4">
+              Évolution des employés
+            </h2>
             <ResponsiveContainer width="100%" height={250}>
               <LineChart data={employeesData}>
                 <XAxis dataKey="name" stroke="#4B5563" />
@@ -160,15 +167,18 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* =============================
-          ALERTES STOCK
-      ============================= */}
+      {/* ======================================================
+          🚨 ALERTES / MOUVEMENTS STOCK
+      ====================================================== */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {recentStockMovements.map((item, idx) => (
-          <Card key={idx} className="p-4 bg-red-50 border border-red-200 rounded-2xl shadow flex items-center">
+          <Card
+            key={idx}
+            className="p-4 bg-red-50 border border-red-200 rounded-2xl shadow flex items-center"
+          >
             <AlertCircle className="w-6 h-6 text-red-700 mr-3" />
             <div>
-              <p className="text-sm font-semibold text-red-800">
+              <p className="font-semibold text-red-800">
                 {item.article} → {item.magasin}
               </p>
               <p className="text-xs text-red-700">
@@ -179,14 +189,15 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* =============================
+      {/* ======================================================
           TABLEAUX
-      ============================= */}
+      ====================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200">
-          <h3 className="text-md font-semibold text-gray-800 mb-2">Dernières affectations</h3>
-          <table className="w-full text-sm text-gray-700">
+        {/* Affectations */}
+        <Card className="p-4 bg-white shadow rounded-2xl border">
+          <h3 className="text-md font-semibold mb-3">Dernières affectations</h3>
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
                 <th className="py-2 text-left">Employé</th>
@@ -206,12 +217,13 @@ export default function Dashboard() {
           </table>
         </Card>
 
-        <Card className="p-4 bg-white shadow rounded-2xl border border-gray-200">
-          <h3 className="text-md font-semibold text-gray-800 mb-2">Congés récents</h3>
-          <ul className="text-sm text-gray-700 space-y-1">
-            <li>Marie Dupont - 3 jours</li>
-            <li>Ali Raharisoa - 2 jours</li>
-            <li>Lucien Rabe - 1 jour</li>
+        {/* Congés récents */}
+        <Card className="p-4 bg-white shadow rounded-2xl border">
+          <h3 className="text-md font-semibold mb-3">Congés récents</h3>
+          <ul className="text-sm space-y-1">
+            <li>Marie Dupont — 3 jours</li>
+            <li>Ali Raharisoa — 2 jours</li>
+            <li>Lucien Rabe — 1 jour</li>
           </ul>
         </Card>
 
