@@ -1,45 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { stockApi } from "@/lib/api";
 
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
-
+import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 // -------------------------
-// Interfaces de données
+// Interfaces
 // -------------------------
+interface Article {
+  id: string;
+  nom: string;
+}
+
 interface DemandeAchat {
   id: string;
   numero: string;
-  article?: { id: string; nom: string };
+  article?: Article | null;
   quantite: number;
   montant_estime: number;
   statut: string;
   demandeur_id: string;
-  finance_valideur_id?: string;
+  finance_valideur_id?: string | null;
   justification: string;
   commentaire_finance?: string;
   date_validation_finance?: string;
@@ -50,46 +34,48 @@ interface DemandeAchat {
   updated_at: string;
 }
 
+// -------------------------
+// Composant
+// -------------------------
 export default function PageDemandesAchat() {
   const [demandes, setDemandes] = useState<DemandeAchat[]>([]);
-  const [articles, setArticles] = useState<{ id: string; nom: string }[]>([]);
-
+  const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [selectedDemande, setSelectedDemande] = useState<DemandeAchat | null>(null);
   const [commentaire, setCommentaire] = useState("");
   const [showDialog, setShowDialog] = useState(false);
-
   const [showCreate, setShowCreate] = useState(false);
+
   const [articleId, setArticleId] = useState("");
   const [quantite, setQuantite] = useState(1);
   const [montant, setMontant] = useState(0);
   const [justification, setJustification] = useState("");
 
-  // -------------------------------------------------------
-  // Charger les données
-  // -------------------------------------------------------
+  // -------------------------
+  // Fetch demandes
+  // -------------------------
   const fetchDemandes = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       const res = await stockApi.getDemandesAchat();
-      console.log("Demandes API:", res);  // 🔹 voir ce qui arrive vraiment
+      // Gestion de pagination ou liste simple
       setDemandes(res.results || res);
+      console.log("Demandes chargées:", res);
     } catch (err) {
       console.error("Erreur récupération demandes :", err);
+      setDemandes([]);
     } finally {
       setLoading(false);
     }
   };
 
-
-
   const fetchArticles = async () => {
     try {
       const arts = await stockApi.getArticles();
-      setArticles(arts);
+      setArticles(arts || []);
     } catch (err) {
       console.error("Erreur récupération articles :", err);
+      setArticles([]);
     }
   };
 
@@ -98,9 +84,9 @@ export default function PageDemandesAchat() {
     fetchArticles();
   }, []);
 
-  // -------------------------------------------------------
-  // Valider / Rejeter
-  // -------------------------------------------------------
+  // -------------------------
+  // Actions
+  // -------------------------
   const handleValider = async (demande: DemandeAchat) => {
     try {
       await stockApi.validerDemandeAchat(demande.id);
@@ -132,9 +118,6 @@ export default function PageDemandesAchat() {
     }
   };
 
-  // -------------------------------------------------------
-  // Créer une nouvelle demande
-  // -------------------------------------------------------
   const handleCreateDemande = async () => {
     if (!articleId || !quantite || !montant || !justification) {
       alert("Veuillez remplir tous les champs !");
@@ -143,7 +126,7 @@ export default function PageDemandesAchat() {
 
     try {
       await stockApi.createDemandeAchat({
-        article: articleId,
+        article_id: articleId,
         quantite,
         montant_estime: montant,
         justification,
@@ -162,9 +145,9 @@ export default function PageDemandesAchat() {
     }
   };
 
-  // -------------------------------------------------------
-  // Affichage
-  // -------------------------------------------------------
+  // -------------------------
+  // Render
+  // -------------------------
   return (
     <div className="p-4">
       {/* Header */}
@@ -176,6 +159,8 @@ export default function PageDemandesAchat() {
       {/* Table */}
       {loading ? (
         <p>Chargement...</p>
+      ) : demandes.length === 0 ? (
+        <p>Aucune demande trouvée.</p>
       ) : (
         <Table>
           <TableHeader>
@@ -191,7 +176,6 @@ export default function PageDemandesAchat() {
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHeader>
-
           <TableBody>
             {demandes.map((d) => (
               <TableRow key={d.id}>
@@ -203,15 +187,11 @@ export default function PageDemandesAchat() {
                 <TableCell>{d.commentaire_finance || "-"}</TableCell>
                 <TableCell>{d.statut_reception}</TableCell>
                 <TableCell>{d.date_reception || "-"}</TableCell>
-
                 <TableCell className="space-x-2">
                   {d.statut === "en_attente" && (
                     <>
                       <Button onClick={() => handleValider(d)}>Valider</Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => handleRejeter(d)}
-                      >
+                      <Button variant="destructive" onClick={() => handleRejeter(d)}>
                         Rejeter
                       </Button>
                     </>
@@ -223,19 +203,17 @@ export default function PageDemandesAchat() {
         </Table>
       )}
 
-      {/* Modal rejet */}
+      {/* Modal Rejet */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Rejeter la demande</DialogTitle>
           </DialogHeader>
-
           <Input
             placeholder="Commentaire de rejet"
             value={commentaire}
             onChange={(e) => setCommentaire(e.target.value)}
           />
-
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setShowDialog(false)}>
               Annuler
@@ -247,13 +225,12 @@ export default function PageDemandesAchat() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal création */}
+      {/* Modal Création */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Nouvelle Demande d'Achat</DialogTitle>
           </DialogHeader>
-
           <div className="space-y-3">
             <Select value={articleId} onValueChange={setArticleId}>
               <SelectTrigger>
@@ -267,7 +244,6 @@ export default function PageDemandesAchat() {
                 ))}
               </SelectContent>
             </Select>
-
             <Input
               type="number"
               placeholder="Quantité"
@@ -275,7 +251,6 @@ export default function PageDemandesAchat() {
               min={1}
               onChange={(e) => setQuantite(Number(e.target.value))}
             />
-
             <Input
               type="number"
               placeholder="Montant estimé"
@@ -283,14 +258,12 @@ export default function PageDemandesAchat() {
               min={0}
               onChange={(e) => setMontant(Number(e.target.value))}
             />
-
             <Input
               placeholder="Justification"
               value={justification}
               onChange={(e) => setJustification(e.target.value)}
             />
           </div>
-
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setShowCreate(false)}>
               Annuler
