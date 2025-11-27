@@ -936,13 +936,22 @@ getStocksAutresMagasins: async (articleId: string) => {
 },
 
 getStocksAutresMagasinsRaw: async (articleId: string) => {
-  const token = await ensureKongToken();
-  const response = await fetch(`${API_BASE_URL}/stock/stocks-autres-magasins/${cleanUUID(articleId)}`, {
-    headers: getHeaders(token),
-  });
-  if (!response.ok) throw new Error("Impossible de récupérer le stock (Raw)");
-  return response.text(); // ou response.json() si tu veux du JSON
+  try {
+    const token = await ensureKongToken();
+    const res = await fetch(`${API_BASE_URL}/stock/stocks-autres-magasins/${cleanUUID(articleId)}`, {
+      headers: getHeaders(token),
+    });
+
+    if (res.status === 404) return null; // ou un objet vide : {}
+    if (!res.ok) throw new Error("Impossible de récupérer le stock (Raw)");
+
+    return res.text(); 
+  } catch (err) {
+    console.error("Erreur getStocksAutresMagasinsRaw:", err);
+    return null;
+  }
 },
+
 
 
 };
