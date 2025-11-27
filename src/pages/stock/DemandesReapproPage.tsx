@@ -1,58 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { stockApi } from "@/lib/api";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-
 // --------------------
-// Interfaces
-// --------------------
-interface Demande {
-  id: string;
-  numero: string;
-  magasin?: { id: string; nom: string };
-  article?: { id: string; nom: string };
-  quantite_demandee: number;
-  quantite_approuvee?: number;
-  statut: string;
-  priorite: string;
-  motif: string;
-  commentaire_validation?: string;
-  created_at: string;
-  updated_at: string;
-  transferts?: { id: string; magasin_source: string; magasin_dest: string; quantite: number; statut: string }[];
-  demande_achat?: { id: string; quantite: number; statut: string; montant_estime: number }[];
-}
-
-// --------------------
-// Composant
+// Composant DemandesReapproPage
 // --------------------
 export default function DemandesReapproPage() {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [showModal, setShowModal] = useState(false);
-  const [showDialog, setShowDialog] = useState(false);
+  const [showModal, setShowModal] = useState(false); // création demande
+  const [showDialog, setShowDialog] = useState(false); // rejet
+  const [showStockModal, setShowStockModal] = useState(false); // vérification stock
 
   const [selectedDemande, setSelectedDemande] = useState<Demande | null>(null);
   const [commentaire, setCommentaire] = useState("");
@@ -65,13 +20,19 @@ export default function DemandesReapproPage() {
   const [priorite, setPriorite] = useState("normale");
   const [motif, setMotif] = useState("");
 
+  const [stocksAutresMagasins, setStocksAutresMagasins] = useState<
+    { magasin: string; quantite: number }[]
+  >([]);
+
   const priorites = ["faible", "normale", "haute", "urgente"];
 
-  // Charger les demandes avec transferts et demandes d'achat associées
+  // --------------------
+  // Récupération données
+  // --------------------
   const fetchDemandes = async () => {
     try {
       setLoading(true);
-      const res = await stockApi.getDemandes(); // le backend doit renvoyer les champs transferts et demande_achat
+      const res = await stockApi.getDemandes(); 
       setDemandes(res);
     } catch (error) {
       console.error("Erreur récupération demandes :", error);
@@ -97,6 +58,9 @@ export default function DemandesReapproPage() {
     fetchMagasinsArticles();
   }, []);
 
+  // --------------------
+  // Validation / Rejet
+  // --------------------
   const handleValider = async (demande: Demande) => {
     try {
       await stockApi.validerDemande(demande.id);
@@ -125,6 +89,9 @@ export default function DemandesReapproPage() {
     }
   };
 
+  // --------------------
+  // Création demande
+  // --------------------
   const handleCreateDemande = async () => {
     if (!magasinId || !articleId || !quantite || !motif) {
       alert("Veuillez remplir tous les champs !");
@@ -154,6 +121,56 @@ export default function DemandesReapproPage() {
     }
   };
 
+  // --------------------
+  // Vérification stock autres magasins
+  // --------------------
+  const handleVerifierStock = async (demande: Demande) => {
+    setSelectedDemande(demande);
+    try {
+      const res = await stockApi.getStocksAutresMagasins(demande.article?.id || "");
+      setStocksAutresMagasins(res);
+      setShowStockModal(true);
+    } catch (error) {
+      console.error("Erreur vérification stock :", error);
+    }
+  };
+
+  const handleCreerTransfert = async (magasinSourceId: string) => {
+    if (!selectedDemande) return;
+
+    try {
+      await stockApi.createTransfert({
+        demande_id: selectedDemande.id,
+        magasin_source_id: magasinSourceId,
+        quantite: selectedDemande.quantite_demandee,
+      });
+      setShowStockModal(false);
+      setSelectedDemande(null);
+      fetchDemandes();
+    } catch (error) {
+      console.error("Erreur création transfert :", error);
+    }
+  };
+
+  const handleDemandeAchat = async () => {
+    if (!selectedDemande) return;
+
+    try {
+      await stockApi.createDemandeAchat({
+        demande_id: selectedDemande.id,
+        quantite: selectedDemande.quantite_demandee,
+      });
+      setShowStockModal(false);
+      setSelectedDemande(null);
+      fetchDemandes();
+    } catch (error) {
+      console.error("Erreur demande achat :", error);
+    }
+  };
+
+  // --------------------
+  // Rendu
+  // --------------------
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
@@ -176,12 +193,9 @@ export default function DemandesReapproPage() {
               <TableCell>Priorité</TableCell>
               <TableCell>Motif</TableCell>
               <TableCell>Commentaire</TableCell>
-              <TableCell>Transferts</TableCell>
-              <TableCell>Demandes Achat</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHeader>
-
           <TableBody>
             {demandes.map((d) => (
               <TableRow key={d.id}>
@@ -194,29 +208,10 @@ export default function DemandesReapproPage() {
                 <TableCell>{d.priorite}</TableCell>
                 <TableCell>{d.motif}</TableCell>
                 <TableCell>{d.commentaire_validation || "-"}</TableCell>
-                <TableCell>
-                  {d.transferts?.length
-                    ? d.transferts.map((t) => (
-                        <div key={t.id}>
-                          {t.magasin_source} → {t.magasin_dest} ({t.quantite}, {t.statut})
-                        </div>
-                      ))
-                    : "-"}
-                </TableCell>
-                <TableCell>
-                  {d.demande_achat?.length
-                    ? d.demande_achat.map((a) => (
-                        <div key={a.id}>
-                          {a.quantite} unités ({a.statut}, {a.montant_estime} Ar)
-                        </div>
-                      ))
-                    : "-"}
-                </TableCell>
                 <TableCell className="space-x-2">
                   {d.statut === "en_attente" && (
                     <>
-                      <Button onClick={() => handleValider(d)}>Valider</Button>
-                      <Button variant="destructive" onClick={() => handleRejeter(d)}>Rejeter</Button>
+                      <Button onClick={() => handleVerifierStock(d)}>Vérifier Stock</Button>
                     </>
                   )}
                 </TableCell>
@@ -226,13 +221,12 @@ export default function DemandesReapproPage() {
         </Table>
       )}
 
-      {/* Modal création */}
+      {/* Modal création demande */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Nouvelle Demande</DialogTitle>
           </DialogHeader>
-
           <div className="flex flex-col gap-3">
             <Select value={magasinId} onValueChange={setMagasinId}>
               <SelectTrigger>
@@ -256,13 +250,7 @@ export default function DemandesReapproPage() {
               </SelectContent>
             </Select>
 
-            <Input
-              type="number"
-              min={1}
-              value={quantite}
-              onChange={(e) => setQuantite(Number(e.target.value))}
-              placeholder="Quantité demandée"
-            />
+            <Input type="number" min={1} value={quantite} onChange={(e) => setQuantite(Number(e.target.value))} placeholder="Quantité demandée" />
 
             <Select value={priorite} onValueChange={setPriorite}>
               <SelectTrigger>
@@ -275,14 +263,8 @@ export default function DemandesReapproPage() {
               </SelectContent>
             </Select>
 
-            <Input
-              type="text"
-              value={motif}
-              onChange={(e) => setMotif(e.target.value)}
-              placeholder="Motif"
-            />
+            <Input type="text" value={motif} onChange={(e) => setMotif(e.target.value)} placeholder="Motif" />
           </div>
-
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setShowModal(false)}>Annuler</Button>
             <Button onClick={handleCreateDemande}>Créer</Button>
@@ -296,17 +278,36 @@ export default function DemandesReapproPage() {
           <DialogHeader>
             <DialogTitle>Rejeter la demande</DialogTitle>
           </DialogHeader>
-
-          <Input
-            placeholder="Commentaire de rejet"
-            value={commentaire}
-            onChange={(e) => setCommentaire(e.target.value)}
-          />
-
+          <Input placeholder="Commentaire de rejet" value={commentaire} onChange={(e) => setCommentaire(e.target.value)} />
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setShowDialog(false)}>Annuler</Button>
             <Button variant="destructive" onClick={submitRejet}>Rejeter</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Vérifier stock */}
+      <Dialog open={showStockModal} onOpenChange={setShowStockModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vérifier stock autres magasins</DialogTitle>
+          </DialogHeader>
+
+          {stocksAutresMagasins.length ? (
+            <div className="space-y-2">
+              {stocksAutresMagasins.map((s) => (
+                <div key={s.magasin} className="flex justify-between items-center">
+                  <span>{s.magasin} : {s.quantite} unités disponibles</span>
+                  <Button onClick={() => handleCreerTransfert(s.magasin)}>Créer Transfert</Button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div>
+              <p>Stock non disponible dans les autres magasins.</p>
+              <Button onClick={handleDemandeAchat}>Envoyer Demande Achat</Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
