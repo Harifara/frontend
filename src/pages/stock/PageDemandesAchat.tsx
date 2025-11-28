@@ -40,14 +40,20 @@ export default function PageDemandesAchat() {
   const [demandes, setDemandes] = useState<DemandeAchat[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [selectedDemande, setSelectedDemande] = useState<DemandeAchat | null>(null);
   const [commentaire, setCommentaire] = useState("");
   const [showDialog, setShowDialog] = useState(false);
+
   const [showCreate, setShowCreate] = useState(false);
   const [articleId, setArticleId] = useState("");
   const [quantite, setQuantite] = useState(1);
   const [montant, setMontant] = useState(0);
   const [justification, setJustification] = useState("");
+
+  // Ajouts pour amélioration
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   // -------------------------
   // Fetch données
@@ -57,7 +63,6 @@ export default function PageDemandesAchat() {
     try {
       const res = await stockApi.getDemandesAchat();
       setDemandes(res.results || res);
-      console.log("Demandes chargées:", res);
     } catch (err) {
       console.error("Erreur récupération demandes :", err);
       setDemandes([]);
@@ -103,6 +108,7 @@ export default function PageDemandesAchat() {
       alert("Le commentaire est obligatoire.");
       return;
     }
+
     try {
       await stockApi.rejeterDemandeAchat(selectedDemande.id, commentaire);
       setShowDialog(false);
@@ -114,11 +120,26 @@ export default function PageDemandesAchat() {
     }
   };
 
+  // RESET du formulaire création
+  const resetForm = () => {
+    setArticleId("");
+    setQuantite(1);
+    setMontant(0);
+    setJustification("");
+    setErrorMessage("");
+    setIsSubmitting(false);
+  };
+
   const handleCreateDemande = async () => {
+    setErrorMessage("");
+
     if (!articleId || !quantite || !montant || !justification) {
-      alert("Veuillez remplir tous les champs !");
+      setErrorMessage("Veuillez remplir tous les champs.");
       return;
     }
+
+    setIsSubmitting(true);
+
     try {
       await stockApi.createDemandeAchat({
         article_id: articleId,
@@ -126,15 +147,22 @@ export default function PageDemandesAchat() {
         montant_estime: montant,
         justification,
       });
-      setArticleId("");
-      setQuantite(1);
-      setMontant(0);
-      setJustification("");
+
+      resetForm();
       setShowCreate(false);
       fetchDemandes();
+
     } catch (err: any) {
       console.error("Erreur création :", err);
-      alert(err.message || "Erreur !");
+
+      if (err.response?.data) {
+        setErrorMessage(JSON.stringify(err.response.data));
+      } else {
+        setErrorMessage("Erreur lors de la création.");
+      }
+
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -202,11 +230,13 @@ export default function PageDemandesAchat() {
           <DialogHeader>
             <DialogTitle>Rejeter la demande</DialogTitle>
           </DialogHeader>
+
           <Input
             placeholder="Commentaire de rejet"
             value={commentaire}
             onChange={(e) => setCommentaire(e.target.value)}
           />
+
           <DialogFooter className="mt-4">
             <Button variant="outline" onClick={() => setShowDialog(false)}>
               Annuler
@@ -224,7 +254,9 @@ export default function PageDemandesAchat() {
           <DialogHeader>
             <DialogTitle>Nouvelle Demande d'Achat</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+
+          <div className="space-y-4">
+
             <Select value={articleId} onValueChange={setArticleId}>
               <SelectTrigger>
                 <SelectValue placeholder="Sélectionner un article" />
@@ -237,6 +269,7 @@ export default function PageDemandesAchat() {
                 ))}
               </SelectContent>
             </Select>
+
             <Input
               type="number"
               placeholder="Quantité"
@@ -244,24 +277,38 @@ export default function PageDemandesAchat() {
               min={1}
               onChange={(e) => setQuantite(Number(e.target.value))}
             />
+
             <Input
               type="number"
               placeholder="Montant estimé"
               value={montant}
-              min={0}
+              min={1}
               onChange={(e) => setMontant(Number(e.target.value))}
             />
+
             <Input
               placeholder="Justification"
               value={justification}
               onChange={(e) => setJustification(e.target.value)}
             />
+
+            {errorMessage && (
+              <p className="text-red-600 text-sm">{errorMessage}</p>
+            )}
+
           </div>
+
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setShowCreate(false)}>
+            <Button variant="outline" onClick={() => { setShowCreate(false); resetForm(); }}>
               Annuler
             </Button>
-            <Button onClick={handleCreateDemande}>Créer</Button>
+
+            <Button
+              disabled={!articleId || !quantite || !montant || !justification || isSubmitting}
+              onClick={handleCreateDemande}
+            >
+              {isSubmitting ? "Création..." : "Créer"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
