@@ -75,7 +75,7 @@ const StockManagement: React.FC = () => {
         const userData = await authApi.me();
         setUserRole(userData.role);
       } catch (error: any) {
-        console.error("Erreur récupération rôle:", error);
+        console.error(error);
         toast({ title: "Erreur", description: "Impossible de récupérer le rôle de l'utilisateur", variant: "destructive" });
       } finally {
         setIsLoadingUserRole(false);
@@ -83,6 +83,7 @@ const StockManagement: React.FC = () => {
     };
     fetchUserRole();
   }, []);
+
 
 
 
@@ -247,6 +248,7 @@ const StockManagement: React.FC = () => {
             <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
           </div>
         )}
+
 
       </div>
 
