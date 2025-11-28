@@ -889,12 +889,12 @@ getDemandesAchat: async () => {
   },
 
   createDemandeAchat: async (payload: {
-    article: string;
+    article_id: string;   // ✔ CORRECT
     quantite: number;
     montant_estime: number;
     justification: string;
-    demandeur_id?: string;
-  }) => {
+}) => {
+
     const token = await ensureKongToken();
     const res = await fetch(`${API_BASE_URL}/stock/demandes-achat/`, {
       method: "POST",
