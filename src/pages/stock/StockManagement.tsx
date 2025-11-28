@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { stockApi } from "@/lib/api";
+import { stockApi, authApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { createPDFDoc } from "@/lib/pdfTemplate";
@@ -61,7 +61,23 @@ const StockManagement: React.FC = () => {
     date_peremption: "",
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [user, setUser] = useState<{ role: string } | null>(null);
   const { toast } = useToast();
+
+  // -----------------------
+  // Récupération utilisateur
+  // -----------------------
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const data = await authApi.me(); // doit retourner { role: "magasinier" | "admin" | ... }
+        setUser(data);
+      } catch (err) {
+        toast({ title: "Erreur", description: "Impossible de charger l'utilisateur", variant: "destructive" });
+      }
+    };
+    fetchUser();
+  }, []);
 
   // -----------------------
   // Fetch Data
@@ -217,11 +233,14 @@ const StockManagement: React.FC = () => {
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Gestion des Stocks</h2>
-        <div className="flex gap-2">
-          <Button onClick={() => { setOpenModal(true); setEditingStock(null); }}>+ Nouveau</Button>
-          <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
-          <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
-        </div>
+        {/* Boutons visibles seulement si ce n'est pas un magasinier */}
+        {user?.role !== "magasinier" && (
+          <div className="flex gap-2">
+            <Button onClick={() => { setOpenModal(true); setEditingStock(null); }}>+ Nouveau</Button>
+            <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
+            <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
+          </div>
+        )}
       </div>
 
       <Input
@@ -231,7 +250,6 @@ const StockManagement: React.FC = () => {
         className="mb-4"
       />
 
-      {/* 🔔 Message global d’alerte */}
       {stocks.some(s => s.quantite <= s.seuil_alerte) && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           ⚠ Certains articles ont un stock faible !
@@ -268,8 +286,13 @@ const StockManagement: React.FC = () => {
                   <TableCell>{s.seuil_alerte}</TableCell>
                   <TableCell>{s.date_peremption || "—"}</TableCell>
                   <TableCell className="space-x-2">
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(s)}>Modifier</Button>
-                    <Button variant="destructive" size="sm" onClick={() => openDeleteModal(s)}>Supprimer</Button>
+                    {/* Actions visibles seulement si ce n'est pas un magasinier */}
+                    {user?.role !== "magasinier" && (
+                      <>
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(s)}>Modifier</Button>
+                        <Button variant="destructive" size="sm" onClick={() => openDeleteModal(s)}>Supprimer</Button>
+                      </>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
@@ -283,95 +306,99 @@ const StockManagement: React.FC = () => {
       </div>
 
       {/* Modal Ajouter/Modifier */}
-      <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingStock ? "Modifier le Stock" : "Ajouter un Stock"}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div>
-              <Label>Article</Label>
-              <Select
-                value={form.article}
-                onValueChange={(val) => setForm({ ...form, article: val })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un article" />
-                </SelectTrigger>
-                <SelectContent>
-                  {articles.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      {user?.role !== "magasinier" && (
+        <Dialog open={openModal} onOpenChange={setOpenModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingStock ? "Modifier le Stock" : "Ajouter un Stock"}</DialogTitle>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              <div>
+                <Label>Article</Label>
+                <Select
+                  value={form.article}
+                  onValueChange={(val) => setForm({ ...form, article: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez un article" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {articles.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label>Magasin</Label>
-              <Select
-                value={form.magasin}
-                onValueChange={(val) => setForm({ ...form, magasin: val })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un magasin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {magasins.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div>
+                <Label>Magasin</Label>
+                <Select
+                  value={form.magasin}
+                  onValueChange={(val) => setForm({ ...form, magasin: val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sélectionnez un magasin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {magasins.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label>Quantité</Label>
-              <Input
-                type="number"
-                value={form.quantite}
-                onChange={(e) => setForm({ ...form, quantite: Number(e.target.value) })}
-              />
-            </div>
+              <div>
+                <Label>Quantité</Label>
+                <Input
+                  type="number"
+                  value={form.quantite}
+                  onChange={(e) => setForm({ ...form, quantite: Number(e.target.value) })}
+                />
+              </div>
 
-            <div>
-              <Label>Seuil d’Alerte</Label>
-              <Input
-                type="number"
-                value={form.seuil_alerte}
-                onChange={(e) => setForm({ ...form, seuil_alerte: Number(e.target.value) })}
-              />
-            </div>
+              <div>
+                <Label>Seuil d’Alerte</Label>
+                <Input
+                  type="number"
+                  value={form.seuil_alerte}
+                  onChange={(e) => setForm({ ...form, seuil_alerte: Number(e.target.value) })}
+                />
+              </div>
 
-            <div>
-              <Label>Date de Péremption</Label>
-              <Input
-                type="date"
-                value={form.date_peremption || ""}
-                onChange={(e) => setForm({ ...form, date_peremption: e.target.value })}
-              />
+              <div>
+                <Label>Date de Péremption</Label>
+                <Input
+                  type="date"
+                  value={form.date_peremption || ""}
+                  onChange={(e) => setForm({ ...form, date_peremption: e.target.value })}
+                />
+              </div>
             </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenModal(false)}>Annuler</Button>
-            <Button onClick={handleSave}>Enregistrer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setOpenModal(false)}>Annuler</Button>
+              <Button onClick={handleSave}>Enregistrer</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Modal Suppression */}
-      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmer la suppression</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p>Voulez-vous vraiment supprimer le stock de <strong>{stockToDelete?.article.nom}</strong> dans <strong>{stockToDelete?.magasin.nom}</strong> ?</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>Annuler</Button>
-            <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {user?.role !== "magasinier" && (
+        <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmer la suppression</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p>Voulez-vous vraiment supprimer le stock de <strong>{stockToDelete?.article.nom}</strong> dans <strong>{stockToDelete?.magasin.nom}</strong> ?</p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>Annuler</Button>
+              <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
