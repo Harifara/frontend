@@ -61,6 +61,7 @@ export default function PageDemandesAchat() {
     setLoading(true);
     try {
       const res = await stockApi.getDemandesAchat();
+      console.log("Demandes récupérées :", res);
       setDemandes(res.results || res);
     } catch (err) {
       console.error("Erreur récupération demandes :", err);
@@ -73,6 +74,7 @@ export default function PageDemandesAchat() {
   const fetchArticles = async () => {
     try {
       const arts = await stockApi.getArticles();
+      console.log("Articles récupérés :", arts);
       setArticles(arts || []);
     } catch (err) {
       console.error("Erreur récupération articles :", err);
@@ -90,6 +92,7 @@ export default function PageDemandesAchat() {
   // -------------------------
   const handleValider = async (demande: DemandeAchat) => {
     try {
+      console.log("Validation de la demande :", demande);
       await stockApi.validerDemandeAchat(demande.id);
       fetchDemandes();
     } catch (err) {
@@ -109,6 +112,7 @@ export default function PageDemandesAchat() {
     }
 
     try {
+      console.log("Rejet de la demande :", selectedDemande.id, "commentaire :", commentaire);
       await stockApi.rejeterDemandeAchat(selectedDemande.id, commentaire);
       setShowDialog(false);
       setCommentaire("");
@@ -119,6 +123,9 @@ export default function PageDemandesAchat() {
     }
   };
 
+  // -------------------------
+  // Création demande
+  // -------------------------
   const resetForm = () => {
     setArticleId("");
     setQuantite(1);
@@ -131,20 +138,30 @@ export default function PageDemandesAchat() {
   const handleCreateDemande = async () => {
     setErrorMessage("");
 
-    if (!articleId) return setErrorMessage("Veuillez sélectionner un article.");
-    if (!quantite || quantite <= 0) return setErrorMessage("Quantité invalide.");
-    if (!montant || montant <= 0) return setErrorMessage("Montant invalide.");
-    if (!justification.trim()) return setErrorMessage("Justification obligatoire.");
+    if (!articleId || !quantite || !montant || !justification) {
+      setErrorMessage("Veuillez remplir tous les champs.");
+      return;
+    }
 
     setIsSubmitting(true);
 
     try {
-      await stockApi.createDemandeAchat({
+      // --- LOG pour debug ---
+      console.log("Création demande d'achat - payload envoyé :", {
         article_id: articleId,
-        quantite: Number(quantite),
-        montant_estime: Number(montant),
-        justification: justification.trim(),
+        quantite,
+        montant_estime: montant,
+        justification,
       });
+
+      const res = await stockApi.createDemandeAchat({
+        article_id: articleId,
+        quantite,
+        montant_estime: montant,
+        justification,
+      });
+
+      console.log("Réponse création :", res);
 
       resetForm();
       setShowCreate(false);
@@ -152,11 +169,14 @@ export default function PageDemandesAchat() {
 
     } catch (err: any) {
       console.error("Erreur création :", err);
+
       if (err.response?.data) {
+        console.log("Réponse du serveur :", err.response.data);
         setErrorMessage(JSON.stringify(err.response.data));
       } else {
         setErrorMessage("Erreur lors de la création.");
       }
+
     } finally {
       setIsSubmitting(false);
     }
@@ -167,13 +187,11 @@ export default function PageDemandesAchat() {
   // -------------------------
   return (
     <div className="p-4">
-      {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Demandes d'Achat</h1>
         <Button onClick={() => setShowCreate(true)}>Nouvelle Demande</Button>
       </div>
 
-      {/* Table */}
       {loading ? (
         <p>Chargement...</p>
       ) : demandes.length === 0 ? (
@@ -208,7 +226,9 @@ export default function PageDemandesAchat() {
                   {d.statut === "en_attente" && (
                     <>
                       <Button onClick={() => handleValider(d)}>Valider</Button>
-                      <Button variant="destructive" onClick={() => handleRejeter(d)}>Rejeter</Button>
+                      <Button variant="destructive" onClick={() => handleRejeter(d)}>
+                        Rejeter
+                      </Button>
                     </>
                   )}
                 </TableCell>
@@ -232,8 +252,12 @@ export default function PageDemandesAchat() {
           />
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setShowDialog(false)}>Annuler</Button>
-            <Button variant="destructive" onClick={submitRejet}>Rejeter</Button>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={submitRejet}>
+              Rejeter
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -252,7 +276,9 @@ export default function PageDemandesAchat() {
               </SelectTrigger>
               <SelectContent>
                 {articles.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>
+                  <SelectItem key={a.id} value={a.id}>
+                    {a.nom}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -279,7 +305,9 @@ export default function PageDemandesAchat() {
               onChange={(e) => setJustification(e.target.value)}
             />
 
-            {errorMessage && <p className="text-red-600 text-sm">{errorMessage}</p>}
+            {errorMessage && (
+              <p className="text-red-600 text-sm">{errorMessage}</p>
+            )}
           </div>
 
           <DialogFooter className="mt-4">
