@@ -43,6 +43,8 @@ import MouvementStock from "./pages/stock/MouvementStock";
 import DemandesReapproPage from "./pages/stock/DemandesReapproPage";
 import PageDemandesAchat from "./pages/stock/PageDemandesAchat";
 
+import ValidationDemandesPage from "./pages/finace/ValidationDemandesPage";
+
 
 const queryClient = new QueryClient();
 
@@ -117,6 +119,9 @@ const App = () => (
               <Route path="/stock/mouvement-stock" element={<MouvementStock />} />
               <Route path="/stock/demandes-reappro" element={<DemandesReapproPage />} />
               <Route path="/stock/demandes-achat" element={<PageDemandesAchat />} />
+
+
+              <Route path="/finance/validation-demandes" element={<ValidationDemandesPage />} />
               </Route>
               
 
