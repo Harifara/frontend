@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { stockApi, rhApi } from "@/lib/api"; // tes APIs configurées
 import { toast } from "react-hot-toast";
+import { stockApi, rhApi } from "@/lib/api";
 
 type Demande = {
   id: string;
@@ -20,8 +18,6 @@ type Demande = {
 const ValidationDemandesPage: React.FC = () => {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
-  const [selectedDemande, setSelectedDemande] = useState<Demande | null>(null);
 
   useEffect(() => {
     fetchDemandes();
@@ -31,29 +27,31 @@ const ValidationDemandesPage: React.FC = () => {
     setLoading(true);
     try {
       // RH Service
-      const rhResp = await rhApi.get("/demandes/");
-      const rhDemandes: Demande[] = (rhResp.data.results || []).map((d: any) => ({
-        id: d.id,
-        description: d.description,
-        montant: d.montant,
-        statut: d.status.toLowerCase(),
-      }));
+      const rhDemandesRaw = await rhApi.getDemandes();
+      const rhDemandes: Demande[] = rhDemandesRaw
+        .map((d: any) => ({
+          id: d.id,
+          description: d.description,
+          montant: d.montant,
+          statut: d.statut?.toLowerCase() || "en_attente",
+        }))
+        .filter(d => d.statut === "en_attente");
 
       // Stock Service
-      const stockResp = await stockApi.get("/demandes-achat/");
-      const stockDemandes: Demande[] = (stockResp.data || []).map((d: any) => ({
-        id: d.id || d.Numero,
-        numero: d.Numero,
-        article: d.Article,
-        quantite: d.Quantite,
-        montant: Number(d["Montant Estimé"] || 0),
-        statut: d["Statut Finance"]?.toLowerCase() || "en_attente",
-        commentaire: d["Commentaire Finance"] || "",
-      }));
+      const stockDemandesRaw = await stockApi.getDemandesAchat();
+      const stockDemandes: Demande[] = stockDemandesRaw
+        .map((d: any) => ({
+          id: d.id,
+          numero: d.article_id || d.id,
+          article: d.article || "-",
+          quantite: d.quantite,
+          montant: Number(d.montant_estime || 0),
+          statut: (d.statut_finance || "en_attente").toLowerCase(),
+          commentaire: d.commentaire_finance || "",
+        }))
+        .filter(d => d.statut === "en_attente");
 
-      // Fusionner toutes les demandes
-      const allDemandes = [...rhDemandes, ...stockDemandes].filter(d => d.statut === "en_attente");
-      setDemandes(allDemandes);
+      setDemandes([...rhDemandes, ...stockDemandes]);
     } catch (error) {
       console.error("Erreur fetch demandes:", error);
       toast.error("Impossible de charger les demandes.");
@@ -65,11 +63,9 @@ const ValidationDemandesPage: React.FC = () => {
   const handleApprove = async (demande: Demande) => {
     try {
       if (demande.numero) {
-        // Stock service
-        await stockApi.post(`/demandes-achat/${demande.id}/approve/`);
+        await stockApi.validerDemandeAchat(demande.id);
       } else {
-        // RH service
-        await rhApi.post(`/demandes/${demande.id}/approve/`);
+        await rhApi.approveDemande(demande.id);
       }
       toast.success("Demande approuvée !");
       fetchDemandes();
@@ -82,9 +78,9 @@ const ValidationDemandesPage: React.FC = () => {
   const handleReject = async (demande: Demande) => {
     try {
       if (demande.numero) {
-        await stockApi.post(`/demandes-achat/${demande.id}/reject/`);
+        await stockApi.rejeterDemandeAchat(demande.id, demande.commentaire || "");
       } else {
-        await rhApi.post(`/demandes/${demande.id}/reject/`);
+        await rhApi.rejectDemande(demande.id);
       }
       toast.success("Demande rejetée !");
       fetchDemandes();
@@ -116,12 +112,16 @@ const ValidationDemandesPage: React.FC = () => {
             <TableRow key={d.id}>
               <TableCell>{d.numero || d.description}</TableCell>
               <TableCell>{d.article || "-"}</TableCell>
-              <TableCell>{d.quantite || "-"}</TableCell>
+              <TableCell>{d.quantite ?? "-"}</TableCell>
               <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
               <TableCell>{d.commentaire || "-"}</TableCell>
               <TableCell className="space-x-2">
-                <Button onClick={() => handleApprove(d)} variant="default" size="sm">Approuver</Button>
-                <Button onClick={() => handleReject(d)} variant="destructive" size="sm">Rejeter</Button>
+                <Button onClick={() => handleApprove(d)} variant="default" size="sm">
+                  Approuver
+                </Button>
+                <Button onClick={() => handleReject(d)} variant="destructive" size="sm">
+                  Rejeter
+                </Button>
               </TableCell>
             </TableRow>
           ))}
