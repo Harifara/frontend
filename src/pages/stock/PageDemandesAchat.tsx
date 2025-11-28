@@ -21,7 +21,6 @@ interface DemandeAchat {
   quantite: number;
   montant_estime: number;
   statut: string;
-  demandeur_id: string;
   finance_valideur_id?: string | null;
   justification: string;
   commentaire_finance?: string;
@@ -132,8 +131,8 @@ export default function PageDemandesAchat() {
   };
 
   const handleCreateDemande = async () => {
-    if (!articleId || !quantite || !montant || !justification.trim()) {
-      setErrorMessage("Veuillez remplir tous les champs.");
+    if (!articleId || quantite < 1 || montant <= 0 || !justification.trim()) {
+      setErrorMessage("Veuillez remplir tous les champs correctement.");
       return;
     }
 
@@ -297,7 +296,7 @@ export default function PageDemandesAchat() {
             </Button>
 
             <Button
-              disabled={!articleId || !quantite || !montant || !justification || isSubmitting}
+              disabled={!articleId || quantite < 1 || montant <= 0 || !justification.trim() || isSubmitting}
               onClick={handleCreateDemande}
             >
               {isSubmitting ? "Création..." : "Créer"}
