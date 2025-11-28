@@ -996,6 +996,69 @@ export const financeApi = {
     });
   },
 
+
+  getDepenses: async () => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/depenses/`, {
+      headers: getHeaders(token),
+    });
+  },
+
+  // Récupérer une dépense spécifique
+  getDepense: async (id: string) => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/`, {
+      headers: getHeaders(token),
+    });
+  },
+
+  // Créer une dépense
+  createDepense: async (payload: any) => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/depenses/`, {
+      method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // Mettre à jour une dépense
+  updateDepense: async (id: string, payload: any) => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/`, {
+      method: "PATCH",
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+  },
+
+  // Supprimer une dépense
+  deleteDepense: async (id: string) => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/`, {
+      method: "DELETE",
+      headers: getHeaders(token),
+    });
+  },
+
+  // Valider une dépense (workflow)
+  validerDepense: async (id: string) => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/valider/`, {
+      method: "POST",
+      headers: getHeaders(token),
+    });
+  },
+
+  rejeterDepense: async (id: string, commentaire: string = "") => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/rejeter/`, {
+      method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify({ commentaire }),
+    });
+  },
+
 };
 
 

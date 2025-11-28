@@ -21,10 +21,11 @@ export default function DepensePage() {
   const fetchDepenses = async () => {
     setLoading(true);
     try {
-      const data = await financeApi.getValidations();
+      const data: Depense[] = await financeApi.getDepenses();
       setDepenses(data);
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de la récupération des dépenses");
+      console.error(err);
+      toast.error(err?.message || "Erreur lors de la récupération des dépenses");
     } finally {
       setLoading(false);
     }
@@ -36,21 +37,23 @@ export default function DepensePage() {
 
   const handleMarquerPayee = async (id: string) => {
     try {
-      await financeApi.approuver(id); // si tu veux appeler la validation
+      await financeApi.validerDepense(id); // Appel de validation
       toast.success("Dépense marquée comme payée");
       fetchDepenses();
     } catch (err: any) {
-      toast.error(err.message);
+      console.error(err);
+      toast.error(err?.message || "Erreur lors de la validation");
     }
   };
 
   const handleAnnuler = async (id: string) => {
     try {
-      await financeApi.rejeter(id, "Annulée par le responsable");
+      await financeApi.rejeterDepense(id, "Annulée par le responsable");
       toast.success("Dépense annulée");
       fetchDepenses();
     } catch (err: any) {
-      toast.error(err.message);
+      console.error(err);
+      toast.error(err?.message || "Erreur lors de l'annulation");
     }
   };
 
@@ -77,7 +80,7 @@ export default function DepensePage() {
               <TableRow key={depense.id}>
                 <TableCell>{depense.numero}</TableCell>
                 <TableCell>{depense.type_depense.nom}</TableCell>
-                <TableCell>{depense.montant} Ar</TableCell>
+                <TableCell>{depense.montant.toLocaleString()} Ar</TableCell>
                 <TableCell>{depense.description}</TableCell>
                 <TableCell>{depense.statut}</TableCell>
                 <TableCell>{new Date(depense.date_creation).toLocaleDateString()}</TableCell>
