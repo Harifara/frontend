@@ -1,177 +1,134 @@
 import React, { useEffect, useState } from "react";
-import { fetchWithLog, getHeaders, API_BASE_URL } from "@/lib/api";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableCell,
-} from "@/components/ui/table";
+import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { stockApi, rhApi } from "@/lib/api"; // tes APIs configurées
+import { toast } from "react-hot-toast";
 
-export default function ValidationDemandesPage() {
-  const [demandes, setDemandes] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
+type Demande = {
+  id: string;
+  numero?: string;
+  description?: string;
+  article?: string;
+  quantite?: number;
+  montant: number;
+  statut: string;
+  commentaire?: string;
+};
 
-  // Dialog
-  const [openDialog, setOpenDialog] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [actionType, setActionType] = useState<"approuver" | "rejeter" | null>(null);
-  const [commentaire, setCommentaire] = useState("");
-
-  // Charger les validations
-  const fetchDemandes = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("kong_token");
-      if (!token) {
-        console.warn("Aucun token Kong trouvé");
-        setDemandes([]);
-        setLoading(false);
-        return;
-      }
-
-      const data = await fetchWithLog(`${API_BASE_URL}/finance/validations-demandes/`, {
-        headers: getHeaders(token),
-      });
-
-      console.log("Données reçues:", data);
-
-      // Adaptation si API retourne { results: [...] } ou tableau direct
-      setDemandes(Array.isArray(data) ? data : data.results || []);
-    } catch (e: any) {
-      console.error("Erreur chargement:", e.message || e);
-      setDemandes([]);
-    }
-    setLoading(false);
-  };
+const ValidationDemandesPage: React.FC = () => {
+  const [demandes, setDemandes] = useState<Demande[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [dialogOpen, setDialogOpen] = useState<boolean>(false);
+  const [selectedDemande, setSelectedDemande] = useState<Demande | null>(null);
 
   useEffect(() => {
     fetchDemandes();
   }, []);
 
-  // Ouvrir le dialog validation
-  const openValidationDialog = (id: string, type: "approuver" | "rejeter") => {
-    setSelectedId(id);
-    setActionType(type);
-    setCommentaire("");
-    setOpenDialog(true);
-  };
-
-  // Action API
-  const handleValidation = async () => {
-    if (!selectedId || !actionType) return;
-
+  const fetchDemandes = async () => {
+    setLoading(true);
     try {
-      const token = localStorage.getItem("kong_token");
-      if (!token) throw new Error("Token Kong manquant");
+      // RH Service
+      const rhResp = await rhApi.get("/demandes/");
+      const rhDemandes: Demande[] = (rhResp.data.results || []).map((d: any) => ({
+        id: d.id,
+        description: d.description,
+        montant: d.montant,
+        statut: d.status.toLowerCase(),
+      }));
 
-      await fetchWithLog(
-        `${API_BASE_URL}/finance/validations-demandes/${selectedId}/${actionType}/`,
-        {
-          method: "POST",
-          headers: getHeaders(token),
-          body: JSON.stringify({
-            responsable_finance_id: localStorage.getItem("user_id"),
-            commentaire,
-          }),
-        }
-      );
+      // Stock Service
+      const stockResp = await stockApi.get("/demandes-achat/");
+      const stockDemandes: Demande[] = (stockResp.data || []).map((d: any) => ({
+        id: d.id || d.Numero,
+        numero: d.Numero,
+        article: d.Article,
+        quantite: d.Quantite,
+        montant: Number(d["Montant Estimé"] || 0),
+        statut: d["Statut Finance"]?.toLowerCase() || "en_attente",
+        commentaire: d["Commentaire Finance"] || "",
+      }));
 
-      setOpenDialog(false);
-      fetchDemandes();
-    } catch (e: any) {
-      console.error("Erreur validation:", e.message || e);
+      // Fusionner toutes les demandes
+      const allDemandes = [...rhDemandes, ...stockDemandes].filter(d => d.statut === "en_attente");
+      setDemandes(allDemandes);
+    } catch (error) {
+      console.error("Erreur fetch demandes:", error);
+      toast.error("Impossible de charger les demandes.");
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleApprove = async (demande: Demande) => {
+    try {
+      if (demande.numero) {
+        // Stock service
+        await stockApi.post(`/demandes-achat/${demande.id}/approve/`);
+      } else {
+        // RH service
+        await rhApi.post(`/demandes/${demande.id}/approve/`);
+      }
+      toast.success("Demande approuvée !");
+      fetchDemandes();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors de l'approbation.");
+    }
+  };
+
+  const handleReject = async (demande: Demande) => {
+    try {
+      if (demande.numero) {
+        await stockApi.post(`/demandes-achat/${demande.id}/reject/`);
+      } else {
+        await rhApi.post(`/demandes/${demande.id}/reject/`);
+      }
+      toast.success("Demande rejetée !");
+      fetchDemandes();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors du rejet.");
+    }
+  };
+
+  if (loading) return <div>Chargement des demandes...</div>;
+  if (!demandes.length) return <div>Aucune demande à valider</div>;
+
   return (
-    <div className="p-6">
+    <div>
       <h1 className="text-xl font-bold mb-4">Validation des Demandes</h1>
-
-      {loading ? (
-        <p>Chargement…</p>
-      ) : demandes.length === 0 ? (
-        <p>Aucune demande à valider</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableCell>Numéro</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Montant</TableCell>
-              <TableCell>Statut</TableCell>
-              <TableCell>Service Origine</TableCell>
-              <TableCell>Actions</TableCell>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableCell>Numéro / Description</TableCell>
+            <TableCell>Article</TableCell>
+            <TableCell>Quantité</TableCell>
+            <TableCell>Montant</TableCell>
+            <TableCell>Commentaire</TableCell>
+            <TableCell>Actions</TableCell>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {demandes.map((d) => (
+            <TableRow key={d.id}>
+              <TableCell>{d.numero || d.description}</TableCell>
+              <TableCell>{d.article || "-"}</TableCell>
+              <TableCell>{d.quantite || "-"}</TableCell>
+              <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
+              <TableCell>{d.commentaire || "-"}</TableCell>
+              <TableCell className="space-x-2">
+                <Button onClick={() => handleApprove(d)} variant="default" size="sm">Approuver</Button>
+                <Button onClick={() => handleReject(d)} variant="destructive" size="sm">Rejeter</Button>
+              </TableCell>
             </TableRow>
-          </TableHeader>
-
-          <TableBody>
-            {demandes.map((d: any) => (
-              <TableRow key={d.id}>
-                <TableCell>{d.numero}</TableCell>
-                <TableCell>{d.type_demande}</TableCell>
-                <TableCell>{d.montant} Ar</TableCell>
-                <TableCell>{d.statut}</TableCell>
-                <TableCell>{d.service_origine}</TableCell>
-                <TableCell className="space-x-2">
-                  {d.statut === "en_attente" && (
-                    <>
-                      <Button
-                        variant="default"
-                        onClick={() => openValidationDialog(d.id, "approuver")}
-                      >
-                        Approuver
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        onClick={() => openValidationDialog(d.id, "rejeter")}
-                      >
-                        Rejeter
-                      </Button>
-                    </>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-
-      {/* DIALOG VALIDATION */}
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              {actionType === "approuver" ? "Approuver" : "Rejeter"} la demande
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="mt-4">
-            <label className="text-sm">Commentaire (facultatif)</label>
-            <Input
-              value={commentaire}
-              onChange={(e) => setCommentaire(e.target.value)}
-              placeholder="Votre remarque..."
-            />
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenDialog(false)}>
-              Annuler
-            </Button>
-            <Button onClick={handleValidation}>Confirmer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
-}
+};
+
+export default ValidationDemandesPage;
