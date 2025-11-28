@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
-import { stockApi, rhApi } from "@/lib/api";
+import { stockApi, rhApi, financeApi } from "@/lib/api";
 
 type Article = { id: string; nom?: string; description?: string; };
 
@@ -24,8 +24,8 @@ const ValidationDemandesPage: React.FC = () => {
   const fetchDemandes = async () => {
     setLoading(true);
     try {
-      // --- RH Service ---
-      const rhData = await rhApi.getDemandes(); // renvoie directement la liste
+      // RH
+      const rhData = await rhApi.getDemandes();
       const rhDemandes: Demande[] = (rhData.results || rhData || []).map((d: any) => ({
         id: d.id,
         description: d.description,
@@ -33,8 +33,8 @@ const ValidationDemandesPage: React.FC = () => {
         statut: (d.status || "").toLowerCase(),
       }));
 
-      // --- Stock Service ---
-      const stockData = await stockApi.getDemandesAchat(); // renvoie directement la liste
+      // Stock
+      const stockData = await stockApi.getDemandesAchat();
       const stockDemandes: Demande[] = (stockData.results || stockData || []).map((d: any) => ({
         id: d.id || d.numero,
         numero: d.numero,
@@ -45,10 +45,11 @@ const ValidationDemandesPage: React.FC = () => {
         commentaire: d.commentaire_finance || "",
       }));
 
+      // Fusion et filtrage
       const allDemandes = [...rhDemandes, ...stockDemandes].filter(d => d.statut === "en_attente");
       setDemandes(allDemandes);
 
-    } catch (err: any) {
+    } catch (err) {
       console.error("Erreur fetch demandes:", err);
       toast.error("Impossible de charger les demandes.");
     } finally {
@@ -56,9 +57,7 @@ const ValidationDemandesPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchDemandes();
-  }, []);
+  useEffect(() => { fetchDemandes(); }, []);
 
   const handleApprove = async (demande: Demande) => {
     try {
