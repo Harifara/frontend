@@ -21,6 +21,7 @@ interface DemandeAchat {
   quantite: number;
   montant_estime: number;
   statut: string;
+  demandeur_id: string;
   finance_valideur_id?: string | null;
   justification: string;
   commentaire_finance?: string;
@@ -60,8 +61,9 @@ export default function PageDemandesAchat() {
     setLoading(true);
     try {
       const res = await stockApi.getDemandesAchat();
+      console.log("Demandes récupérées :", res);
       setDemandes(res.results || res);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Erreur récupération demandes :", err);
       setDemandes([]);
     } finally {
@@ -72,8 +74,9 @@ export default function PageDemandesAchat() {
   const fetchArticles = async () => {
     try {
       const arts = await stockApi.getArticles();
+      console.log("Articles récupérés :", arts);
       setArticles(arts || []);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Erreur récupération articles :", err);
       setArticles([]);
     }
@@ -89,9 +92,10 @@ export default function PageDemandesAchat() {
   // -------------------------
   const handleValider = async (demande: DemandeAchat) => {
     try {
+      console.log("Validation de la demande :", demande);
       await stockApi.validerDemandeAchat(demande.id);
       fetchDemandes();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Erreur validation :", err);
     }
   };
@@ -102,18 +106,19 @@ export default function PageDemandesAchat() {
   };
 
   const submitRejet = async () => {
-    if (!selectedDemande || !commentaire.trim()) {
+    if (!selectedDemande || !commentaire) {
       alert("Le commentaire est obligatoire.");
       return;
     }
 
     try {
+      console.log("Rejet de la demande :", selectedDemande.id, "commentaire :", commentaire);
       await stockApi.rejeterDemandeAchat(selectedDemande.id, commentaire);
       setShowDialog(false);
       setCommentaire("");
       setSelectedDemande(null);
       fetchDemandes();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Erreur rejet :", err);
     }
   };
@@ -131,32 +136,47 @@ export default function PageDemandesAchat() {
   };
 
   const handleCreateDemande = async () => {
-    if (!articleId || quantite < 1 || montant <= 0 || !justification.trim()) {
-      setErrorMessage("Veuillez remplir tous les champs correctement.");
+    setErrorMessage("");
+
+    if (!articleId || !quantite || !montant || !justification) {
+      setErrorMessage("Veuillez remplir tous les champs.");
       return;
     }
 
     setIsSubmitting(true);
-    setErrorMessage("");
 
     try {
-      await stockApi.createDemandeAchat({
+      // --- LOG pour debug ---
+      console.log("Création demande d'achat - payload envoyé :", {
         article_id: articleId,
         quantite,
         montant_estime: montant,
         justification,
       });
 
+      const res = await stockApi.createDemandeAchat({
+        article_id: articleId,
+        quantite,
+        montant_estime: montant,
+        justification,
+      });
+
+      console.log("Réponse création :", res);
+
       resetForm();
       setShowCreate(false);
       fetchDemandes();
+
     } catch (err: any) {
       console.error("Erreur création :", err);
+
       if (err.response?.data) {
+        console.log("Réponse du serveur :", err.response.data);
         setErrorMessage(JSON.stringify(err.response.data));
       } else {
         setErrorMessage("Erreur lors de la création.");
       }
+
     } finally {
       setIsSubmitting(false);
     }
@@ -232,7 +252,7 @@ export default function PageDemandesAchat() {
           />
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => { setShowDialog(false); setCommentaire(""); }}>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>
               Annuler
             </Button>
             <Button variant="destructive" onClick={submitRejet}>
@@ -296,7 +316,7 @@ export default function PageDemandesAchat() {
             </Button>
 
             <Button
-              disabled={!articleId || quantite < 1 || montant <= 0 || !justification.trim() || isSubmitting}
+              disabled={!articleId || !quantite || !montant || !justification || isSubmitting}
               onClick={handleCreateDemande}
             >
               {isSubmitting ? "Création..." : "Créer"}
