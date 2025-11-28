@@ -4,17 +4,27 @@ import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { stockApi, rhApi } from "@/lib/api";
 
-type Article = { id: string; nom?: string; description?: string };
+type Article = { id: string; nom?: string };
+
+type AchatRH = { designation: string; quantite: number; prix: number; statut: string };
+type PaiementRH = { montant: number; statut: string };
 
 type Demande = {
   id: string;
   numero?: string;
   description?: string;
+
+  // STOCK
   article?: Article | null;
   quantite?: number;
+  commentaire?: string;
+
+  // RH
+  achats?: AchatRH[];
+  paiements?: PaiementRH[];
+
   montant: number;
   statut: string;
-  commentaire?: string;
   source: "rh" | "stock";
 };
 
@@ -31,16 +41,24 @@ const ValidationDemandesPage: React.FC = () => {
       const rhRes = await rhApi.getDemandes();
       const rhList = rhRes.results || rhRes || [];
 
-      const rhDemandes: Demande[] = rhList.map((d: any) => ({
-        id: d.id,
-        description: d.description,
-        montant: Number(d.montant || 0),
-        statut: (d.status || "").toLowerCase(),
-        source: "rh",
-      }));
+      // 👉 Pour chaque demande RH → on doit charger les détails
+      const rhDetails = await Promise.all(
+        rhList.map(async (d: any) => {
+          const full = await rhApi.getDemande(d.id); // ⚠️ IMPORTANT
+          return {
+            id: d.id,
+            description: d.description,
+            montant: Number(d.montant || 0),
+            statut: (d.status || "").toLowerCase(),
+            source: "rh",
+            achats: full.achats || [],
+            paiements: full.payements || [],
+          };
+        })
+      );
 
       // -------------------------------
-      // 📌 2. Demandes Stock
+      // 📌 2. Demandes STOCK
       // -------------------------------
       const stockRes = await stockApi.getDemandesAchat();
       const stockList = stockRes.results || stockRes || [];
@@ -57,7 +75,7 @@ const ValidationDemandesPage: React.FC = () => {
       }));
 
       // Fusion + filtrage
-      const all = [...rhDemandes, ...stockDemandes].filter(
+      const all = [...rhDetails, ...stockDemandes].filter(
         d => d.statut === "en_attente"
       );
 
@@ -87,8 +105,7 @@ const ValidationDemandesPage: React.FC = () => {
       }
       toast.success("Demande approuvée");
       fetchDemandes();
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error("Erreur");
     }
   };
@@ -105,8 +122,7 @@ const ValidationDemandesPage: React.FC = () => {
       }
       toast.success("Demande rejetée");
       fetchDemandes();
-    } catch (err) {
-      console.error(err);
+    } catch {
       toast.error("Erreur lors du rejet");
     }
   };
@@ -124,10 +140,8 @@ const ValidationDemandesPage: React.FC = () => {
         <TableHeader>
           <TableRow>
             <TableCell>Numéro / Description</TableCell>
-            <TableCell>Article</TableCell>
-            <TableCell>Quantité</TableCell>
+            <TableCell>Détails</TableCell>
             <TableCell>Montant</TableCell>
-            <TableCell>Commentaire</TableCell>
             <TableCell>Service</TableCell>
             <TableCell>Actions</TableCell>
           </TableRow>
@@ -137,18 +151,46 @@ const ValidationDemandesPage: React.FC = () => {
           {demandes.map(d => (
             <TableRow key={d.id}>
               <TableCell>{d.numero || d.description}</TableCell>
-              <TableCell>{d.article?.nom || "-"}</TableCell>
-              <TableCell>{d.quantite ?? "-"}</TableCell>
-              <TableCell>{formatMontant(d.montant)}</TableCell>
-              <TableCell>{d.commentaire || "-"}</TableCell>
+
+              {/* Détails */}
               <TableCell>
-                {d.source === "stock" ? "Stock" : "Ressources Humaines"}
+                {d.source === "stock" ? (
+                  <>
+                    <b>Article : </b> {d.article?.nom} <br />
+                    <b>Quantité : </b> {d.quantite}
+                  </>
+                ) : (
+                  <>
+                    <b>Achats :</b>
+                    {d.achats?.length ? (
+                      <ul className="list-disc ml-4">
+                        {d.achats.map((a, i) => (
+                          <li key={i}>
+                            {a.designation}, {a.quantite} x {a.prix} Ar ({a.statut})
+                          </li>
+                        ))}
+                      </ul>
+                    ) : " - "}
+                    <b>Payements :</b>
+                    {d.paiements?.length ? (
+                      <ul className="list-disc ml-4">
+                        {d.paiements.map((p, i) => (
+                          <li key={i}>
+                            {p.montant} Ar - {p.statut}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : " - "}
+                  </>
+                )}
               </TableCell>
 
+              <TableCell>{formatMontant(d.montant)}</TableCell>
+
+              <TableCell>{d.source === "stock" ? "Stock" : "RH"}</TableCell>
+
               <TableCell className="space-x-2">
-                <Button size="sm" onClick={() => handleApprove(d)}>
-                  Approuver
-                </Button>
+                <Button size="sm" onClick={() => handleApprove(d)}>Approuver</Button>
                 <Button size="sm" variant="destructive" onClick={() => handleReject(d)}>
                   Rejeter
                 </Button>
