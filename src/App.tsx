@@ -43,7 +43,8 @@ import MouvementStock from "./pages/stock/MouvementStock";
 import DemandesReapproPage from "./pages/stock/DemandesReapproPage";
 import PageDemandesAchat from "./pages/stock/PageDemandesAchat";
 
-import ValidationDemandesPage from "./pages/finace/ValidationDemandesPage";
+import ValidationDemandesPage from "./pages/finance/ValidationDemandesPage";
+
 
 
 const queryClient = new QueryClient();
