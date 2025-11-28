@@ -51,7 +51,6 @@ export default function PageDemandesAchat() {
   const [montant, setMontant] = useState(0);
   const [justification, setJustification] = useState("");
 
-  // Ajouts pour amélioration
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -120,7 +119,6 @@ export default function PageDemandesAchat() {
     }
   };
 
-  // RESET du formulaire création
   const resetForm = () => {
     setArticleId("");
     setQuantite(1);
@@ -133,19 +131,19 @@ export default function PageDemandesAchat() {
   const handleCreateDemande = async () => {
     setErrorMessage("");
 
-    if (!articleId || !quantite || !montant || !justification) {
-      setErrorMessage("Veuillez remplir tous les champs.");
-      return;
-    }
+    if (!articleId) return setErrorMessage("Veuillez sélectionner un article.");
+    if (!quantite || quantite <= 0) return setErrorMessage("Quantité invalide.");
+    if (!montant || montant <= 0) return setErrorMessage("Montant invalide.");
+    if (!justification.trim()) return setErrorMessage("Justification obligatoire.");
 
     setIsSubmitting(true);
 
     try {
       await stockApi.createDemandeAchat({
         article_id: articleId,
-        quantite,
-        montant_estime: montant,
-        justification,
+        quantite: Number(quantite),
+        montant_estime: Number(montant),
+        justification: justification.trim(),
       });
 
       resetForm();
@@ -154,13 +152,11 @@ export default function PageDemandesAchat() {
 
     } catch (err: any) {
       console.error("Erreur création :", err);
-
       if (err.response?.data) {
         setErrorMessage(JSON.stringify(err.response.data));
       } else {
         setErrorMessage("Erreur lors de la création.");
       }
-
     } finally {
       setIsSubmitting(false);
     }
@@ -212,9 +208,7 @@ export default function PageDemandesAchat() {
                   {d.statut === "en_attente" && (
                     <>
                       <Button onClick={() => handleValider(d)}>Valider</Button>
-                      <Button variant="destructive" onClick={() => handleRejeter(d)}>
-                        Rejeter
-                      </Button>
+                      <Button variant="destructive" onClick={() => handleRejeter(d)}>Rejeter</Button>
                     </>
                   )}
                 </TableCell>
@@ -238,12 +232,8 @@ export default function PageDemandesAchat() {
           />
 
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
-              Annuler
-            </Button>
-            <Button variant="destructive" onClick={submitRejet}>
-              Rejeter
-            </Button>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={submitRejet}>Rejeter</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -256,16 +246,13 @@ export default function PageDemandesAchat() {
           </DialogHeader>
 
           <div className="space-y-4">
-
             <Select value={articleId} onValueChange={setArticleId}>
               <SelectTrigger>
                 <SelectValue placeholder="Sélectionner un article" />
               </SelectTrigger>
               <SelectContent>
                 {articles.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.nom}
-                  </SelectItem>
+                  <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -292,10 +279,7 @@ export default function PageDemandesAchat() {
               onChange={(e) => setJustification(e.target.value)}
             />
 
-            {errorMessage && (
-              <p className="text-red-600 text-sm">{errorMessage}</p>
-            )}
-
+            {errorMessage && <p className="text-red-600 text-sm">{errorMessage}</p>}
           </div>
 
           <DialogFooter className="mt-4">
