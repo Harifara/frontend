@@ -26,11 +26,9 @@ const ValidationDemandesPage: React.FC = () => {
     setLoading(true);
     try {
       // -------------------------------
-      // 📌 1. Demandes RH
-      // -------------------------------
+      // Demandes RH
       const rhRes = await rhApi.getDemandes();
       const rhList = rhRes.results || rhRes || [];
-
       const rhDemandes: Demande[] = rhList.map((d: any) => ({
         id: d.id,
         description: d.description,
@@ -40,11 +38,9 @@ const ValidationDemandesPage: React.FC = () => {
       }));
 
       // -------------------------------
-      // 📌 2. Demandes Stock
-      // -------------------------------
+      // Demandes Stock
       const stockRes = await stockApi.getDemandesAchat();
       const stockList = stockRes.results || stockRes || [];
-
       const stockDemandes: Demande[] = stockList.map((d: any) => ({
         id: d.id,
         numero: d.numero,
@@ -56,13 +52,8 @@ const ValidationDemandesPage: React.FC = () => {
         source: "stock",
       }));
 
-      // Fusion + filtrage
-      const all = [...rhDemandes, ...stockDemandes].filter(
-        d => d.statut === "en_attente"
-      );
-
+      const all = [...rhDemandes, ...stockDemandes].filter(d => d.statut === "en_attente");
       setDemandes(all);
-
     } catch (err) {
       console.error(err);
       toast.error("Erreur lors du chargement.");
@@ -75,34 +66,24 @@ const ValidationDemandesPage: React.FC = () => {
     fetchDemandes();
   }, []);
 
-  // -------------------------------
-  // 📌 Validation
-  // -------------------------------
   const handleApprove = async (demande: Demande) => {
     try {
-      if (demande.source === "stock") {
-        await stockApi.validerDemandeAchat(demande.id);
-      } else {
-        await rhApi.approveDemande(demande.id);
-      }
+      if (demande.source === "stock") await stockApi.validerDemandeAchat(demande.id);
+      else await rhApi.approveDemande(demande.id);
+
       toast.success("Demande approuvée");
       fetchDemandes();
     } catch (err) {
       console.error(err);
-      toast.error("Erreur");
+      toast.error("Erreur lors de l'approbation");
     }
   };
 
-  // -------------------------------
-  // 📌 Rejet
-  // -------------------------------
   const handleReject = async (demande: Demande) => {
     try {
-      if (demande.source === "stock") {
-        await stockApi.rejeterDemandeAchat(demande.id, "Rejet via finance");
-      } else {
-        await rhApi.rejectDemande(demande.id, "Rejet via finance");
-      }
+      if (demande.source === "stock") await stockApi.rejeterDemandeAchat(demande.id, "Rejet via finance");
+      else await rhApi.rejectDemande(demande.id, "Rejet via finance");
+
       toast.success("Demande rejetée");
       fetchDemandes();
     } catch (err) {
@@ -136,22 +117,15 @@ const ValidationDemandesPage: React.FC = () => {
         <TableBody>
           {demandes.map(d => (
             <TableRow key={d.id}>
-              <TableCell>{d.numero || d.description}</TableCell>
+              <TableCell>{d.numero || d.description || "-"}</TableCell>
               <TableCell>{d.article?.nom || "-"}</TableCell>
-              <TableCell>{d.quantite ?? "-"}</TableCell>
+              <TableCell>{d.quantite !== undefined ? d.quantite : "-"}</TableCell>
               <TableCell>{formatMontant(d.montant)}</TableCell>
               <TableCell>{d.commentaire || "-"}</TableCell>
-              <TableCell>
-                {d.source === "stock" ? "Stock" : "Ressources Humaines"}
-              </TableCell>
-
-              <TableCell className="space-x-2">
-                <Button size="sm" onClick={() => handleApprove(d)}>
-                  Approuver
-                </Button>
-                <Button size="sm" variant="destructive" onClick={() => handleReject(d)}>
-                  Rejeter
-                </Button>
+              <TableCell>{d.source === "stock" ? "Stock" : "Ressources Humaines"}</TableCell>
+              <TableCell className="flex gap-2">
+                <Button size="sm" onClick={() => handleApprove(d)}>Approuver</Button>
+                <Button size="sm" variant="destructive" onClick={() => handleReject(d)}>Rejeter</Button>
               </TableCell>
             </TableRow>
           ))}
