@@ -22,6 +22,8 @@ import { stockApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { createPDFDoc } from "@/lib/pdfTemplate";
+import { stockApi, authApi } from "@/lib/api";
+
 
 
 
@@ -56,7 +58,7 @@ const StockManagement: React.FC = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [stockToDelete, setStockToDelete] = useState<Stock | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
-
+  const [isLoadingUserRole, setIsLoadingUserRole] = useState(true);
   const [form, setForm] = useState({
     article: "",
     magasin: "",
@@ -70,10 +72,13 @@ const StockManagement: React.FC = () => {
   useEffect(() => {
     const fetchUserRole = async () => {
       try {
-        const userData = await authApi.me(); // retourne { role: "magasinier" | "admin" | ... }
+        const userData = await authApi.me();
         setUserRole(userData.role);
       } catch (error: any) {
+        console.error("Erreur récupération rôle:", error);
         toast({ title: "Erreur", description: "Impossible de récupérer le rôle de l'utilisateur", variant: "destructive" });
+      } finally {
+        setIsLoadingUserRole(false);
       }
     };
     fetchUserRole();
