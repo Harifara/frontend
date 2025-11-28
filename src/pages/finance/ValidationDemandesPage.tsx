@@ -1,14 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { stockApi, rhApi, financeApi } from "@/lib/api"; // attention à bien utiliser financeApi si nécessaire
 import { toast } from "react-hot-toast";
-import { stockApi, rhApi } from "@/lib/api";
+
+type Article = {
+  id: string;
+  code?: string;
+  nom?: string;
+  description?: string;
+  unite_mesure?: string;
+  prix_unitaire_estime?: number;
+  is_active?: boolean;
+  categorie?: string;
+  created_at?: string;
+  updated_at?: string;
+};
 
 type Demande = {
   id: string;
   numero?: string;
   description?: string;
-  article?: string;
+  article?: Article;
   quantite?: number;
   montant: number;
   statut: string;
@@ -27,31 +42,29 @@ const ValidationDemandesPage: React.FC = () => {
     setLoading(true);
     try {
       // RH Service
-      const rhDemandesRaw = await rhApi.getDemandes();
-      const rhDemandes: Demande[] = rhDemandesRaw
-        .map((d: any) => ({
-          id: d.id,
-          description: d.description,
-          montant: d.montant,
-          statut: d.statut?.toLowerCase() || "en_attente",
-        }))
-        .filter(d => d.statut === "en_attente");
+      const rhResp = await rhApi.get("/demandes/");
+      const rhDemandes: Demande[] = (rhResp.data.results || []).map((d: any) => ({
+        id: d.id,
+        description: d.description,
+        montant: d.montant,
+        statut: d.status.toLowerCase(),
+      }));
 
       // Stock Service
-      const stockDemandesRaw = await stockApi.getDemandesAchat();
-      const stockDemandes: Demande[] = stockDemandesRaw
-        .map((d: any) => ({
-          id: d.id,
-          numero: d.article_id || d.id,
-          article: d.article || "-",
-          quantite: d.quantite,
-          montant: Number(d.montant_estime || 0),
-          statut: (d.statut_finance || "en_attente").toLowerCase(),
-          commentaire: d.commentaire_finance || "",
-        }))
-        .filter(d => d.statut === "en_attente");
+      const stockResp = await stockApi.get("/demandes-achat/");
+      const stockDemandes: Demande[] = (stockResp.data || []).map((d: any) => ({
+        id: d.id || d.Numero,
+        numero: d.Numero,
+        article: d.Article || null,
+        quantite: d.Quantite,
+        montant: Number(d["Montant Estimé"] || 0),
+        statut: d["Statut Finance"]?.toLowerCase() || "en_attente",
+        commentaire: d["Commentaire Finance"] || "",
+      }));
 
-      setDemandes([...rhDemandes, ...stockDemandes]);
+      // Fusionner toutes les demandes et ne garder que celles en attente
+      const allDemandes = [...rhDemandes, ...stockDemandes].filter(d => d.statut === "en_attente");
+      setDemandes(allDemandes);
     } catch (error) {
       console.error("Erreur fetch demandes:", error);
       toast.error("Impossible de charger les demandes.");
@@ -63,9 +76,11 @@ const ValidationDemandesPage: React.FC = () => {
   const handleApprove = async (demande: Demande) => {
     try {
       if (demande.numero) {
-        await stockApi.validerDemandeAchat(demande.id);
+        // Stock service
+        await stockApi.post(`/demandes-achat/${demande.id}/approve/`);
       } else {
-        await rhApi.approveDemande(demande.id);
+        // RH service
+        await rhApi.post(`/demandes/${demande.id}/approve/`);
       }
       toast.success("Demande approuvée !");
       fetchDemandes();
@@ -78,9 +93,9 @@ const ValidationDemandesPage: React.FC = () => {
   const handleReject = async (demande: Demande) => {
     try {
       if (demande.numero) {
-        await stockApi.rejeterDemandeAchat(demande.id, demande.commentaire || "");
+        await stockApi.post(`/demandes-achat/${demande.id}/reject/`);
       } else {
-        await rhApi.rejectDemande(demande.id);
+        await rhApi.post(`/demandes/${demande.id}/reject/`);
       }
       toast.success("Demande rejetée !");
       fetchDemandes();
@@ -111,7 +126,11 @@ const ValidationDemandesPage: React.FC = () => {
           {demandes.map((d) => (
             <TableRow key={d.id}>
               <TableCell>{d.numero || d.description}</TableCell>
-              <TableCell>{d.article || "-"}</TableCell>
+              <TableCell>
+                {d.article
+                  ? d.article.nom || d.article.description || "-"
+                  : "-"}
+              </TableCell>
               <TableCell>{d.quantite ?? "-"}</TableCell>
               <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
               <TableCell>{d.commentaire || "-"}</TableCell>
