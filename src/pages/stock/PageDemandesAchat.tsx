@@ -1,317 +1,156 @@
 import React, { useEffect, useState } from "react";
-import { stockApi } from "@/lib/api";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { toast } from "react-hot-toast";
+import { stockApi, rhApi } from "@/lib/api";
 
 // -------------------------
-// Interfaces
+// Types
 // -------------------------
-interface Article {
+type Article = {
   id: string;
-  nom: string;
-}
+  nom?: string;
+  description?: string;
+};
 
-interface DemandeAchat {
+type Demande = {
   id: string;
-  numero: string;
+  numero?: string;
+  description?: string;
   article?: Article | null;
-  quantite: number;
-  montant_estime: number;
+  quantite?: number;
+  montant: number;
   statut: string;
-  demandeur_id: string;
-  finance_valideur_id?: string | null;
-  justification: string;
-  commentaire_finance?: string;
-  date_validation_finance?: string;
-  statut_reception: string;
-  date_reception?: string;
-  magasin_reception_id?: string;
-  created_at: string;
-  updated_at: string;
-}
+  commentaire?: string;
+};
 
 // -------------------------
 // Composant
 // -------------------------
-export default function PageDemandesAchat() {
-  const [demandes, setDemandes] = useState<DemandeAchat[]>([]);
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const [selectedDemande, setSelectedDemande] = useState<DemandeAchat | null>(null);
-  const [commentaire, setCommentaire] = useState("");
-  const [showDialog, setShowDialog] = useState(false);
-
-  const [showCreate, setShowCreate] = useState(false);
-  const [articleId, setArticleId] = useState("");
-  const [quantite, setQuantite] = useState(1);
-  const [montant, setMontant] = useState(0);
-  const [justification, setJustification] = useState("");
-
-  // Ajouts pour amélioration
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+const ValidationDemandesPage: React.FC = () => {
+  const [demandes, setDemandes] = useState<Demande[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // -------------------------
-  // Fetch données
+  // Fetch des demandes
   // -------------------------
   const fetchDemandes = async () => {
     setLoading(true);
     try {
-      const res = await stockApi.getDemandesAchat();
-      setDemandes(res.results || res);
-    } catch (err) {
-      console.error("Erreur récupération demandes :", err);
-      setDemandes([]);
+      // RH Service
+      const rhResp = await rhApi.getDemandes(); // fonction custom
+      const rhDemandes: Demande[] = (rhResp.results || []).map((d: any) => ({
+        id: d.id,
+        description: d.description,
+        montant: Number(d.montant || 0),
+        statut: (d.status || "").toLowerCase(),
+      }));
+
+      // Stock Service
+      const stockResp = await stockApi.getDemandesAchat(); // fonction custom
+      const stockDemandes: Demande[] = (stockResp.results || stockResp || []).map((d: any) => ({
+        id: d.id || d.numero,
+        numero: d.numero,
+        article: d.article || null,
+        quantite: d.quantite ?? 0,
+        montant: Number(d.montant_estime || 0),
+        statut: (d.statut || "en_attente").toLowerCase(),
+        commentaire: d.commentaire_finance || "",
+      }));
+
+      // Fusionner toutes les demandes et ne garder que celles en attente
+      const allDemandes = [...rhDemandes, ...stockDemandes].filter(d => d.statut === "en_attente");
+      setDemandes(allDemandes);
+
+    } catch (error) {
+      console.error("Erreur fetch demandes:", error);
+      toast.error("Impossible de charger les demandes.");
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchArticles = async () => {
-    try {
-      const arts = await stockApi.getArticles();
-      setArticles(arts || []);
-    } catch (err) {
-      console.error("Erreur récupération articles :", err);
-      setArticles([]);
-    }
-  };
-
   useEffect(() => {
     fetchDemandes();
-    fetchArticles();
   }, []);
 
   // -------------------------
-  // Actions
+  // Actions approbation / rejet
   // -------------------------
-  const handleValider = async (demande: DemandeAchat) => {
+  const handleApprove = async (demande: Demande) => {
     try {
-      await stockApi.validerDemandeAchat(demande.id);
-      fetchDemandes();
-    } catch (err) {
-      console.error("Erreur validation :", err);
-    }
-  };
-
-  const handleRejeter = (demande: DemandeAchat) => {
-    setSelectedDemande(demande);
-    setShowDialog(true);
-  };
-
-  const submitRejet = async () => {
-    if (!selectedDemande || !commentaire) {
-      alert("Le commentaire est obligatoire.");
-      return;
-    }
-
-    try {
-      await stockApi.rejeterDemandeAchat(selectedDemande.id, commentaire);
-      setShowDialog(false);
-      setCommentaire("");
-      setSelectedDemande(null);
-      fetchDemandes();
-    } catch (err) {
-      console.error("Erreur rejet :", err);
-    }
-  };
-
-  // RESET du formulaire création
-  const resetForm = () => {
-    setArticleId("");
-    setQuantite(1);
-    setMontant(0);
-    setJustification("");
-    setErrorMessage("");
-    setIsSubmitting(false);
-  };
-
-  const handleCreateDemande = async () => {
-    setErrorMessage("");
-
-    if (!articleId || !quantite || !montant || !justification) {
-      setErrorMessage("Veuillez remplir tous les champs.");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      await stockApi.createDemandeAchat({
-        article_id: articleId,
-        quantite,
-        montant_estime: montant,
-        justification,
-      });
-
-      resetForm();
-      setShowCreate(false);
-      fetchDemandes();
-
-    } catch (err: any) {
-      console.error("Erreur création :", err);
-
-      if (err.response?.data) {
-        setErrorMessage(JSON.stringify(err.response.data));
+      if (demande.numero) {
+        await stockApi.validerDemandeAchat(demande.id);
       } else {
-        setErrorMessage("Erreur lors de la création.");
+        await rhApi.approveDemande(demande.id);
       }
-
-    } finally {
-      setIsSubmitting(false);
+      toast.success("Demande approuvée !");
+      fetchDemandes();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors de l'approbation.");
     }
   };
+
+  const handleReject = async (demande: Demande) => {
+    try {
+      if (demande.numero) {
+        await stockApi.rejeterDemandeAchat(demande.id, "Rejet via validation page");
+      } else {
+        await rhApi.rejectDemande(demande.id, "Rejet via validation page");
+      }
+      toast.success("Demande rejetée !");
+      fetchDemandes();
+    } catch (error) {
+      console.error(error);
+      toast.error("Erreur lors du rejet.");
+    }
+  };
+
+  const formatMontant = (montant: number) => montant.toLocaleString() + " Ar";
 
   // -------------------------
   // Render
   // -------------------------
+  if (loading) return <div>Chargement des demandes...</div>;
+  if (!demandes.length) return <div>Aucune demande à valider</div>;
+
   return (
-    <div className="p-4">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Demandes d'Achat</h1>
-        <Button onClick={() => setShowCreate(true)}>Nouvelle Demande</Button>
-      </div>
-
-      {/* Table */}
-      {loading ? (
-        <p>Chargement...</p>
-      ) : demandes.length === 0 ? (
-        <p>Aucune demande trouvée.</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableCell>Numéro</TableCell>
-              <TableCell>Article</TableCell>
-              <TableCell>Quantité</TableCell>
-              <TableCell>Montant Estimé</TableCell>
-              <TableCell>Statut Finance</TableCell>
-              <TableCell>Commentaire Finance</TableCell>
-              <TableCell>Statut Réception</TableCell>
-              <TableCell>Date Réception</TableCell>
-              <TableCell>Actions</TableCell>
+    <div>
+      <h1 className="text-xl font-bold mb-4">Validation des Demandes</h1>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableCell>Numéro / Description</TableCell>
+            <TableCell>Article</TableCell>
+            <TableCell>Quantité</TableCell>
+            <TableCell>Montant</TableCell>
+            <TableCell>Commentaire</TableCell>
+            <TableCell>Actions</TableCell>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {demandes.map((d) => (
+            <TableRow key={d.id}>
+              <TableCell>{d.numero || d.description}</TableCell>
+              <TableCell>{d.article ? d.article.nom || d.article.description || "-" : "-"}</TableCell>
+              <TableCell>{d.quantite ?? "-"}</TableCell>
+              <TableCell>{formatMontant(d.montant)}</TableCell>
+              <TableCell>{d.commentaire || "-"}</TableCell>
+              <TableCell className="space-x-2">
+                <Button onClick={() => handleApprove(d)} variant="default" size="sm">
+                  Approuver
+                </Button>
+                <Button onClick={() => handleReject(d)} variant="destructive" size="sm">
+                  Rejeter
+                </Button>
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {demandes.map((d) => (
-              <TableRow key={d.id}>
-                <TableCell>{d.numero}</TableCell>
-                <TableCell>{d.article?.nom || "-"}</TableCell>
-                <TableCell>{d.quantite}</TableCell>
-                <TableCell>{d.montant_estime}</TableCell>
-                <TableCell>{d.statut}</TableCell>
-                <TableCell>{d.commentaire_finance || "-"}</TableCell>
-                <TableCell>{d.statut_reception}</TableCell>
-                <TableCell>{d.date_reception || "-"}</TableCell>
-                <TableCell className="space-x-2">
-                  {d.statut === "en_attente" && (
-                    <>
-                      <Button onClick={() => handleValider(d)}>Valider</Button>
-                      <Button variant="destructive" onClick={() => handleRejeter(d)}>
-                        Rejeter
-                      </Button>
-                    </>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-
-      {/* Modal Rejet */}
-      <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rejeter la demande</DialogTitle>
-          </DialogHeader>
-
-          <Input
-            placeholder="Commentaire de rejet"
-            value={commentaire}
-            onChange={(e) => setCommentaire(e.target.value)}
-          />
-
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => setShowDialog(false)}>
-              Annuler
-            </Button>
-            <Button variant="destructive" onClick={submitRejet}>
-              Rejeter
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Création */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Nouvelle Demande d'Achat</DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4">
-
-            <Select value={articleId} onValueChange={setArticleId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner un article" />
-              </SelectTrigger>
-              <SelectContent>
-                {articles.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.nom}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Input
-              type="number"
-              placeholder="Quantité"
-              value={quantite}
-              min={1}
-              onChange={(e) => setQuantite(Number(e.target.value))}
-            />
-
-            <Input
-              type="number"
-              placeholder="Montant estimé"
-              value={montant}
-              min={1}
-              onChange={(e) => setMontant(Number(e.target.value))}
-            />
-
-            <Input
-              placeholder="Justification"
-              value={justification}
-              onChange={(e) => setJustification(e.target.value)}
-            />
-
-            {errorMessage && (
-              <p className="text-red-600 text-sm">{errorMessage}</p>
-            )}
-
-          </div>
-
-          <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={() => { setShowCreate(false); resetForm(); }}>
-              Annuler
-            </Button>
-
-            <Button
-              disabled={!articleId || !quantite || !montant || !justification || isSubmitting}
-              onClick={handleCreateDemande}
-            >
-              {isSubmitting ? "Création..." : "Créer"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
-}
+};
+
+export default ValidationDemandesPage;
