@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { stockApi, rhApi, financeApi } from "@/lib/api"; // attention à bien utiliser financeApi si nécessaire
 import { toast } from "react-hot-toast";
+import { stockApi, rhApi } from "@/lib/api";
 
 type Article = {
   id: string;
@@ -23,7 +21,7 @@ type Demande = {
   id: string;
   numero?: string;
   description?: string;
-  article?: Article;
+  article?: Article | null;
   quantite?: number;
   montant: number;
   statut: string;
@@ -43,11 +41,11 @@ const ValidationDemandesPage: React.FC = () => {
     try {
       // RH Service
       const rhResp = await rhApi.get("/demandes/");
-      const rhDemandes: Demande[] = (rhResp.data.results || []).map((d: any) => ({
+      const rhDemandes: Demande[] = (rhResp.data?.results || []).map((d: any) => ({
         id: d.id,
         description: d.description,
-        montant: d.montant,
-        statut: d.status.toLowerCase(),
+        montant: Number(d.montant || 0),
+        statut: (d.status || "").toLowerCase(),
       }));
 
       // Stock Service
@@ -56,9 +54,9 @@ const ValidationDemandesPage: React.FC = () => {
         id: d.id || d.Numero,
         numero: d.Numero,
         article: d.Article || null,
-        quantite: d.Quantite,
+        quantite: d.Quantite ?? 0,
         montant: Number(d["Montant Estimé"] || 0),
-        statut: d["Statut Finance"]?.toLowerCase() || "en_attente",
+        statut: (d["Statut Finance"] || "en_attente").toLowerCase(),
         commentaire: d["Commentaire Finance"] || "",
       }));
 
@@ -76,10 +74,8 @@ const ValidationDemandesPage: React.FC = () => {
   const handleApprove = async (demande: Demande) => {
     try {
       if (demande.numero) {
-        // Stock service
         await stockApi.post(`/demandes-achat/${demande.id}/approve/`);
       } else {
-        // RH service
         await rhApi.post(`/demandes/${demande.id}/approve/`);
       }
       toast.success("Demande approuvée !");
@@ -105,6 +101,8 @@ const ValidationDemandesPage: React.FC = () => {
     }
   };
 
+  const formatMontant = (montant: number) => montant?.toLocaleString() + " Ar";
+
   if (loading) return <div>Chargement des demandes...</div>;
   if (!demandes.length) return <div>Aucune demande à valider</div>;
 
@@ -127,12 +125,10 @@ const ValidationDemandesPage: React.FC = () => {
             <TableRow key={d.id}>
               <TableCell>{d.numero || d.description}</TableCell>
               <TableCell>
-                {d.article
-                  ? d.article.nom || d.article.description || "-"
-                  : "-"}
+                {d.article ? d.article.nom || d.article.description || "-" : "-"}
               </TableCell>
               <TableCell>{d.quantite ?? "-"}</TableCell>
-              <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
+              <TableCell>{formatMontant(d.montant)}</TableCell>
               <TableCell>{d.commentaire || "-"}</TableCell>
               <TableCell className="space-x-2">
                 <Button onClick={() => handleApprove(d)} variant="default" size="sm">
