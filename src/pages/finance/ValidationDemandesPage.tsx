@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 
 export default function ValidationDemandesPage() {
-  const [demandes, setDemandes] = useState([]);
+  const [demandes, setDemandes] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Dialog
@@ -32,12 +32,24 @@ export default function ValidationDemandesPage() {
     setLoading(true);
     try {
       const token = localStorage.getItem("kong_token");
+      if (!token) {
+        console.warn("Aucun token Kong trouvé");
+        setDemandes([]);
+        setLoading(false);
+        return;
+      }
+
       const data = await fetchWithLog(`${API_BASE_URL}/finance/validations-demandes/`, {
         headers: getHeaders(token),
       });
-      setDemandes(data);
-    } catch (e) {
-      console.error("Erreur chargement:", e);
+
+      console.log("Données reçues:", data);
+
+      // Adaptation si API retourne { results: [...] } ou tableau direct
+      setDemandes(Array.isArray(data) ? data : data.results || []);
+    } catch (e: any) {
+      console.error("Erreur chargement:", e.message || e);
+      setDemandes([]);
     }
     setLoading(false);
   };
@@ -60,6 +72,8 @@ export default function ValidationDemandesPage() {
 
     try {
       const token = localStorage.getItem("kong_token");
+      if (!token) throw new Error("Token Kong manquant");
+
       await fetchWithLog(
         `${API_BASE_URL}/finance/validations-demandes/${selectedId}/${actionType}/`,
         {
@@ -74,8 +88,8 @@ export default function ValidationDemandesPage() {
 
       setOpenDialog(false);
       fetchDemandes();
-    } catch (e) {
-      console.error("Erreur validation:", e);
+    } catch (e: any) {
+      console.error("Erreur validation:", e.message || e);
     }
   };
 
@@ -85,6 +99,8 @@ export default function ValidationDemandesPage() {
 
       {loading ? (
         <p>Chargement…</p>
+      ) : demandes.length === 0 ? (
+        <p>Aucune demande à valider</p>
       ) : (
         <Table>
           <TableHeader>
