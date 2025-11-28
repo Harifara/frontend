@@ -2,9 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
-import { stockApi, rhApi, financeApi } from "@/lib/api";
+import { stockApi, rhApi } from "@/lib/api";
 
-type Article = { id: string; nom?: string; description?: string; };
+type Article = { id: string; nom?: string; description?: string };
 
 type Demande = {
   id: string;
@@ -15,82 +15,111 @@ type Demande = {
   montant: number;
   statut: string;
   commentaire?: string;
+  source: "rh" | "stock";
 };
 
 const ValidationDemandesPage: React.FC = () => {
   const [demandes, setDemandes] = useState<Demande[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
 
   const fetchDemandes = async () => {
     setLoading(true);
     try {
-      // RH
-      const rhData = await rhApi.getDemandes();
-      const rhDemandes: Demande[] = (rhData.results || rhData || []).map((d: any) => ({
+      // -------------------------------
+      // 📌 1. Demandes RH
+      // -------------------------------
+      const rhRes = await rhApi.getDemandes();
+      const rhList = rhRes.results || rhRes || [];
+
+      const rhDemandes: Demande[] = rhList.map((d: any) => ({
         id: d.id,
         description: d.description,
         montant: Number(d.montant || 0),
         statut: (d.status || "").toLowerCase(),
+        source: "rh",
       }));
 
-      // Stock
-      const stockData = await stockApi.getDemandesAchat();
-      const stockDemandes: Demande[] = (stockData.results || stockData || []).map((d: any) => ({
-        id: d.id || d.numero,
+      // -------------------------------
+      // 📌 2. Demandes Stock
+      // -------------------------------
+      const stockRes = await stockApi.getDemandesAchat();
+      const stockList = stockRes.results || stockRes || [];
+
+      const stockDemandes: Demande[] = stockList.map((d: any) => ({
+        id: d.id,
         numero: d.numero,
-        article: d.article || null,
-        quantite: d.quantite ?? 0,
+        article: d.article,
+        quantite: d.quantite,
         montant: Number(d.montant_estime || 0),
         statut: (d.statut || "en_attente").toLowerCase(),
         commentaire: d.commentaire_finance || "",
+        source: "stock",
       }));
 
-      // Fusion et filtrage
-      const allDemandes = [...rhDemandes, ...stockDemandes].filter(d => d.statut === "en_attente");
-      setDemandes(allDemandes);
+      // Fusion + filtrage
+      const all = [...rhDemandes, ...stockDemandes].filter(
+        d => d.statut === "en_attente"
+      );
+
+      setDemandes(all);
 
     } catch (err) {
-      console.error("Erreur fetch demandes:", err);
-      toast.error("Impossible de charger les demandes.");
+      console.error(err);
+      toast.error("Erreur lors du chargement.");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchDemandes(); }, []);
+  useEffect(() => {
+    fetchDemandes();
+  }, []);
 
+  // -------------------------------
+  // 📌 Validation
+  // -------------------------------
   const handleApprove = async (demande: Demande) => {
     try {
-      if (demande.numero) await stockApi.validerDemandeAchat(demande.id);
-      else await rhApi.approveDemande(demande.id);
-      toast.success("Demande approuvée !");
+      if (demande.source === "stock") {
+        await stockApi.validerDemandeAchat(demande.id);
+      } else {
+        await rhApi.approveDemande(demande.id);
+      }
+      toast.success("Demande approuvée");
       fetchDemandes();
     } catch (err) {
       console.error(err);
-      toast.error("Erreur lors de l'approbation.");
+      toast.error("Erreur");
     }
   };
 
+  // -------------------------------
+  // 📌 Rejet
+  // -------------------------------
   const handleReject = async (demande: Demande) => {
     try {
-      if (demande.numero) await stockApi.rejeterDemandeAchat(demande.id, "Rejet via page");
-      else await rhApi.rejectDemande(demande.id, "Rejet via page");
-      toast.success("Demande rejetée !");
+      if (demande.source === "stock") {
+        await stockApi.rejeterDemandeAchat(demande.id, "Rejet via finance");
+      } else {
+        await rhApi.rejectDemande(demande.id, "Rejet via finance");
+      }
+      toast.success("Demande rejetée");
       fetchDemandes();
     } catch (err) {
       console.error(err);
-      toast.error("Erreur lors du rejet.");
+      toast.error("Erreur lors du rejet");
     }
   };
 
-  const formatMontant = (montant: number) => montant.toLocaleString() + " Ar";
+  const formatMontant = (m: number) => `${m.toLocaleString()} Ar`;
 
-  if (loading) return <div>Chargement des demandes...</div>;
+  if (loading) return <div>Chargement...</div>;
   if (!demandes.length) return <div>Aucune demande à valider</div>;
 
   return (
     <div>
       <h1 className="text-xl font-bold mb-4">Validation des Demandes</h1>
+
       <Table>
         <TableHeader>
           <TableRow>
@@ -99,20 +128,30 @@ const ValidationDemandesPage: React.FC = () => {
             <TableCell>Quantité</TableCell>
             <TableCell>Montant</TableCell>
             <TableCell>Commentaire</TableCell>
+            <TableCell>Service</TableCell>
             <TableCell>Actions</TableCell>
           </TableRow>
         </TableHeader>
+
         <TableBody>
           {demandes.map(d => (
             <TableRow key={d.id}>
               <TableCell>{d.numero || d.description}</TableCell>
-              <TableCell>{d.article ? d.article.nom || d.article.description || "-" : "-"}</TableCell>
+              <TableCell>{d.article?.nom || "-"}</TableCell>
               <TableCell>{d.quantite ?? "-"}</TableCell>
               <TableCell>{formatMontant(d.montant)}</TableCell>
               <TableCell>{d.commentaire || "-"}</TableCell>
+              <TableCell>
+                {d.source === "stock" ? "Stock" : "Ressources Humaines"}
+              </TableCell>
+
               <TableCell className="space-x-2">
-                <Button onClick={() => handleApprove(d)} variant="default" size="sm">Approuver</Button>
-                <Button onClick={() => handleReject(d)} variant="destructive" size="sm">Rejeter</Button>
+                <Button size="sm" onClick={() => handleApprove(d)}>
+                  Approuver
+                </Button>
+                <Button size="sm" variant="destructive" onClick={() => handleReject(d)}>
+                  Rejeter
+                </Button>
               </TableCell>
             </TableRow>
           ))}
