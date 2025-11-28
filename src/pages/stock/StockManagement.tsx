@@ -22,10 +22,6 @@ import { stockApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { createPDFDoc } from "@/lib/pdfTemplate";
-import { stockApi, authApi } from "@/lib/api";
-
-
-
 
 interface Article {
   id: string;
@@ -57,8 +53,6 @@ const StockManagement: React.FC = () => {
   const [editingStock, setEditingStock] = useState<Stock | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [stockToDelete, setStockToDelete] = useState<Stock | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [isLoadingUserRole, setIsLoadingUserRole] = useState(true);
   const [form, setForm] = useState({
     article: "",
     magasin: "",
@@ -68,24 +62,6 @@ const StockManagement: React.FC = () => {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
-  
-  useEffect(() => {
-    const fetchUserRole = async () => {
-      try {
-        const userData = await authApi.me();
-        setUserRole(userData.role);
-      } catch (error: any) {
-        console.error(error);
-        toast({ title: "Erreur", description: "Impossible de récupérer le rôle de l'utilisateur", variant: "destructive" });
-      } finally {
-        setIsLoadingUserRole(false);
-      }
-    };
-    fetchUserRole();
-  }, []);
-
-
-
 
   // -----------------------
   // Fetch Data
@@ -241,15 +217,11 @@ const StockManagement: React.FC = () => {
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Gestion des Stocks</h2>
-        {userRole !== "magasinier" && (
-          <div className="flex gap-2">
-            <Button onClick={() => { setOpenModal(true); setEditingStock(null); }}>+ Nouveau</Button>
-            <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
-            <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
-          </div>
-        )}
-
-
+        <div className="flex gap-2">
+          <Button onClick={() => { setOpenModal(true); setEditingStock(null); }}>+ Nouveau</Button>
+          <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
+          <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
+        </div>
       </div>
 
       <Input
@@ -296,13 +268,8 @@ const StockManagement: React.FC = () => {
                   <TableCell>{s.seuil_alerte}</TableCell>
                   <TableCell>{s.date_peremption || "—"}</TableCell>
                   <TableCell className="space-x-2">
-                    {userRole !== "magasinier" && (
-                        <>
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(s)}>Modifier</Button>
-                          <Button variant="destructive" size="sm" onClick={() => openDeleteModal(s)}>Supprimer</Button>
-                        </>
-                      )}
-
+                    <Button variant="outline" size="sm" onClick={() => handleEdit(s)}>Modifier</Button>
+                    <Button variant="destructive" size="sm" onClick={() => openDeleteModal(s)}>Supprimer</Button>
                   </TableCell>
                 </TableRow>
               ))
@@ -316,7 +283,6 @@ const StockManagement: React.FC = () => {
       </div>
 
       {/* Modal Ajouter/Modifier */}
-      {userRole !== "magasinier" && (
       <Dialog open={openModal} onOpenChange={setOpenModal}>
         <DialogContent>
           <DialogHeader>
@@ -390,10 +356,8 @@ const StockManagement: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      )}
 
       {/* Modal Suppression */}
-      {userRole !== "magasinier" && (
       <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -408,7 +372,6 @@ const StockManagement: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      )}
     </div>
   );
 };
