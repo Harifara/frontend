@@ -35,13 +35,29 @@ interface Demande {
   montant: number;
 }
 
-// Fonction pour normaliser n'importe quel format d’API
+// Fonction utilitaire pour extraire la liste depuis l’API
 const extractList = (response: any) => {
   if (!response) return [];
   if (Array.isArray(response)) return response;
   if (response.data && Array.isArray(response.data)) return response.data;
   if (response.results && Array.isArray(response.results)) return response.results;
   return [];
+};
+
+// 🎨 Fonction utilitaire pour donner la bonne couleur selon le statut
+const badgeColor = (status: string) => {
+  switch (status.toLowerCase()) {
+    case "approuve":
+      return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
+    case "rejete":
+      return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
+    case "en_attente":
+      return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    case "non_demande":
+      return "bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-semibold";
+    default:
+      return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
+  }
 };
 
 const Demandes = () => {
@@ -176,7 +192,14 @@ const Demandes = () => {
               {filteredDemandes.length ? filteredDemandes.map(d => (
                 <TableRow key={d.id}>
                   <TableCell>{d.description}</TableCell>
-                  <TableCell>{d.status}</TableCell>
+
+                  {/* 🎨 STATUS DEMANDE */}
+                  <TableCell>
+                    <span className={badgeColor(d.status)}>
+                      {d.status}
+                    </span>
+                  </TableCell>
+
                   <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
 
                   {/* ----------------- */}
@@ -188,7 +211,11 @@ const Demandes = () => {
                       <ul className="ml-4 list-disc">
                         {d.achats.map(a => (
                           <li key={a.id}>
-                            {a.article} - {a.nombre} x {a.montant.toLocaleString()} Ar ({a.statut})
+                            {a.article} - {a.nombre} x {a.montant.toLocaleString()} Ar 
+                            {" "}
+                            <span className={badgeColor(a.statut)}>
+                              {a.statut}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -198,7 +225,11 @@ const Demandes = () => {
                       <ul className="ml-4 list-disc">
                         {d.payements.map(p => (
                           <li key={p.id}>
-                            {p.montant.toLocaleString()} Ar - {p.status}
+                            {p.montant.toLocaleString()} Ar 
+                            {" "}
+                            <span className={badgeColor(p.status)}>
+                              {p.status}
+                            </span>
                           </li>
                         ))}
                       </ul>
@@ -210,7 +241,6 @@ const Demandes = () => {
                   {/* ----------------- */}
                   <TableCell className="space-x-2">
 
-                    {/* Approuver */}
                     <Button
                       size="sm"
                       variant="outline"
@@ -227,7 +257,6 @@ const Demandes = () => {
                       Approuver
                     </Button>
 
-                    {/* Refuser */}
                     <Button
                       size="sm"
                       variant="destructive"
@@ -244,7 +273,6 @@ const Demandes = () => {
                       Refuser
                     </Button>
 
-                    {/* Modifier */}
                     <Button
                       size="sm"
                       variant="outline"
@@ -253,7 +281,6 @@ const Demandes = () => {
                       Modifier
                     </Button>
 
-                    {/* Supprimer */}
                     <Button
                       size="sm"
                       variant="destructive"
