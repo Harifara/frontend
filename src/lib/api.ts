@@ -966,44 +966,37 @@ export const financeApi = {
 
   getValidations: async () => {
     const token = await ensureKongToken();
-    const res = await fetch(`${API_BASE_URL}/validations-demandes/`, {
+    return fetchWithLog(`${API_BASE_URL}/validations-demandes/`, {
       headers: getHeaders(token),
     });
-    if (!res.ok) throw new Error("Erreur lors de la récupération des validations");
-    return res.json();
   },
 
   getValidation: async (id: string) => {
     const token = await ensureKongToken();
-    const res = await fetch(`${API_BASE_URL}/validations-demandes/${cleanUUID(id)}/`, {
+    return fetchWithLog(`${API_BASE_URL}/validations-demandes/${cleanUUID(id)}/`, {
       headers: getHeaders(token),
     });
-    if (!res.ok) throw new Error("Erreur lors de la récupération de la validation");
-    return res.json();
   },
 
   approuver: async (id: string, commentaire: string = "") => {
     const token = await ensureKongToken();
-    const res = await fetch(`${API_BASE_URL}/validations-demandes/${cleanUUID(id)}/approuver/`, {
+    return fetchWithLog(`${API_BASE_URL}/validations-demandes/${cleanUUID(id)}/approuver/`, {
       method: "POST",
       headers: getHeaders(token),
       body: JSON.stringify({ commentaire }),
     });
-    if (!res.ok) throw new Error("Erreur lors de l'approbation de la demande");
-    return res.json();
   },
 
   rejeter: async (id: string, commentaire: string = "") => {
     const token = await ensureKongToken();
-    const res = await fetch(`${API_BASE_URL}/validations-demandes/${cleanUUID(id)}/rejeter/`, {
+    return fetchWithLog(`${API_BASE_URL}/validations-demandes/${cleanUUID(id)}/rejeter/`, {
       method: "POST",
       headers: getHeaders(token),
       body: JSON.stringify({ commentaire }),
     });
-    if (!res.ok) throw new Error("Erreur lors du rejet de la demande");
-    return res.json();
   },
 
 };
+
 
 
