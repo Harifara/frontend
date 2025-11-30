@@ -22,6 +22,8 @@ const ValidationDemandesPage: React.FC = () => {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
+  const normalizeStatus = (status: string) => status?.toLowerCase().replace(/\s/g, "_") || "en_attente";
+
   const fetchDemandes = async () => {
     setLoading(true);
     try {
@@ -33,7 +35,7 @@ const ValidationDemandesPage: React.FC = () => {
         id: d.id,
         description: d.description,
         montant: Number(d.montant || 0),
-        statut: (d.statut || "").toLowerCase(),
+        statut: normalizeStatus(d.status || d.statut),
         source: "rh",
       }));
 
@@ -47,7 +49,7 @@ const ValidationDemandesPage: React.FC = () => {
         article: d.article,
         quantite: d.quantite,
         montant: Number(d.montant_estime || 0),
-        statut: (d.statut || "en_attente").toLowerCase(),
+        statut: normalizeStatus(d.statut),
         commentaire: d.commentaire_finance || "",
         source: "stock",
       }));
