@@ -22,7 +22,9 @@ const ValidationDemandesPage: React.FC = () => {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const normalizeStatus = (status: string) => status?.toLowerCase().replace(/\s/g, "_") || "en_attente";
+  // Normalise le statut en lowercase avec underscore
+  const normalizeStatus = (status?: string) =>
+    status?.toLowerCase().replace(/\s/g, "_") || "en_attente";
 
   const fetchDemandes = async () => {
     setLoading(true);
