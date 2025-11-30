@@ -4,59 +4,55 @@ import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { stockApi, rhApi } from "@/lib/api";
 
-type Article = { id: string; nom?: string; description?: string };
+type ArticleDetail = { nom: string; quantite: number; prix_unitaire: number };
 
-type Demande = {
+type DemandeDetail = {
   id: string;
   numero?: string;
   description?: string;
-  article?: Article | null;
-  quantite?: number;
   montant: number;
   statut: string;
-  commentaire?: string;
   source: "rh" | "stock";
+  articles?: ArticleDetail[];
+  paiements?: number[];
 };
 
 const ValidationDemandesPage: React.FC = () => {
-  const [demandes, setDemandes] = useState<Demande[]>([]);
+  const [demandes, setDemandes] = useState<DemandeDetail[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Normalise le statut en lowercase avec underscore
   const normalizeStatus = (status?: string) =>
     status?.toLowerCase().replace(/\s/g, "_") || "en_attente";
 
   const fetchDemandes = async () => {
     setLoading(true);
     try {
-      // -------------------------------
-      // Demandes RH
+      // RH
       const rhRes = await rhApi.getDemandes();
       const rhList = Array.isArray(rhRes.results) ? rhRes.results : rhRes || [];
-      const rhDemandes: Demande[] = rhList.map((d: any) => ({
+      const rhDemandes: DemandeDetail[] = rhList.map((d: any) => ({
         id: d.id,
         description: d.description,
         montant: Number(d.montant || 0),
         statut: normalizeStatus(d.status || d.statut),
         source: "rh",
+        paiements: [Number(d.montant || 0)],
       }));
 
-      // -------------------------------
-      // Demandes Stock
+      // Stock
       const stockRes = await stockApi.getDemandesAchat();
       const stockList = Array.isArray(stockRes.results) ? stockRes.results : stockRes || [];
-      const stockDemandes: Demande[] = stockList.map((d: any) => ({
+      const stockDemandes: DemandeDetail[] = stockList.map((d: any) => ({
         id: d.id,
         numero: d.numero,
-        article: d.article,
-        quantite: d.quantite,
+        description: d.numero || d.description || "-",
         montant: Number(d.montant_estime || 0),
         statut: normalizeStatus(d.statut),
-        commentaire: d.commentaire_finance || "",
         source: "stock",
+        articles: d.article ? [{ nom: d.article.nom, quantite: d.quantite, prix_unitaire: d.montant_estime }] : [],
       }));
 
-      // Filtrer uniquement les demandes en attente
+      // Regrouper par demande principale (ici par id)
       const all = [...rhDemandes, ...stockDemandes].filter(d => d.statut === "en_attente");
       setDemandes(all);
     } catch (err) {
@@ -71,7 +67,7 @@ const ValidationDemandesPage: React.FC = () => {
     fetchDemandes();
   }, []);
 
-  const handleApprove = async (demande: Demande) => {
+  const handleApprove = async (demande: DemandeDetail) => {
     try {
       if (demande.source === "stock") {
         await stockApi.validerDemandeAchat(demande.id);
@@ -86,7 +82,7 @@ const ValidationDemandesPage: React.FC = () => {
     }
   };
 
-  const handleReject = async (demande: Demande) => {
+  const handleReject = async (demande: DemandeDetail) => {
     try {
       if (demande.source === "stock") {
         await stockApi.rejeterDemandeAchat(demande.id, "Rejet via finance");
@@ -108,35 +104,41 @@ const ValidationDemandesPage: React.FC = () => {
 
   return (
     <div>
-      <h1 className="text-xl font-bold mb-4">Validation des Demandes</h1>
+      <h1 className="text-xl font-bold mb-4">Liste des Demandes</h1>
 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableCell>Numéro / Description</TableCell>
-            <TableCell>Article</TableCell>
-            <TableCell>Quantité</TableCell>
+            <TableCell>Description</TableCell>
+            <TableCell>Status</TableCell>
             <TableCell>Montant</TableCell>
-            <TableCell>Commentaire</TableCell>
-            <TableCell>Service</TableCell>
+            <TableCell>Détails</TableCell>
             <TableCell>Actions</TableCell>
           </TableRow>
         </TableHeader>
-
         <TableBody>
           {demandes.map(d => (
-            <TableRow key={d.id}>
-              <TableCell>{d.numero || d.description || "-"}</TableCell>
-              <TableCell>{d.article?.nom || "-"}</TableCell>
-              <TableCell>{d.quantite ?? "-"}</TableCell>
-              <TableCell>{formatMontant(d.montant)}</TableCell>
-              <TableCell>{d.commentaire || "-"}</TableCell>
-              <TableCell>{d.source === "stock" ? "Stock" : "Ressources Humaines"}</TableCell>
-              <TableCell className="flex gap-2">
-                <Button size="sm" onClick={() => handleApprove(d)}>Approuver</Button>
-                <Button size="sm" variant="destructive" onClick={() => handleReject(d)}>Rejeter</Button>
-              </TableCell>
-            </TableRow>
+            <React.Fragment key={d.id}>
+              <TableRow className="bg-gray-100">
+                <TableCell>{d.description}</TableCell>
+                <TableCell>{d.statut}</TableCell>
+                <TableCell>{formatMontant(d.montant)}</TableCell>
+                <TableCell>
+                  {d.source === "stock" && d.articles?.map(a => (
+                    <div key={a.nom}>
+                      {a.nom} - {a.quantite} x {formatMontant(a.prix_unitaire)}
+                    </div>
+                  ))}
+                  {d.source === "rh" && d.paiements?.map((p, i) => (
+                    <div key={i}>{formatMontant(p)}</div>
+                  ))}
+                </TableCell>
+                <TableCell className="flex gap-2">
+                  <Button size="sm" onClick={() => handleApprove(d)}>Approuver</Button>
+                  <Button size="sm" variant="destructive" onClick={() => handleReject(d)}>Rejeter</Button>
+                </TableCell>
+              </TableRow>
+            </React.Fragment>
           ))}
         </TableBody>
       </Table>
