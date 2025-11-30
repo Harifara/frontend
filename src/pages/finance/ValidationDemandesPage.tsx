@@ -20,7 +20,7 @@ type Demande = {
 
 const ValidationDemandesPage: React.FC = () => {
   const [demandes, setDemandes] = useState<Demande[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(true);
 
   const fetchDemandes = async () => {
     setLoading(true);
@@ -28,19 +28,19 @@ const ValidationDemandesPage: React.FC = () => {
       // -------------------------------
       // Demandes RH
       const rhRes = await rhApi.getDemandes();
-      const rhList = rhRes.results || rhRes || [];
+      const rhList = Array.isArray(rhRes.results) ? rhRes.results : rhRes || [];
       const rhDemandes: Demande[] = rhList.map((d: any) => ({
         id: d.id,
         description: d.description,
         montant: Number(d.montant || 0),
-        statut: (d.status || "").toLowerCase(),
+        statut: (d.statut || "").toLowerCase(),
         source: "rh",
       }));
 
       // -------------------------------
       // Demandes Stock
       const stockRes = await stockApi.getDemandesAchat();
-      const stockList = stockRes.results || stockRes || [];
+      const stockList = Array.isArray(stockRes.results) ? stockRes.results : stockRes || [];
       const stockDemandes: Demande[] = stockList.map((d: any) => ({
         id: d.id,
         numero: d.numero,
@@ -52,11 +52,12 @@ const ValidationDemandesPage: React.FC = () => {
         source: "stock",
       }));
 
+      // Filtrer uniquement les demandes en attente
       const all = [...rhDemandes, ...stockDemandes].filter(d => d.statut === "en_attente");
       setDemandes(all);
     } catch (err) {
       console.error(err);
-      toast.error("Erreur lors du chargement.");
+      toast.error("Erreur lors du chargement des demandes.");
     } finally {
       setLoading(false);
     }
@@ -68,10 +69,12 @@ const ValidationDemandesPage: React.FC = () => {
 
   const handleApprove = async (demande: Demande) => {
     try {
-      if (demande.source === "stock") await stockApi.validerDemandeAchat(demande.id);
-      else await rhApi.approveDemande(demande.id);
-
-      toast.success("Demande approuvée");
+      if (demande.source === "stock") {
+        await stockApi.validerDemandeAchat(demande.id);
+      } else {
+        await rhApi.approveDemande(demande.id);
+      }
+      toast.success("Demande approuvée avec succès");
       fetchDemandes();
     } catch (err) {
       console.error(err);
@@ -81,10 +84,12 @@ const ValidationDemandesPage: React.FC = () => {
 
   const handleReject = async (demande: Demande) => {
     try {
-      if (demande.source === "stock") await stockApi.rejeterDemandeAchat(demande.id, "Rejet via finance");
-      else await rhApi.rejectDemande(demande.id, "Rejet via finance");
-
-      toast.success("Demande rejetée");
+      if (demande.source === "stock") {
+        await stockApi.rejeterDemandeAchat(demande.id, "Rejet via finance");
+      } else {
+        await rhApi.rejectDemande(demande.id, "Rejet via finance");
+      }
+      toast.success("Demande rejetée avec succès");
       fetchDemandes();
     } catch (err) {
       console.error(err);
@@ -119,7 +124,7 @@ const ValidationDemandesPage: React.FC = () => {
             <TableRow key={d.id}>
               <TableCell>{d.numero || d.description || "-"}</TableCell>
               <TableCell>{d.article?.nom || "-"}</TableCell>
-              <TableCell>{d.quantite !== undefined ? d.quantite : "-"}</TableCell>
+              <TableCell>{d.quantite ?? "-"}</TableCell>
               <TableCell>{formatMontant(d.montant)}</TableCell>
               <TableCell>{d.commentaire || "-"}</TableCell>
               <TableCell>{d.source === "stock" ? "Stock" : "Ressources Humaines"}</TableCell>
