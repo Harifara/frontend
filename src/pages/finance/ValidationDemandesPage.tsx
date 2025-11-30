@@ -6,6 +6,7 @@ import { stockApi, rhApi } from "@/lib/api";
 
 // Types
 type ArticleDetail = { nom: string; quantite: number; prix_unitaire: number; statut?: string };
+type PaiementDetail = { montant: number; statut?: string };
 type DemandeDetail = {
   id: string;
   numero?: string;
@@ -14,7 +15,7 @@ type DemandeDetail = {
   statut: string;
   source: "rh" | "stock";
   articles?: ArticleDetail[];
-  paiements?: { montant: number; statut?: string }[];
+  paiements?: PaiementDetail[];
 };
 
 // Badge couleur
@@ -23,6 +24,7 @@ const badgeColor = (status: string) => {
     case "approuve": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
     case "rejete": return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
     case "en_attente": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    case "non_demande": return "bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-semibold";
     default: return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
   }
 };
@@ -58,7 +60,9 @@ const ValidationDemandesPage: React.FC = () => {
         montant: Number(d.montant_estime || 0),
         statut: normalizeStatus(d.statut),
         source: "stock",
-        articles: d.article ? [{ nom: d.article.nom, quantite: d.quantite, prix_unitaire: d.montant_estime, statut: normalizeStatus(d.statut) }] : [],
+        articles: d.article
+          ? [{ nom: d.article.nom, quantite: d.quantite, prix_unitaire: d.montant_estime, statut: normalizeStatus(d.statut) }]
+          : [],
       }));
 
       const all = [...rhDemandes, ...stockDemandes].filter(d => d.statut === "en_attente");
@@ -118,15 +122,18 @@ const ValidationDemandesPage: React.FC = () => {
               </TableCell>
               <TableCell>{formatMontant(d.montant)}</TableCell>
               <TableCell>
+                {/* Détails Stock */}
                 {d.source === "stock" && d.articles?.map(a => (
                   <div key={a.nom}>
-                    {a.nom} - {a.quantite} x {formatMontant(a.prix_unitaire)}{" "}
+                    <strong>Achats :</strong> {a.nom} - {a.quantite} x {formatMontant(a.prix_unitaire)}{" "}
                     <span className={badgeColor(a.statut || "")}>{a.statut}</span>
                   </div>
                 ))}
+                {/* Détails RH */}
                 {d.source === "rh" && d.paiements?.map((p, i) => (
                   <div key={i}>
-                    {formatMontant(p.montant)} <span className={badgeColor(p.statut || "")}>{p.statut}</span>
+                    <strong>Payements :</strong> {formatMontant(p.montant)}{" "}
+                    <span className={badgeColor(p.statut || "")}>{p.statut}</span>
                   </div>
                 ))}
               </TableCell>
