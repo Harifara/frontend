@@ -140,11 +140,13 @@ const DemandesDecaissementPage: React.FC = () => {
                 <strong>Statut:</strong> {selected.statut}
               </div>
 
-              <Textarea
+              <textarea
+                className="w-full border rounded px-2 py-1"
                 placeholder="Commentaire pour le rejet"
                 value={commentaire}
                 onChange={(e) => setCommentaire(e.target.value)}
-              />
+                />
+
             </div>
           )}
 
