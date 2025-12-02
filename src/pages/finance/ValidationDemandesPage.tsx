@@ -25,6 +25,7 @@ type DemandeDetail = {
   montant: number;
   statut: string;
   source: "rh" | "stock";
+  decaissement_cree?: boolean;
   articles?: ArticleDetail[];
   paiements?: PaiementDetail[];
 };
@@ -55,7 +56,7 @@ const ValidationDemandesPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const normalizeStatus = (s?: string) => s?.toLowerCase().replace(/\s/g, "_") || "en_attente";
+  const normalizeStatus = (s?: string) => s?.toLowerCase().replace(/\s/g, "_") || "non_demande";
   const extractList = (res: any) => Array.isArray(res?.results) ? res.results : Array.isArray(res) ? res : [];
 
   // -----------------
@@ -73,6 +74,7 @@ const ValidationDemandesPage: React.FC = () => {
         montant: Number(d.montant || 0),
         statut: normalizeStatus(d.status),
         source: "rh",
+        decaissement_cree: d.decaissement_cree || false,
         paiements: d.payements?.map((p: any) => ({
           montant: Number(p.montant || 0),
           statut: normalizeStatus(p.status),
@@ -95,6 +97,7 @@ const ValidationDemandesPage: React.FC = () => {
         montant: Number(d.montant_estime || 0),
         statut: normalizeStatus(d.statut),
         source: "stock",
+        decaissement_cree: d.decaissement_cree || false,
         articles: d.article ? [{
           nom: d.article.nom,
           quantite: d.quantite,
@@ -171,7 +174,7 @@ const ValidationDemandesPage: React.FC = () => {
       <Button
         className="mb-4"
         onClick={handleDecaisserSelection}
-        disabled={Array.from(selected).length === 0}
+        disabled={selected.size === 0}
       >
         Créer demande de décaissement pour la sélection
       </Button>
@@ -197,7 +200,7 @@ const ValidationDemandesPage: React.FC = () => {
                 <TableCell>
                   <input
                     type="checkbox"
-                    disabled={d.statut !== "approuve"}
+                    disabled={d.statut === "decaisse" || d.statut === "rejete" || d.decaissement_cree}
                     checked={selected.has(d.id)}
                     onChange={() => toggleSelect(d.id)}
                   />
