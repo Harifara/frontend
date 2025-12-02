@@ -12,6 +12,8 @@ type DemandeDetail = {
   montant: number;
   statut: string;
   source: "rh" | "stock";
+  decaissement_cree?: boolean;
+  cordo_valide?: boolean;
 };
 
 const badgeColor = (status: string) => {
@@ -20,6 +22,7 @@ const badgeColor = (status: string) => {
     case "rejete": return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
     case "en_attente": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
     case "decaisse": return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
+    case "cordo_valide": return "bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold";
     default: return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
   }
 };
@@ -42,6 +45,8 @@ const DemandesDecaissementPage: React.FC = () => {
           montant: Number(d.montant || 0),
           statut: d.status.toLowerCase().replace(/\s/g, "_"),
           source: "rh",
+          decaissement_cree: d.decaissement_cree || false,
+          cordo_valide: d.cordo_valide || false,
         })),
         ...(stockRes.results || []).map((d: any) => ({
           id: d.id,
@@ -49,11 +54,13 @@ const DemandesDecaissementPage: React.FC = () => {
           montant: Number(d.montant_estime || 0),
           statut: d.statut.toLowerCase().replace(/\s/g, "_"),
           source: "stock",
+          decaissement_cree: d.decaissement_cree || false,
+          cordo_valide: d.cordo_valide || false,
         })),
       ];
 
-      // Ne garder que les demandes approuvées côté Cordo
-      setDemandes(allDemandes.filter(d => d.statut === "approuve"));
+      // On ne garde que les demandes approuvées ou déjà décaissement
+      setDemandes(allDemandes.filter(d => d.statut === "approuve" || d.decaissement_cree));
     } catch (err) {
       console.error(err);
       toast.error("Erreur lors du chargement des demandes.");
@@ -89,7 +96,8 @@ const DemandesDecaissementPage: React.FC = () => {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Créer une demande de décaissement</h1>
+      <h1 className="text-2xl font-bold mb-4">Demandes de décaissement</h1>
+
       <Button className="mb-4" onClick={handleCreateDecaissement} disabled={!selectedIds.length}>
         Créer la demande
       </Button>
@@ -114,9 +122,16 @@ const DemandesDecaissementPage: React.FC = () => {
                     type="checkbox"
                     checked={selectedIds.includes(d.id)}
                     onChange={() => toggleSelect(d.id)}
+                    disabled={d.decaissement_cree}
                   />
                 </TableCell>
-                <TableCell>{d.description} {d.numero ? `(${d.numero})` : ""}</TableCell>
+                <TableCell>
+                  {d.description} {d.numero ? `(${d.numero})` : ""}
+                  <div className="mt-1 space-x-2">
+                    {d.decaissement_cree && <span className={badgeColor("decaisse")}>Décaissement créé</span>}
+                    {d.cordo_valide && <span className={badgeColor("cordo_valide")}>Cordo validé</span>}
+                  </div>
+                </TableCell>
                 <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
                 <TableCell>
                   <span className={badgeColor(d.statut)}>{d.statut}</span>
