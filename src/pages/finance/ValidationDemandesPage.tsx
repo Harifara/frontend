@@ -1,3 +1,4 @@
+// src/pages/finance/ValidationDemandesPage.tsx
 import React, { useEffect, useState } from "react";
 import {
   Table,
@@ -9,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
-import { stockApi, rhApi } from "@/lib/api";
+import { stockApi, rhApi, financeApi } from "@/lib/api";
 
 // -----------------
 // Types
@@ -47,14 +48,14 @@ const badgeColor = (status: string) => {
 };
 
 // -----------------
-// Page
+// Composant
 // -----------------
 const ValidationDemandesPage: React.FC = () => {
   const [demandes, setDemandes] = useState<DemandeDetail[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const normalizeStatus = (s?: string) => s?.toLowerCase().replace(/\s/g, "_") || "en_attente";
-
   const extractList = (res: any) => Array.isArray(res?.results) ? res.results : Array.isArray(res) ? res : [];
 
   // -----------------
@@ -121,11 +122,8 @@ const ValidationDemandesPage: React.FC = () => {
   // -----------------
   const handleApprove = async (d: DemandeDetail) => {
     try {
-      if (d.source === "rh") {
-        await rhApi.approveDemande(d.id);
-      } else {
-        await stockApi.validerDemandeAchat(d.id);
-      }
+      if (d.source === "rh") await rhApi.approveDemande(d.id);
+      else await stockApi.validerDemandeAchat(d.id);
       toast.success("Demande approuvée.");
       fetchDemandes();
     } catch {
@@ -135,11 +133,8 @@ const ValidationDemandesPage: React.FC = () => {
 
   const handleReject = async (d: DemandeDetail) => {
     try {
-      if (d.source === "rh") {
-        await rhApi.rejectDemande(d.id);
-      } else {
-        await stockApi.rejeterDemandeAchat(d.id, "Rejeté par finance");
-      }
+      if (d.source === "rh") await rhApi.rejectDemande(d.id);
+      else await stockApi.rejeterDemandeAchat(d.id, "Rejeté par finance");
       toast.success("Demande rejetée.");
       fetchDemandes();
     } catch {
@@ -147,17 +142,22 @@ const ValidationDemandesPage: React.FC = () => {
     }
   };
 
-  const handleDecaisser = async (d: DemandeDetail) => {
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selected);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelected(newSet);
+  };
+
+  const handleDecaisserSelection = async () => {
+    if (!selected.size) return toast.error("Sélectionnez au moins une demande.");
     try {
-      if (d.source === "rh") {
-        await rhApi.decaisserDemande(d.id); // Crée côté API
-      } else {
-        await stockApi.decaisserDemandeAchat(d.id); // Crée côté API
-      }
-      toast.success("Décaissement effectué !");
+      await financeApi.createDemandeDecaissement(Array.from(selected));
+      toast.success("Décaissement créé !");
+      setSelected(new Set());
       fetchDemandes();
-    } catch {
-      toast.error("Erreur lors du décaissement.");
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors du décaissement");
     }
   };
 
@@ -168,12 +168,21 @@ const ValidationDemandesPage: React.FC = () => {
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4">Validation des Demandes</h1>
 
+      <Button
+        className="mb-4"
+        onClick={handleDecaisserSelection}
+        disabled={Array.from(selected).length === 0}
+      >
+        Créer demande de décaissement pour la sélection
+      </Button>
+
       {loading ? (
         <p>Chargement...</p>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Sélection</TableHead>
               <TableHead>Description / Numéro</TableHead>
               <TableHead>Montant</TableHead>
               <TableHead>Détails</TableHead>
@@ -186,11 +195,15 @@ const ValidationDemandesPage: React.FC = () => {
             {demandes.map((d) => (
               <TableRow key={d.id}>
                 <TableCell>
-                  {d.description} {d.numero ? `(${d.numero})` : ""}
+                  <input
+                    type="checkbox"
+                    disabled={d.statut !== "approuve"}
+                    checked={selected.has(d.id)}
+                    onChange={() => toggleSelect(d.id)}
+                  />
                 </TableCell>
-
+                <TableCell>{d.description} {d.numero ? `(${d.numero})` : ""}</TableCell>
                 <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
-
                 <TableCell>
                   {d.articles?.length ? (
                     <div className="mb-2">
@@ -205,7 +218,6 @@ const ValidationDemandesPage: React.FC = () => {
                       </ul>
                     </div>
                   ) : null}
-
                   {d.paiements?.length ? (
                     <div>
                       <strong>Paiements :</strong>
@@ -220,32 +232,10 @@ const ValidationDemandesPage: React.FC = () => {
                     </div>
                   ) : null}
                 </TableCell>
-
-                <TableCell>
-                  <span className={badgeColor(d.statut)}>{d.statut}</span>
-                </TableCell>
-
+                <TableCell><span className={badgeColor(d.statut)}>{d.statut}</span></TableCell>
                 <TableCell className="space-x-2">
-                  <Button
-                    onClick={() => handleApprove(d)}
-                    disabled={d.statut !== "en_attente"}
-                  >
-                    Approuver
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleReject(d)}
-                    disabled={d.statut !== "en_attente"}
-                  >
-                    Rejeter
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => handleDecaisser(d)}
-                    disabled={d.statut !== "approuve"}
-                  >
-                    Décaisser
-                  </Button>
+                  <Button onClick={() => handleApprove(d)} disabled={d.statut !== "en_attente"}>Approuver</Button>
+                  <Button variant="destructive" onClick={() => handleReject(d)} disabled={d.statut !== "en_attente"}>Rejeter</Button>
                 </TableCell>
               </TableRow>
             ))}
