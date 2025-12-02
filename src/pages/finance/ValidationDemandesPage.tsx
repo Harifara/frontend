@@ -44,6 +44,8 @@ const badgeColor = (status: string) => {
       return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
     case "decaisse":
       return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
+    case "cordo_valide":
+      return "bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold";
     default:
       return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
   }
@@ -208,7 +210,17 @@ const ValidationDemandesPage: React.FC = () => {
                     onChange={() => toggleSelect(d.id)}
                   />
                 </TableCell>
-                <TableCell>{d.description} {d.numero ? `(${d.numero})` : ""}</TableCell>
+                <TableCell>
+                  {d.description} {d.numero ? `(${d.numero})` : ""}
+                  <div className="mt-1 space-x-2">
+                    {d.decaissement_cree && (
+                      <span className={badgeColor("decaisse")}>Décaissement envoyé</span>
+                    )}
+                    {d.cordo_valide && (
+                      <span className={badgeColor("cordo_valide")}>Cordo validé</span>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
                 <TableCell>
                   {d.articles?.length ? (
