@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
+} from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
 import { stockApi, rhApi } from "@/lib/api";
@@ -32,6 +39,8 @@ const badgeColor = (status: string) => {
       return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
     case "en_attente":
       return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    case "decaisse":
+      return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
     default:
       return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
   }
@@ -44,11 +53,9 @@ const ValidationDemandesPage: React.FC = () => {
   const [demandes, setDemandes] = useState<DemandeDetail[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const normalizeStatus = (s?: string) =>
-    s?.toLowerCase().replace(/\s/g, "_") || "en_attente";
+  const normalizeStatus = (s?: string) => s?.toLowerCase().replace(/\s/g, "_") || "en_attente";
 
-  const extractList = (res: any) =>
-    Array.isArray(res?.results) ? res.results : Array.isArray(res) ? res : [];
+  const extractList = (res: any) => Array.isArray(res?.results) ? res.results : Array.isArray(res) ? res : [];
 
   // -----------------
   // Fetch
@@ -59,31 +66,27 @@ const ValidationDemandesPage: React.FC = () => {
       // === RH ===
       const rhRes = await rhApi.getDemandes();
       const rhList = extractList(rhRes);
-
       const rhDemandes: DemandeDetail[] = rhList.map((d: any) => ({
         id: d.id,
         description: d.description,
         montant: Number(d.montant || 0),
         statut: normalizeStatus(d.status),
         source: "rh",
-        paiements:
-          d.payements?.map((p: any) => ({
-            montant: Number(p.montant || 0),
-            statut: normalizeStatus(p.status),
-          })) || [],
-        articles:
-          d.achats?.map((a: any) => ({
-            nom: a.article,
-            quantite: a.nombre,
-            prix_unitaire: a.montant,
-            statut: normalizeStatus(a.statut),
-          })) || [],
+        paiements: d.payements?.map((p: any) => ({
+          montant: Number(p.montant || 0),
+          statut: normalizeStatus(p.status),
+        })) || [],
+        articles: d.achats?.map((a: any) => ({
+          nom: a.article,
+          quantite: a.nombre,
+          prix_unitaire: a.montant,
+          statut: normalizeStatus(a.statut),
+        })) || [],
       }));
 
       // === STOCK ===
       const stockRes = await stockApi.getDemandesAchat();
       const stockList = extractList(stockRes);
-
       const stockDemandes: DemandeDetail[] = stockList.map((d: any) => ({
         id: d.id,
         numero: d.numero,
@@ -91,23 +94,16 @@ const ValidationDemandesPage: React.FC = () => {
         montant: Number(d.montant_estime || 0),
         statut: normalizeStatus(d.statut),
         source: "stock",
-        articles: d.article
-          ? [
-              {
-                nom: d.article.nom,
-                quantite: d.quantite,
-                prix_unitaire: d.montant_estime,
-                statut: normalizeStatus(d.statut),
-              },
-            ]
-          : [],
+        articles: d.article ? [{
+          nom: d.article.nom,
+          quantite: d.quantite,
+          prix_unitaire: d.montant_estime,
+          statut: normalizeStatus(d.statut),
+        }] : [],
         paiements: [],
       }));
 
-      // === Combine + filtre ===
-      setDemandes(
-        [...rhDemandes, ...stockDemandes].filter((d) => d.statut === "en_attente")
-      );
+      setDemandes([...rhDemandes, ...stockDemandes]);
     } catch (err) {
       console.error(err);
       toast.error("Erreur lors du chargement.");
@@ -125,10 +121,11 @@ const ValidationDemandesPage: React.FC = () => {
   // -----------------
   const handleApprove = async (d: DemandeDetail) => {
     try {
-      d.source === "rh"
-        ? await rhApi.approveDemande(d.id)
-        : await stockApi.validerDemandeAchat(d.id);
-
+      if (d.source === "rh") {
+        await rhApi.approveDemande(d.id);
+      } else {
+        await stockApi.validerDemandeAchat(d.id);
+      }
       toast.success("Demande approuvée.");
       fetchDemandes();
     } catch {
@@ -138,14 +135,29 @@ const ValidationDemandesPage: React.FC = () => {
 
   const handleReject = async (d: DemandeDetail) => {
     try {
-      d.source === "rh"
-        ? await rhApi.rejectDemande(d.id)
-        : await stockApi.rejeterDemandeAchat(d.id, "Rejeté par finance");
-
+      if (d.source === "rh") {
+        await rhApi.rejectDemande(d.id);
+      } else {
+        await stockApi.rejeterDemandeAchat(d.id, "Rejeté par finance");
+      }
       toast.success("Demande rejetée.");
       fetchDemandes();
     } catch {
       toast.error("Erreur lors du rejet.");
+    }
+  };
+
+  const handleDecaisser = async (d: DemandeDetail) => {
+    try {
+      if (d.source === "rh") {
+        await rhApi.decaisserDemande(d.id); // Crée côté API
+      } else {
+        await stockApi.decaisserDemandeAchat(d.id); // Crée côté API
+      }
+      toast.success("Décaissement effectué !");
+      fetchDemandes();
+    } catch {
+      toast.error("Erreur lors du décaissement.");
     }
   };
 
@@ -179,27 +191,21 @@ const ValidationDemandesPage: React.FC = () => {
 
                 <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
 
-                {/* Détails */}
                 <TableCell>
-                  {/* Articles */}
                   {d.articles?.length ? (
                     <div className="mb-2">
                       <strong>Articles :</strong>
                       <ul className="ml-4 list-disc">
                         {d.articles.map((a, i) => (
                           <li key={i}>
-                            {a.nom} — {a.quantite} ×{" "}
-                            {a.prix_unitaire.toLocaleString()} Ar{" "}
-                            <span className={badgeColor(a.statut || "")}>
-                              {a.statut}
-                            </span>
+                            {a.nom} — {a.quantite} × {a.prix_unitaire.toLocaleString()} Ar{" "}
+                            <span className={badgeColor(a.statut || "")}>{a.statut}</span>
                           </li>
                         ))}
                       </ul>
                     </div>
                   ) : null}
 
-                  {/* Paiements */}
                   {d.paiements?.length ? (
                     <div>
                       <strong>Paiements :</strong>
@@ -207,9 +213,7 @@ const ValidationDemandesPage: React.FC = () => {
                         {d.paiements.map((p, i) => (
                           <li key={i}>
                             {p.montant.toLocaleString()} Ar{" "}
-                            <span className={badgeColor(p.statut || "")}>
-                              {p.statut}
-                            </span>
+                            <span className={badgeColor(p.statut || "")}>{p.statut}</span>
                           </li>
                         ))}
                       </ul>
@@ -217,19 +221,30 @@ const ValidationDemandesPage: React.FC = () => {
                   ) : null}
                 </TableCell>
 
-                {/* Statut */}
                 <TableCell>
                   <span className={badgeColor(d.statut)}>{d.statut}</span>
                 </TableCell>
 
-                {/* Actions */}
                 <TableCell className="space-x-2">
-                  <Button onClick={() => handleApprove(d)}>Approuver</Button>
+                  <Button
+                    onClick={() => handleApprove(d)}
+                    disabled={d.statut !== "en_attente"}
+                  >
+                    Approuver
+                  </Button>
                   <Button
                     variant="destructive"
                     onClick={() => handleReject(d)}
+                    disabled={d.statut !== "en_attente"}
                   >
                     Rejeter
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleDecaisser(d)}
+                    disabled={d.statut !== "approuve"}
+                  >
+                    Décaisser
                   </Button>
                 </TableCell>
               </TableRow>
