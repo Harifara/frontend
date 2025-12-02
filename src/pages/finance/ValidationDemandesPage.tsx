@@ -27,7 +27,8 @@ type DemandeDetail = {
   source: "rh" | "stock";
   articles?: ArticleDetail[];
   paiements?: PaiementDetail[];
-  decaissement_cree?: boolean; // <- Nouveau champ pour savoir si décaissement déjà créé
+  decaissement_cree?: boolean; // décaissement déjà créé
+  cordo_valide?: boolean;      // validation du service cordo
 };
 
 // -----------------
@@ -74,6 +75,7 @@ const ValidationDemandesPage: React.FC = () => {
         montant: Number(d.montant || 0),
         statut: normalizeStatus(d.status),
         source: "rh",
+        cordo_valide: d.cordo_valide || false,
         paiements: d.payements?.map((p: any) => ({
           montant: Number(p.montant || 0),
           statut: normalizeStatus(p.status),
@@ -97,6 +99,7 @@ const ValidationDemandesPage: React.FC = () => {
         montant: Number(d.montant_estime || 0),
         statut: normalizeStatus(d.statut),
         source: "stock",
+        cordo_valide: d.cordo_valide || false,
         articles: d.article ? [{
           nom: d.article.nom,
           quantite: d.quantite,
@@ -237,8 +240,19 @@ const ValidationDemandesPage: React.FC = () => {
                 </TableCell>
                 <TableCell><span className={badgeColor(d.statut)}>{d.statut}</span></TableCell>
                 <TableCell className="space-x-2">
-                  <Button onClick={() => handleApprove(d)} disabled={d.statut !== "en_attente"}>Approuver</Button>
-                  <Button variant="destructive" onClick={() => handleReject(d)} disabled={d.statut !== "en_attente"}>Rejeter</Button>
+                  <Button
+                    onClick={() => handleApprove(d)}
+                    disabled={d.statut !== "en_attente" || !d.cordo_valide}
+                  >
+                    Approuver
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => handleReject(d)}
+                    disabled={d.statut !== "en_attente" || !d.cordo_valide}
+                  >
+                    Rejeter
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
