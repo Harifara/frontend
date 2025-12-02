@@ -34,6 +34,7 @@ const DemandesDecaissementPage: React.FC = () => {
     try {
       const rhRes = await rhApi.getDemandes();
       const stockRes = await stockApi.getDemandesAchat();
+
       const allDemandes: DemandeDetail[] = [
         ...(rhRes.results || []).map((d: any) => ({
           id: d.id,
@@ -50,7 +51,8 @@ const DemandesDecaissementPage: React.FC = () => {
           source: "stock",
         })),
       ];
-      // On ne garde que les demandes validées côté coordo
+
+      // Ne garder que les demandes approuvées côté Cordo
       setDemandes(allDemandes.filter(d => d.statut === "approuve"));
     } catch (err) {
       console.error(err);

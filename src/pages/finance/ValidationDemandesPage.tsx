@@ -27,8 +27,8 @@ type DemandeDetail = {
   source: "rh" | "stock";
   articles?: ArticleDetail[];
   paiements?: PaiementDetail[];
-  decaissement_cree?: boolean; // décaissement déjà créé
-  cordo_valide?: boolean;      // validation du service cordo
+  decaissement_cree?: boolean;
+  cordo_valide?: boolean;
 };
 
 // -----------------
@@ -36,18 +36,12 @@ type DemandeDetail = {
 // -----------------
 const badgeColor = (status: string) => {
   switch (status?.toLowerCase()) {
-    case "approuve":
-      return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
-    case "rejete":
-      return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
-    case "en_attente":
-      return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
-    case "decaisse":
-      return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
-    case "cordo_valide":
-      return "bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold";
-    default:
-      return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
+    case "approuve": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
+    case "rejete": return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
+    case "en_attente": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    case "decaisse": return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
+    case "cordo_valide": return "bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold";
+    default: return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
   }
 };
 
@@ -68,7 +62,6 @@ const ValidationDemandesPage: React.FC = () => {
   const fetchDemandes = async () => {
     setLoading(true);
     try {
-      // === RH ===
       const rhRes = await rhApi.getDemandes();
       const rhList = extractList(rhRes);
       const rhDemandes: DemandeDetail[] = rhList.map((d: any) => ({
@@ -91,7 +84,6 @@ const ValidationDemandesPage: React.FC = () => {
         decaissement_cree: d.decaissement_cree || false,
       }));
 
-      // === STOCK ===
       const stockRes = await stockApi.getDemandesAchat();
       const stockList = extractList(stockRes);
       const stockDemandes: DemandeDetail[] = stockList.map((d: any) => ({
@@ -213,12 +205,8 @@ const ValidationDemandesPage: React.FC = () => {
                 <TableCell>
                   {d.description} {d.numero ? `(${d.numero})` : ""}
                   <div className="mt-1 space-x-2">
-                    {d.decaissement_cree && (
-                      <span className={badgeColor("decaisse")}>Décaissement envoyé</span>
-                    )}
-                    {d.cordo_valide && (
-                      <span className={badgeColor("cordo_valide")}>Cordo validé</span>
-                    )}
+                    {d.decaissement_cree && <span className={badgeColor("decaisse")}>Décaissement envoyé</span>}
+                    {d.cordo_valide && <span className={badgeColor("cordo_valide")}>Cordo validé</span>}
                   </div>
                 </TableCell>
                 <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
