@@ -23,12 +23,11 @@ type DemandeDetail = {
   numero?: string;
   description?: string;
   montant: number;
-  statut: string;
+  statut: string; // statut Cordo
+  decaissement_cree?: boolean; // nouveau champ pour suivre si décaissement a été créé
   source: "rh" | "stock";
   articles?: ArticleDetail[];
   paiements?: PaiementDetail[];
-  decaissement_cree?: boolean; // décaissement déjà créé
-  cordo_valide?: boolean;      // validation du service cordo
 };
 
 // -----------------
@@ -44,6 +43,8 @@ const badgeColor = (status: string) => {
       return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
     case "decaisse":
       return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
+    case "decaissement_envoye":
+      return "bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-xs font-semibold";
     default:
       return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
   }
@@ -73,9 +74,9 @@ const ValidationDemandesPage: React.FC = () => {
         id: d.id,
         description: d.description,
         montant: Number(d.montant || 0),
-        statut: normalizeStatus(d.status),
+        statut: normalizeStatus(d.status), // statut Cordo
+        decaissement_cree: !!d.decaissement_cree, // bool venant du backend
         source: "rh",
-        cordo_valide: d.cordo_valide || false,
         paiements: d.payements?.map((p: any) => ({
           montant: Number(p.montant || 0),
           statut: normalizeStatus(p.status),
@@ -86,7 +87,6 @@ const ValidationDemandesPage: React.FC = () => {
           prix_unitaire: a.montant,
           statut: normalizeStatus(a.statut),
         })) || [],
-        decaissement_cree: d.decaissement_cree || false,
       }));
 
       // === STOCK ===
@@ -98,8 +98,8 @@ const ValidationDemandesPage: React.FC = () => {
         description: d.numero || d.description || "-",
         montant: Number(d.montant_estime || 0),
         statut: normalizeStatus(d.statut),
+        decaissement_cree: !!d.decaissement_cree,
         source: "stock",
-        cordo_valide: d.cordo_valide || false,
         articles: d.article ? [{
           nom: d.article.nom,
           quantite: d.quantite,
@@ -107,7 +107,6 @@ const ValidationDemandesPage: React.FC = () => {
           statut: normalizeStatus(d.statut),
         }] : [],
         paiements: [],
-        decaissement_cree: d.decaissement_cree || false,
       }));
 
       setDemandes([...rhDemandes, ...stockDemandes]);
@@ -177,7 +176,7 @@ const ValidationDemandesPage: React.FC = () => {
       <Button
         className="mb-4"
         onClick={handleDecaisserSelection}
-        disabled={Array.from(selected).length === 0}
+        disabled={selected.size === 0}
       >
         Créer demande de décaissement pour la sélection
       </Button>
@@ -237,19 +236,24 @@ const ValidationDemandesPage: React.FC = () => {
                       </ul>
                     </div>
                   ) : null}
+                  {d.decaissement_cree && (
+                    <div className="mt-1">
+                      <span className={badgeColor("decaissement_envoye")}>Décaissement envoyé</span>
+                    </div>
+                  )}
                 </TableCell>
                 <TableCell><span className={badgeColor(d.statut)}>{d.statut}</span></TableCell>
                 <TableCell className="space-x-2">
                   <Button
                     onClick={() => handleApprove(d)}
-                    disabled={d.statut !== "en_attente" || !d.cordo_valide}
+                    disabled={d.statut !== "en_attente"}
                   >
                     Approuver
                   </Button>
                   <Button
                     variant="destructive"
                     onClick={() => handleReject(d)}
-                    disabled={d.statut !== "en_attente" || !d.cordo_valide}
+                    disabled={d.statut !== "en_attente"}
                   >
                     Rejeter
                   </Button>
