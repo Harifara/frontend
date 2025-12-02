@@ -1,6 +1,6 @@
 // src/pages/finance/DemandesDecaissement.tsx
 import React, { useEffect, useState } from "react";
-import { financeApi } from "@/lib/api"; // Assure-toi d'avoir les endpoints CRUD
+import axios from "axios";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -8,90 +8,69 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { toast } from "react-hot-toast";
 
-interface DemandeDecaissement {
+interface ValidationDemande {
   id: string;
   numero: string;
+  type_demande: string;
   montant: number;
   description: string;
   statut: string;
 }
 
-const DemandesDecaissement: React.FC = () => {
-  const [demandes, setDemandes] = useState<DemandeDecaissement[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingDemande, setEditingDemande] = useState<DemandeDecaissement | null>(null);
-  const [numero, setNumero] = useState("");
-  const [montant, setMontant] = useState<number>(0);
-  const [description, setDescription] = useState("");
+interface DemandeDecaissement {
+  id: string;
+  numero: string;
+  type_decaissement_nom: string;
+  montant_demande: number;
+  justification: string;
+  statut: string;
+  validations: ValidationDemande[];
+}
 
-  // Charger toutes les demandes
-  const fetchDemandes = async () => {
+const DemandesDecaissement: React.FC = () => {
+  const [validations, setValidations] = useState<ValidationDemande[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedValidations, setSelectedValidations] = useState<string[]>([]);
+  const [justification, setJustification] = useState("");
+
+  const fetchValidations = async () => {
     try {
-      const res = await financeApi.get("/demandes-decaissement");
-      setDemandes(res.data);
+      const res = await axios.get("/api/demandes-decaissement/validations-en-attente/");
+      setValidations(res.data);
     } catch (error) {
-      toast.error("Impossible de charger les demandes");
+      toast.error("Impossible de charger les validations");
     }
   };
 
   useEffect(() => {
-    fetchDemandes();
+    fetchValidations();
   }, []);
 
-  // Ouvrir modal pour création
-  const openCreateModal = () => {
-    setEditingDemande(null);
-    setNumero("");
-    setMontant(0);
-    setDescription("");
-    setIsModalOpen(true);
+  const toggleValidation = (id: string) => {
+    setSelectedValidations(prev =>
+      prev.includes(id) ? prev.filter(v => v !== id) : [...prev, id]
+    );
   };
 
-  // Ouvrir modal pour édition
-  const openEditModal = (demande: DemandeDecaissement) => {
-    setEditingDemande(demande);
-    setNumero(demande.numero);
-    setMontant(demande.montant);
-    setDescription(demande.description);
-    setIsModalOpen(true);
-  };
-
-  // Créer ou mettre à jour une demande
-  const saveDemande = async () => {
-    try {
-      if (editingDemande) {
-        // Édition
-        await financeApi.put(`/demandes-decaissement/${editingDemande.id}`, {
-          numero,
-          montant,
-          description,
-        });
-        toast.success("Demande mise à jour avec succès");
-      } else {
-        // Création
-        await financeApi.post("/demandes-decaissement", {
-          numero,
-          montant,
-          description,
-        });
-        toast.success("Demande créée avec succès");
-      }
-      setIsModalOpen(false);
-      fetchDemandes();
-    } catch (error) {
-      toast.error("Erreur lors de la sauvegarde");
+  const createDecaissement = async () => {
+    if (!selectedValidations.length) {
+      toast.error("Veuillez sélectionner au moins une validation.");
+      return;
     }
-  };
 
-  // Supprimer une demande
-  const deleteDemande = async (id: string) => {
-    if (!confirm("Voulez-vous vraiment supprimer cette demande ?")) return;
     try {
-      await financeApi.delete(`/demandes-decaissement/${id}`);
-      toast.success("Demande supprimée");
-      fetchDemandes();
-    } catch (error) {
-      toast.error("Erreur lors de la suppression");
+      const res = await axios.post("/api/demandes-decaissement/", {
+        validations_ids: selectedValidations,
+        justification,
+        demandeur_finance_id: "UUID_DU_RESPONSABLE" // à remplacer dynamiquement
+      });
+      toast.success("Décaissement créé avec succès !");
+      setIsModalOpen(false);
+      setSelectedValidations([]);
+      setJustification("");
+      fetchValidations();
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Erreur lors de la création");
     }
   };
 
@@ -99,35 +78,36 @@ const DemandesDecaissement: React.FC = () => {
     <div className="p-4">
       <Card>
         <CardHeader>
-          <CardTitle>Demandes de Décaissement</CardTitle>
-          <Button onClick={openCreateModal}>Nouvelle Demande</Button>
+          <CardTitle>Validations en attente de décaissement</CardTitle>
+          <Button onClick={() => setIsModalOpen(true)}>Créer Décaissement</Button>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Sélection</TableHead>
                 <TableHead>Numéro</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead>Montant</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Statut</TableHead>
-                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {demandes.map((demande) => (
-                <TableRow key={demande.id}>
-                  <TableCell>{demande.numero}</TableCell>
-                  <TableCell>{demande.montant}</TableCell>
-                  <TableCell>{demande.description}</TableCell>
-                  <TableCell>{demande.statut}</TableCell>
+              {validations.map(v => (
+                <TableRow key={v.id}>
                   <TableCell>
-                    <Button variant="outline" size="sm" onClick={() => openEditModal(demande)}>
-                      Modifier
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => deleteDemande(demande.id)}>
-                      Supprimer
-                    </Button>
+                    <input
+                      type="checkbox"
+                      checked={selectedValidations.includes(v.id)}
+                      onChange={() => toggleValidation(v.id)}
+                    />
                   </TableCell>
+                  <TableCell>{v.numero}</TableCell>
+                  <TableCell>{v.type_demande}</TableCell>
+                  <TableCell>{v.montant}</TableCell>
+                  <TableCell>{v.description}</TableCell>
+                  <TableCell>{v.statut}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -135,33 +115,21 @@ const DemandesDecaissement: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Modal Création/Édition */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingDemande ? "Modifier la demande" : "Nouvelle demande"}</DialogTitle>
+            <DialogTitle>Créer Décaissement</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-2">
-            <Input
-              placeholder="Numéro"
-              value={numero}
-              onChange={(e) => setNumero(e.target.value)}
-            />
-            <Input
-              type="number"
-              placeholder="Montant"
-              value={montant}
-              onChange={(e) => setMontant(Number(e.target.value))}
-            />
             <textarea
               className="w-full border rounded px-2 py-1"
-              placeholder="Description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Justification"
+              value={justification}
+              onChange={e => setJustification(e.target.value)}
             />
           </div>
           <DialogFooter className="mt-2">
-            <Button onClick={saveDemande}>{editingDemande ? "Enregistrer" : "Créer"}</Button>
+            <Button onClick={createDecaissement}>Créer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
