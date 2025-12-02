@@ -1,152 +1,148 @@
-import React, { useState } from "react";
-import { financeApi } from "@/lib/api";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+// src/pages/finance/DemandesDecaissement.tsx
+import React, { useEffect, useState } from "react";
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { toast } from "react-hot-toast";
+import { stockApi, rhApi, financeApi } from "@/lib/api";
 
-interface DemandeForm {
-  objet: string;
-  justificatif: string;
+type DemandeDetail = {
+  id: string;
+  numero?: string;
+  description?: string;
   montant: number;
-  validations: string[]; // liste des UUID des personnes à valider
-}
+  statut: string;
+  source: "rh" | "stock";
+  decaissement_cree?: boolean;
+  cordo_valide?: boolean;
+};
 
-const VALIDATEURS = [
-  { id: "coordo_finance", label: "Coordonnateur Finance" },
-  { id: "coordo_programme", label: "Coordonnateur Programme" },
-  { id: "dg", label: "Directeur Général" },
-  { id: "daf", label: "DAF" },
-];
+const badgeColor = (status: string) => {
+  switch (status?.toLowerCase()) {
+    case "approuve": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
+    case "rejete": return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
+    case "en_attente": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    case "decaisse": return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
+    case "cordo_valide": return "bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold";
+    default: return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
+  }
+};
 
-export default function DemandeDecaissementForm() {
-  const [form, setForm] = useState<DemandeForm>({
-    objet: "",
-    justificatif: "",
-    montant: 0,
-    validations: [],
-  });
+const DemandesDecaissementPage: React.FC = () => {
+  const [demandes, setDemandes] = useState<DemandeDetail[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const [isSending, setIsSending] = useState(false);
-  const [isSelectionDisabled, setIsSelectionDisabled] = useState(false);
-
-  // Gestion des champs simples
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // Gestion des validations multi-sélection
-  const toggleValidation = (id: string) => {
-    if (isSelectionDisabled) return;
-
-    setForm((prev) => {
-      const exists = prev.validations.includes(id);
-      return {
-        ...prev,
-        validations: exists
-          ? prev.validations.filter((v) => v !== id)
-          : [...prev.validations, id],
-      };
-    });
-  };
-
-  // Envoi
-  const handleSubmit = async () => {
+  const fetchDemandes = async () => {
+    setLoading(true);
     try {
-      if (!form.objet || !form.justificatif || !form.montant) {
-        toast.error("Veuillez remplir tous les champs.");
-        return;
-      }
+      const rhRes = await rhApi.getDemandes();
+      const stockRes = await stockApi.getDemandesAchat();
 
-      if (form.validations.length === 0) {
-        toast.error("Veuillez sélectionner au moins un validateur.");
-        return;
-      }
+      const allDemandes: DemandeDetail[] = [
+        ...(rhRes.results || []).map((d: any) => ({
+          id: d.id,
+          description: d.description,
+          montant: Number(d.montant || 0),
+          statut: d.status.toLowerCase().replace(/\s/g, "_"),
+          source: "rh",
+          decaissement_cree: d.decaissement_cree || false,
+          cordo_valide: d.cordo_valide || false,
+        })),
+        ...(stockRes.results || []).map((d: any) => ({
+          id: d.id,
+          description: d.numero || d.description || "-",
+          montant: Number(d.montant_estime || 0),
+          statut: d.statut.toLowerCase().replace(/\s/g, "_"),
+          source: "stock",
+          decaissement_cree: d.decaissement_cree || false,
+          cordo_valide: d.cordo_valide || false,
+        })),
+      ];
 
-      setIsSending(true);
-
-      await financeApi.post("/demandes-decaissement/", form);
-
-      toast.success("Demande envoyée avec succès !");
-      setIsSelectionDisabled(true); // ❌ désactiver la sélection une fois envoyé
-    } catch (error) {
-      toast.error("Erreur lors de l’envoi de la demande.");
-      console.error(error);
+      // On ne garde que les demandes approuvées ou déjà décaissement
+      setDemandes(allDemandes.filter(d => d.statut === "approuve" || d.decaissement_cree));
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur lors du chargement des demandes.");
     } finally {
-      setIsSending(false);
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDemandes();
+  }, []);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleCreateDecaissement = async () => {
+    if (!selectedIds.length) {
+      toast.error("Sélectionnez au moins une demande !");
+      return;
+    }
+    try {
+      await financeApi.createDemandeDecaissement(selectedIds);
+      toast.success("Demande de décaissement créée !");
+      setSelectedIds([]);
+      fetchDemandes();
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors de la création");
     }
   };
 
   return (
-    <Card className="max-w-2xl mx-auto">
-      <CardHeader>
-        <CardTitle>Créer une Demande de Décaissement</CardTitle>
-      </CardHeader>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Demandes de décaissement</h1>
 
-      <CardContent className="space-y-4">
-        <div>
-          <Label>Objet</Label>
-          <Input
-            name="objet"
-            value={form.objet}
-            onChange={handleChange}
-            placeholder="Ex: Achat matériel informatique"
-          />
-        </div>
+      <Button className="mb-4" onClick={handleCreateDecaissement} disabled={!selectedIds.length}>
+        Créer la demande
+      </Button>
 
-        <div>
-          <Label>Justificatif</Label>
-          <Textarea
-            name="justificatif"
-            value={form.justificatif}
-            onChange={handleChange}
-            placeholder="Explique pourquoi le décaissement est nécessaire"
-          />
-        </div>
-
-        <div>
-          <Label>Montant</Label>
-          <Input
-            name="montant"
-            type="number"
-            value={form.montant}
-            onChange={handleChange}
-          />
-        </div>
-
-        <div>
-          <Label>Choisir les validateurs</Label>
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            {VALIDATEURS.map((v) => (
-              <button
-                key={v.id}
-                type="button"
-                className={`border p-2 rounded ${
-                  form.validations.includes(v.id)
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100"
-                } ${
-                  isSelectionDisabled
-                    ? "opacity-50 pointer-events-none"
-                    : "cursor-pointer"
-                }`}
-                onClick={() => toggleValidation(v.id)}
-              >
-                {v.label}
-              </button>
+      {loading ? (
+        <p>Chargement...</p>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Sélection</TableHead>
+              <TableHead>Description / Numéro</TableHead>
+              <TableHead>Montant</TableHead>
+              <TableHead>Statut</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {demandes.map(d => (
+              <TableRow key={d.id}>
+                <TableCell>
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.includes(d.id)}
+                    onChange={() => toggleSelect(d.id)}
+                    disabled={d.decaissement_cree}
+                  />
+                </TableCell>
+                <TableCell>
+                  {d.description} {d.numero ? `(${d.numero})` : ""}
+                  <div className="mt-1 space-x-2">
+                    {d.decaissement_cree && <span className={badgeColor("decaisse")}>Décaissement créé</span>}
+                    {d.cordo_valide && <span className={badgeColor("cordo_valide")}>Cordo validé</span>}
+                  </div>
+                </TableCell>
+                <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
+                <TableCell>
+                  <span className={badgeColor(d.statut)}>{d.statut}</span>
+                </TableCell>
+              </TableRow>
             ))}
-          </div>
-        </div>
-
-        <Button onClick={handleSubmit} disabled={isSending}>
-          {isSending ? "Envoi..." : "Envoyer la demande"}
-        </Button>
-      </CardContent>
-    </Card>
+          </TableBody>
+        </Table>
+      )}
+    </div>
   );
-}
+};
+
+export default DemandesDecaissementPage;
