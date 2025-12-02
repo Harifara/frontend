@@ -66,6 +66,7 @@ const navigation = [
 
   { name: "Validation des demandes", href: "/finance/validation-demandes", icon: ClipboardList, roles: ["admin", "responsable_finance"] },
   { name: "Dépenses", href: "/finance/depenses", icon: ClipboardList, roles: ["admin", "responsable_finance"] },
+  { name: "Demandes de décaissement", href: "/finance/demandes-decaissement", icon: ClipboardList, roles: ["admin", "responsable_finance"] },
 ];
 
 // Fonction pour initiales utilisateur

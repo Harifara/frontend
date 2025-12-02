@@ -960,10 +960,13 @@ getStocksAutresMagasinsRaw: async (articleId: string) => {
 
 
 // ==========================
-// FINANCE API (Validations demandes)
+// FINANCE API (Validations et Décaissements)
 // ==========================
 export const financeApi = {
 
+  // --------------------------
+  // Validations demandes
+  // --------------------------
   getValidations: async () => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/validations-demandes/`, {
@@ -996,7 +999,9 @@ export const financeApi = {
     });
   },
 
-
+  // --------------------------
+  // Dépenses
+  // --------------------------
   getDepenses: async () => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/depenses/`, {
@@ -1004,7 +1009,6 @@ export const financeApi = {
     });
   },
 
-  // Récupérer une dépense spécifique
   getDepense: async (id: string) => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/`, {
@@ -1012,7 +1016,6 @@ export const financeApi = {
     });
   },
 
-  // Créer une dépense
   createDepense: async (payload: any) => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/depenses/`, {
@@ -1022,7 +1025,6 @@ export const financeApi = {
     });
   },
 
-  // Mettre à jour une dépense
   updateDepense: async (id: string, payload: any) => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/`, {
@@ -1032,7 +1034,6 @@ export const financeApi = {
     });
   },
 
-  // Supprimer une dépense
   deleteDepense: async (id: string) => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/`, {
@@ -1041,7 +1042,6 @@ export const financeApi = {
     });
   },
 
-  // Valider une dépense (workflow)
   validerDepense: async (id: string) => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/valider/`, {
@@ -1059,7 +1059,63 @@ export const financeApi = {
     });
   },
 
+  // --------------------------
+  // DEMANDES DE DECAISSEMENT
+  // --------------------------
+  getDemandesDecaissement: async () => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/`, {
+      headers: getHeaders(token),
+    });
+  },
+
+  getDemandeDecaissement: async (id: string) => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/${cleanUUID(id)}/`, {
+      headers: getHeaders(token),
+    });
+  },
+
+  createDemandeDecaissement: async (payload: any) => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/`, {
+      method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+  },
+
+  updateDemandeDecaissement: async (id: string, payload: any) => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/${cleanUUID(id)}/`, {
+      method: "PATCH",
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
+  },
+
+  deleteDemandeDecaissement: async (id: string) => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/${cleanUUID(id)}/`, {
+      method: "DELETE",
+      headers: getHeaders(token),
+    });
+  },
+
+  validerDemandeDecaissement: async (id: string) => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/${cleanUUID(id)}/valider/`, {
+      method: "POST",
+      headers: getHeaders(token),
+    });
+  },
+
+  rejeterDemandeDecaissement: async (id: string, commentaire: string = "") => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/${cleanUUID(id)}/rejeter/`, {
+      method: "POST",
+      headers: getHeaders(token),
+      body: JSON.stringify({ commentaire }),
+    });
+  },
 };
-
-
-

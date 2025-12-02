@@ -45,6 +45,7 @@ import PageDemandesAchat from "./pages/stock/PageDemandesAchat";
 
 import ValidationDemandesPage from "./pages/finance/ValidationDemandesPage";
 import DepensePage from "./pages/finance/DepensePage";
+import DemandesDecaissement from "./pages/finance/DemandesDecaissement";
 
 
 
@@ -125,6 +126,7 @@ const App = () => (
 
               <Route path="/finance/validation-demandes" element={<ValidationDemandesPage />} />
               <Route path="/finance/depenses" element={<DepensePage />} />
+              <Route path="/finance/demandes-decaissement" element={<DemandesDecaissement />} />
               </Route>
               
 
