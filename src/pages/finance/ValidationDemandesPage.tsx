@@ -37,8 +37,10 @@ type DemandeDetail = {
 const badgeColor = (status: string) => {
   switch (status?.toLowerCase()) {
     case "approuve": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
-    case "rejete": return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
+    case "rejete":
+    case "refuse": return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
     case "en_attente": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    case "en_cours": return "bg-yellow-200 text-yellow-900 px-2 py-1 rounded text-xs font-semibold";
     case "decaisse": return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
     case "cordo_valide": return "bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold";
     default: return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
@@ -53,10 +55,15 @@ const ValidationDemandesPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const normalizeStatus = (s?: string) => s?.toLowerCase().replace(/\s/g, "_") || "en_attente";
+  const normalizeStatus = (s?: string) => {
+    if (!s) return "en_attente";
+    if (s.toLowerCase() === "refuse") return "rejete"; // correspondance RH
+    return s.toLowerCase().replace(/\s/g, "_");
+  };
 
   const extractList = (res: any) =>
-    Array.isArray(res?.results) ? res.results : Array.isArray(res) ? res : [];
+    Array.isArray(res?.results) ? res.results :
+    Array.isArray(res) ? res : [];
 
   // -----------------
   // Fetch
@@ -71,7 +78,7 @@ const ValidationDemandesPage: React.FC = () => {
       const rhDemandes: DemandeDetail[] = rhList.map((d: any) => ({
         id: d.id,
         description: d.description,
-        montant: Number(d.montant || 0),
+        montant: Number(d.montant_total || 0), // montant_total calculé backend
         statut: normalizeStatus(d.status),
         source: "rh",
         cordo_valide: Boolean(d.cordo_valide),
@@ -100,14 +107,12 @@ const ValidationDemandesPage: React.FC = () => {
         statut: normalizeStatus(d.statut),
         source: "stock",
         cordo_valide: Boolean(d.cordo_valide),
-        articles: [
-          {
-            nom: d.article_nom || (d.article?.nom ?? "Article"),
-            quantite: Number(d.quantite || 1),
-            prix_unitaire: Number(d.montant_estime || 0),
-            statut: normalizeStatus(d.statut),
-          },
-        ],
+        articles: [{
+          nom: d.article_nom || (d.article?.nom ?? "Article"),
+          quantite: Number(d.quantite || 1),
+          prix_unitaire: Number(d.montant_estime || 0),
+          statut: normalizeStatus(d.statut),
+        }],
         paiements: [],
         decaissement_cree: Boolean(d.decaissement_cree),
       }));
@@ -163,7 +168,7 @@ const ValidationDemandesPage: React.FC = () => {
     if (!selected.size) return toast.error("Aucune demande sélectionnée.");
 
     try {
-      await financeApi.createDemandeDecaissement([...selected]);
+      await financeApi.createDemandeDecaissement([...selected], "Décaissement depuis validation"); 
       toast.success("Décaissement créé !");
       setSelected(new Set());
       fetchDemandes();
