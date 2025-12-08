@@ -3,17 +3,16 @@ import React, { useEffect, useState } from "react";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
-import { stockApi, rhApi, financeApi } from "@/lib/api";
+import { financeApi } from "@/lib/api";
 
-type DemandeDetail = {
+type ValidationDetail = {
   id: string;
-  numero?: string;
-  description?: string;
+  numero: string;
+  description: string;
   montant: number;
-  statut: string;
-  source: "rh" | "stock";
-  decaissement_cree?: boolean;
-  cordo_valide?: boolean;
+  statut: string; // en_attente | approuve | rejete
+  decaissement_cree: boolean;
+  cordo_valide: boolean;
 };
 
 const badgeColor = (status: string) => {
@@ -28,49 +27,37 @@ const badgeColor = (status: string) => {
 };
 
 const DemandesDecaissementPage: React.FC = () => {
-  const [demandes, setDemandes] = useState<DemandeDetail[]>([]);
+  const [demandes, setDemandes] = useState<ValidationDetail[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
 
-  const fetchDemandes = async () => {
+  const fetchValidations = async () => {
     setLoading(true);
     try {
-      const rhRes = await rhApi.getDemandes();
-      const stockRes = await stockApi.getDemandesAchat();
+      const res = await financeApi.getValidations();
 
-      const allDemandes: DemandeDetail[] = [
-        ...(rhRes.results || []).map((d: any) => ({
-          id: d.id,
-          description: d.description,
-          montant: Number(d.montant || 0),
-          statut: d.status.toLowerCase().replace(/\s/g, "_"),
-          source: "rh",
-          decaissement_cree: d.decaissement_cree || false,
-          cordo_valide: d.cordo_valide || false,
-        })),
-        ...(stockRes.results || []).map((d: any) => ({
-          id: d.id,
-          description: d.numero || d.description || "-",
-          montant: Number(d.montant_estime || 0),
-          statut: d.statut.toLowerCase().replace(/\s/g, "_"),
-          source: "stock",
-          decaissement_cree: d.decaissement_cree || false,
-          cordo_valide: d.cordo_valide || false,
-        })),
-      ];
+      const validations = (res.results || []).map((v: any) => ({
+        id: v.id,
+        numero: v.numero,
+        description: v.description,
+        montant: Number(v.montant),
+        statut: v.statut,
+        decaissement_cree: v.decaissement_cree ?? false,
+        cordo_valide: v.cordo_valide ?? false,
+      }));
 
-      // On ne garde que les demandes approuvées ou déjà décaissement
-      setDemandes(allDemandes.filter(d => d.statut === "approuve" || d.decaissement_cree));
+      // ne garder que les demandes approuvées ou déjà en décaissement
+      setDemandes(validations.filter(v => v.statut === "approuve" || v.decaissement_cree));
     } catch (err) {
       console.error(err);
-      toast.error("Erreur lors du chargement des demandes.");
+      toast.error("Erreur chargement validations.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDemandes();
+    fetchValidations();
   }, []);
 
   const toggleSelect = (id: string) => {
@@ -86,11 +73,11 @@ const DemandesDecaissementPage: React.FC = () => {
     }
     try {
       await financeApi.createDemandeDecaissement(selectedIds);
-      toast.success("Demande de décaissement créée !");
+      toast.success("Décaissement créé !");
       setSelectedIds([]);
-      fetchDemandes();
+      fetchValidations();
     } catch (err: any) {
-      toast.error(err.message || "Erreur lors de la création");
+      toast.error(err.message || "Erreur création décaissement");
     }
   };
 
@@ -109,7 +96,7 @@ const DemandesDecaissementPage: React.FC = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Sélection</TableHead>
-              <TableHead>Description / Numéro</TableHead>
+              <TableHead>Description</TableHead>
               <TableHead>Montant</TableHead>
               <TableHead>Statut</TableHead>
             </TableRow>
@@ -126,16 +113,14 @@ const DemandesDecaissementPage: React.FC = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  {d.description} {d.numero ? `(${d.numero})` : ""}
+                  <span className="font-semibold">{d.numero}</span> — {d.description}
                   <div className="mt-1 space-x-2">
                     {d.decaissement_cree && <span className={badgeColor("decaisse")}>Décaissement créé</span>}
                     {d.cordo_valide && <span className={badgeColor("cordo_valide")}>Cordo validé</span>}
                   </div>
                 </TableCell>
                 <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
-                <TableCell>
-                  <span className={badgeColor(d.statut)}>{d.statut}</span>
-                </TableCell>
+                <TableCell><span className={badgeColor(d.statut)}>{d.statut}</span></TableCell>
               </TableRow>
             ))}
           </TableBody>
