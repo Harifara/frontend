@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { rhApi, MEDIA_URL } from "@/lib/api";
+import { rhApi } from "@/lib/api";
+import { MEDIA_URL } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
@@ -32,7 +33,7 @@ interface Employer {
   cv?: string;
 }
 
-const DEFAULT_USER_ICON = "/default-user-icon.png"; // mettre dans public/
+const DEFAULT_USER_ICON = "/default-user-icon.png";
 
 const Employes: React.FC = () => {
   const [employes, setEmployes] = useState<Employer[]>([]);
@@ -122,9 +123,7 @@ const Employes: React.FC = () => {
         toast({ title: "Succès", description: "Employé mis à jour" });
       } else {
         const newEmp = await rhApi.createEmploye(payload);
-        // Récupérer l'employé complet après ajout
-        const fullEmp = await rhApi.getEmploye(newEmp.id!);
-        setEmployes(prev => [...prev, fullEmp]);
+        setEmployes(prev => [...prev, newEmp]);
         toast({ title: "Succès", description: "Employé ajouté" });
       }
     } catch (err: any) {
@@ -185,6 +184,7 @@ const Employes: React.FC = () => {
 
   return (
     <div className="p-8 space-y-6">
+      {/* Header */}
       <div className="flex justify-between items-center gap-2">
         <h1 className="text-3xl font-bold">Employés</h1>
         <div className="flex gap-2">
@@ -194,8 +194,10 @@ const Employes: React.FC = () => {
         </div>
       </div>
 
+      {/* Recherche */}
       <Input placeholder="Rechercher un employé..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="max-w-md" />
 
+      {/* Table */}
       <Card>
         <CardHeader><CardTitle>Liste des employés</CardTitle></CardHeader>
         <CardContent>
@@ -232,7 +234,6 @@ const Employes: React.FC = () => {
                       />
                     </div>
                   </TableCell>
-
                   <TableCell>{e.nom_employer} {e.prenom_employer}</TableCell>
                   <TableCell>{e.email}</TableCell>
                   <TableCell>{e.fonction?.nom_fonction || "-"}</TableCell>
@@ -259,6 +260,7 @@ const Employes: React.FC = () => {
           <DialogHeader>
             <DialogTitle>{editing ? "Modifier un employé" : "Ajouter un employé"}</DialogTitle>
           </DialogHeader>
+
           <div className="grid grid-cols-4 gap-5">
             {/* Nom / Prénom */}
             <div><Label>Nom</Label><Input value={form.nom_employer || ""} onChange={e => setForm({ ...form, nom_employer: e.target.value })} /></div>
@@ -305,26 +307,26 @@ const Employes: React.FC = () => {
               </Select>
             </div>
             {/* Photo / CV */}
-            {editing?.photo_profil && (
-              <div className="col-span-2 flex items-center gap-4">
+            <div className="col-span-2 flex items-center gap-4">
+              {photo ? (
+                <img src={URL.createObjectURL(photo)} className="w-16 h-16 rounded-full object-cover" />
+              ) : editing?.photo_profil ? (
                 <img src={getPhotoUrl(editing.photo_profil)} className="w-16 h-16 rounded-full object-cover" />
-                <span className="text-sm text-gray-500">Photo actuelle</span>
-              </div>
-            )}
-            <div>
+              ) : null}
               <Label>Photo de profil</Label>
               <Input type="file" accept="image/*" onChange={e => setPhoto(e.target.files?.[0] || null)} />
             </div>
-            {editing?.cv && (
-              <div className="col-span-2 flex items-center gap-2">
-                <a href={editing.cv?.startsWith("http") ? editing.cv : `${MEDIA_URL}${editing.cv}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">Voir le CV actuel</a>
-                <span className="text-sm text-gray-500">(PDF)</span>
-              </div>
-            )}
-            <div>
+
+            <div className="col-span-2 flex items-center gap-2">
+              {cv ? (
+                <a href={URL.createObjectURL(cv)} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">Voir le CV</a>
+              ) : editing?.cv ? (
+                <a href={editing.cv.startsWith("http") ? editing.cv : `${MEDIA_URL}${editing.cv}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">Voir le CV actuel</a>
+              ) : null}
               <Label>CV (PDF)</Label>
               <Input type="file" accept=".pdf" onChange={e => setCV(e.target.files?.[0] || null)} />
             </div>
+
             {/* Statut */}
             <div>
               <Label>Statut</Label>
