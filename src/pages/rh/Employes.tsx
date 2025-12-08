@@ -12,8 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
 import { createPDFDoc } from "@/lib/pdfTemplate";
-import { User } from "lucide-react";
-
 
 interface Fonction { id: string; nom_fonction: string; }
 interface District { id: string; name: string; }
@@ -34,9 +32,8 @@ interface Employer {
   photo_profil?: string;
   cv?: string;
 }
-const DEFAULT_USER_ICON = "/default-user-icon.png"; // mettre dans public/
 
-
+const DEFAULT_USER_ICON = "/default-user-icon.png";
 
 const Employes: React.FC = () => {
   const [employes, setEmployes] = useState<Employer[]>([]);
@@ -54,30 +51,12 @@ const Employes: React.FC = () => {
 
   const { toast } = useToast();
   const navigate = useNavigate();
+
   const getPhotoUrl = (photo?: string) => {
-    if (!photo) {
-      console.log("Aucune photo fournie, utilisation de l'icône par défaut.");
-      return DEFAULT_USER_ICON;
-    }
-
-    // Si Django renvoie déjà une URL complète
-    if (photo.startsWith("http")) {
-      console.log("Photo URL finale:", photo);
-      return photo; 
-    }
-
-    // Sinon, on construit depuis MEDIA_URL
-    const url = `${MEDIA_URL.replace(/\/$/, "")}/${photo.replace(/^\/+/, "")}`;
-    console.log("Photo URL finale:", url);
-    return url;
+    if (!photo) return DEFAULT_USER_ICON;
+    return photo.startsWith("http") ? photo : `${MEDIA_URL.replace(/\/$/, "")}/${photo.replace(/^\/+/, "")}`;
   };
 
-
-
-
-
-
-  // Chargement initial
   useEffect(() => { fetchData(); }, []);
 
   const fetchData = async () => {
@@ -98,25 +77,10 @@ const Employes: React.FC = () => {
     }
   };
 
-  // Ouvrir modal ajout
-  const openAddModal = () => {
-    setEditing(null);
-    setForm({});
-    setPhoto(null);
-    setCV(null);
-    setIsModalOpen(true);
-  };
+  const openAddModal = () => { setEditing(null); setForm({}); setPhoto(null); setCV(null); setIsModalOpen(true); };
+  const openEditModal = (emp: Employer) => { setEditing(emp); setForm(emp); setPhoto(null); setCV(null); setIsModalOpen(true); };
+  const openDeleteModal = (id: string) => { setSelectedIdToDelete(id); setIsDeleteModalOpen(true); };
 
-  // Ouvrir modal édition
-  const openEditModal = (emp: Employer) => {
-    setEditing(emp);
-    setForm(emp);
-    setPhoto(null);
-    setCV(null);
-    setIsModalOpen(true);
-  };
-
-  // Soumission formulaire
   const handleSubmit = async () => {
     if (!form.nom_employer || !form.prenom_employer || !form.email || !form.date_entree) {
       toast({ title: "Champs manquants", description: "Veuillez remplir tous les champs obligatoires.", variant: "destructive" });
@@ -141,8 +105,8 @@ const Employes: React.FC = () => {
 
     try {
       if (editing?.id) {
-        await rhApi.updateEmploye(editing.id, payload);
-        setEmployes(prev => prev.map(e => (e.id === editing.id ? { ...e, ...form } : e)));
+        const updated = await rhApi.updateEmploye(editing.id, payload);
+        setEmployes(prev => prev.map(e => e.id === editing.id ? updated : e));
         toast({ title: "Succès", description: "Employé mis à jour" });
       } else {
         const newEmp = await rhApi.createEmploye(payload);
@@ -150,18 +114,12 @@ const Employes: React.FC = () => {
         toast({ title: "Succès", description: "Employé ajouté" });
       }
     } catch (err: any) {
-      toast({
-        title: "Erreur",
-        description: err.response?.data ? JSON.stringify(err.response.data) : err.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: err.response?.data ? JSON.stringify(err.response.data) : err.message, variant: "destructive" });
     } finally {
       setIsModalOpen(false);
     }
   };
 
-  // Modal suppression
-  const openDeleteModal = (id: string) => { setSelectedIdToDelete(id); setIsDeleteModalOpen(true); };
   const confirmDelete = async () => {
     if (!selectedIdToDelete) return;
     try {
@@ -176,9 +134,8 @@ const Employes: React.FC = () => {
     }
   };
 
-  // Export Excel
   const exportExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(employes.map(e => ({
+    const ws = XLSX.utils.json_to_sheet(employes.map(e => ({
       Nom: e.nom_employer,
       Prénom: e.prenom_employer,
       Email: e.email,
@@ -186,12 +143,11 @@ const Employes: React.FC = () => {
       District: e.district?.name || "",
       Statut: e.status_employer
     })));
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Employés");
-    XLSX.writeFile(workbook, "employes.xlsx");
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Employés");
+    XLSX.writeFile(wb, "employes.xlsx");
   };
 
-  // Export PDF
   const exportPDF = async () => {
     const data = employes.map(e => [
       e.nom_employer, e.prenom_employer, e.email,
@@ -201,7 +157,6 @@ const Employes: React.FC = () => {
     await createPDFDoc("Liste des employés", data, columns, "employes.pdf");
   };
 
-  // Filtrage recherche
   const filtered = employes.filter(e => {
     const term = searchTerm.toLowerCase();
     return `${e.nom_employer} ${e.prenom_employer}`.toLowerCase().includes(term) || e.email.toLowerCase().includes(term);
@@ -211,20 +166,17 @@ const Employes: React.FC = () => {
 
   return (
     <div className="p-8 space-y-6">
-      {/* Header */}
       <div className="flex justify-between items-center gap-2">
         <h1 className="text-3xl font-bold">Employés</h1>
         <div className="flex gap-2">
-          <Button onClick={openAddModal}>Ajouter un employé</Button>
-          <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
-          <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
+          <Button onClick={openAddModal}>Ajouter</Button>
+          <Button variant="outline" onClick={exportPDF}>Exporter PDF</Button>
+          <Button variant="outline" onClick={exportExcel}>Exporter Excel</Button>
         </div>
       </div>
 
-      {/* Recherche */}
       <Input placeholder="Rechercher un employé..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="max-w-md" />
 
-      {/* Table */}
       <Card>
         <CardHeader><CardTitle>Liste des employés</CardTitle></CardHeader>
         <CardContent>
@@ -244,28 +196,19 @@ const Employes: React.FC = () => {
               {filtered.length > 0 ? filtered.map(e => (
                 <TableRow key={e.id} className="hover:bg-gray-50">
                   <TableCell>
-                      <div
-                        className="w-10 h-10 rounded-full overflow-hidden border border-gray-300 bg-gray-100 flex items-center justify-center cursor-pointer"
-                        onClick={() => navigate(`/rh/employes/${e.id}`)}
-                        title="Voir le profil"
-                      >
-                        <img
-                          src={getPhotoUrl(e.photo_profil)}
-                          alt={e.nom_employer}
-                          className="w-full h-full object-cover"
-                          onError={(event) => {
-                            const target = event.target as HTMLImageElement;
-                            console.error("Erreur de chargement de l'image pour:", e.nom_employer, "URL:", target.src);
-                            target.onerror = null;
-                            target.src = DEFAULT_USER_ICON;
-                          }}
-                          onLoad={() => console.log("Image chargée avec succès pour:", e.nom_employer, "URL:", getPhotoUrl(e.photo_profil))}
-                        />
-
-
-                      </div>
-                    </TableCell>
-
+                    <div
+                      className="w-10 h-10 rounded-full overflow-hidden border border-gray-300 bg-gray-100 flex items-center justify-center cursor-pointer"
+                      onClick={() => navigate(`/rh/employes/${e.id}`)}
+                      title="Voir le profil"
+                    >
+                      <img
+                        src={getPhotoUrl(e.photo_profil)}
+                        alt={e.nom_employer}
+                        className="w-full h-full object-cover"
+                        onError={event => { (event.target as HTMLImageElement).src = DEFAULT_USER_ICON; }}
+                      />
+                    </div>
+                  </TableCell>
                   <TableCell>{e.nom_employer} {e.prenom_employer}</TableCell>
                   <TableCell>{e.email}</TableCell>
                   <TableCell>{e.fonction?.nom_fonction || "-"}</TableCell>
@@ -292,22 +235,22 @@ const Employes: React.FC = () => {
           <DialogHeader>
             <DialogTitle>{editing ? "Modifier un employé" : "Ajouter un employé"}</DialogTitle>
           </DialogHeader>
-
           <div className="grid grid-cols-4 gap-5">
-            {/* Nom / Prénom */}
-            <div><Label>Nom</Label><Input value={form.nom_employer || ""} onChange={e => setForm({ ...form, nom_employer: e.target.value })} /></div>
-            <div><Label>Prénom</Label><Input value={form.prenom_employer || ""} onChange={e => setForm({ ...form, prenom_employer: e.target.value })} /></div>
-            {/* Email / Téléphone */}
-            <div><Label>Email</Label><Input value={form.email || ""} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
-            <div><Label>Téléphone</Label><Input value={form.telephone || ""} onChange={e => setForm({ ...form, telephone: e.target.value })} /></div>
-            {/* Dates */}
-            <div><Label>Date de naissance</Label><Input type="date" value={form.date_naissance || ""} onChange={e => setForm({ ...form, date_naissance: e.target.value })} /></div>
-            <div><Label>Date d'entrée</Label><Input type="date" value={form.date_entree || ""} onChange={e => setForm({ ...form, date_entree: e.target.value })} /></div>
+            {/* Nom, Prénom, Email, Téléphone */}
+            <div><Label>Nom</Label><Input value={form.nom_employer || ""} onChange={e => setForm({...form, nom_employer: e.target.value})} /></div>
+            <div><Label>Prénom</Label><Input value={form.prenom_employer || ""} onChange={e => setForm({...form, prenom_employer: e.target.value})} /></div>
+            <div><Label>Email</Label><Input value={form.email || ""} onChange={e => setForm({...form, email: e.target.value})} /></div>
+            <div><Label>Téléphone</Label><Input value={form.telephone || ""} onChange={e => setForm({...form, telephone: e.target.value})} /></div>
+
+            {/* Date naissance / Date entrée */}
+            <div><Label>Date de naissance</Label><Input type="date" value={form.date_naissance || ""} onChange={e => setForm({...form, date_naissance: e.target.value})} /></div>
+            <div><Label>Date d'entrée</Label><Input type="date" value={form.date_entree || ""} onChange={e => setForm({...form, date_entree: e.target.value})} /></div>
+
             {/* Adresse / Diplôme */}
-            <div><Label>Adresse</Label><Input value={form.adresse || ""} onChange={e => setForm({ ...form, adresse: e.target.value })} /></div>
+            <div><Label>Adresse</Label><Input value={form.adresse || ""} onChange={e => setForm({...form, adresse: e.target.value})} /></div>
             <div>
               <Label>Diplôme</Label>
-              <Select value={form.diplome || ""} onValueChange={val => setForm({ ...form, diplome: val as Employer["diplome"] })}>
+              <Select value={form.diplome || ""} onValueChange={val => setForm({...form, diplome: val as Employer["diplome"]})}>
                 <SelectTrigger><SelectValue placeholder="Sélectionner diplôme" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="bacc">BACC</SelectItem>
@@ -317,69 +260,47 @@ const Employes: React.FC = () => {
                 </SelectContent>
               </Select>
             </div>
+
             {/* Domaine / Fonction */}
-            <div><Label>Domaine d'étude</Label><Input value={form.domaine_etude || ""} onChange={e => setForm({ ...form, domaine_etude: e.target.value })} /></div>
+            <div><Label>Domaine</Label><Input value={form.domaine_etude || ""} onChange={e => setForm({...form, domaine_etude: e.target.value})} /></div>
             <div>
               <Label>Fonction</Label>
-              <Select value={form.fonction?.id || ""} onValueChange={val => setForm({ ...form, fonction: fonctions.find(f => f.id === val) || null })}>
+              <Select value={form.fonction?.id || ""} onValueChange={val => setForm({...form, fonction: fonctions.find(f => f.id === val) || null})}>
                 <SelectTrigger><SelectValue placeholder="Sélectionner fonction" /></SelectTrigger>
                 <SelectContent>
                   {fonctions.map(f => <SelectItem key={f.id} value={f.id}>{f.nom_fonction}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
+
             {/* District */}
             <div>
               <Label>District</Label>
-              <Select value={form.district?.id || ""} onValueChange={val => setForm({ ...form, district: districts.find(d => d.id === val) || null })}>
+              <Select value={form.district?.id || ""} onValueChange={val => setForm({...form, district: districts.find(d => d.id === val) || null})}>
                 <SelectTrigger><SelectValue placeholder="Sélectionner district" /></SelectTrigger>
                 <SelectContent>
                   {districts.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
+
             {/* Photo / CV */}
-            {editing?.photo_profil && (
-              <div className="col-span-2 flex items-center gap-4">
-                <img
-                  src={getPhotoUrl(editing.photo_profil)}
-
-                  className="w-16 h-16 rounded-full object-cover"
-                />
-
-                <span className="text-sm text-gray-500">Photo actuelle</span>
-              </div>
-            )}
             <div>
-              <Label>Photo de profil</Label>
+              <Label>Photo</Label>
               <Input type="file" accept="image/*" onChange={e => setPhoto(e.target.files?.[0] || null)} />
+              {editing?.photo_profil && <img src={getPhotoUrl(editing.photo_profil)} className="w-16 h-16 rounded-full mt-2" />}
             </div>
-            {editing?.cv && (
-              <div className="col-span-2 flex items-center gap-2">
-                <a
-                  href={
-                    editing.cv?.startsWith("http")
-                      ? editing.cv
-                      : `${MEDIA_URL}${editing.cv}`
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 underline text-sm"
-                >
-                  Voir le CV actuel
-                </a>
 
-                <span className="text-sm text-gray-500">(PDF)</span>
-              </div>
-            )}
             <div>
               <Label>CV (PDF)</Label>
               <Input type="file" accept=".pdf" onChange={e => setCV(e.target.files?.[0] || null)} />
+              {editing?.cv && <a href={editing.cv.startsWith("http") ? editing.cv : `${MEDIA_URL}${editing.cv}`} target="_blank" className="text-blue-600 underline text-sm">Voir le CV actuel</a>}
             </div>
+
             {/* Statut */}
             <div>
               <Label>Statut</Label>
-              <Select value={form.status_employer || ""} onValueChange={val => setForm({ ...form, status_employer: val as Employer["status_employer"] })}>
+              <Select value={form.status_employer || ""} onValueChange={val => setForm({...form, status_employer: val as Employer["status_employer"]})}>
                 <SelectTrigger><SelectValue placeholder="Sélectionner statut" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="actif">Actif</SelectItem>
@@ -403,7 +324,7 @@ const Employes: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Confirmer la suppression</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">Êtes-vous sûr de vouloir supprimer cet employé ? Cette action est irréversible.</p>
+          <p className="text-sm text-muted-foreground">Êtes-vous sûr de vouloir supprimer cet employé ?</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Annuler</Button>
             <Button variant="destructive" onClick={confirmDelete}>Supprimer</Button>
