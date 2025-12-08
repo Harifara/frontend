@@ -59,16 +59,19 @@ const Employes: React.FC = () => {
       console.log("Aucune photo fournie, utilisation de l'icône par défaut.");
       return DEFAULT_USER_ICON;
     }
-    let url = photo.startsWith("http") ? photo : `${MEDIA_URL.replace(/\/$/, "")}/${photo.replace(/^\/+/, "")}`;
 
-    // Forcer HTTPS
-    if (url.startsWith("http://")) {
-      url = url.replace("http://", "https://");
+    // Si Django renvoie déjà une URL complète
+    if (photo.startsWith("http")) {
+      console.log("Photo URL finale:", photo);
+      return photo; 
     }
 
+    // Sinon, on construit depuis MEDIA_URL
+    const url = `${MEDIA_URL.replace(/\/$/, "")}/${photo.replace(/^\/+/, "")}`;
     console.log("Photo URL finale:", url);
     return url;
   };
+
 
 
 
@@ -339,11 +342,8 @@ const Employes: React.FC = () => {
             {editing?.photo_profil && (
               <div className="col-span-2 flex items-center gap-4">
                 <img
-                  src={
-                    editing.photo_profil?.startsWith("http")
-                      ? editing.photo_profil
-                      : `${MEDIA_URL}${editing.photo_profil}`
-                  }
+                  src={getPhotoUrl(editing.photo_profil)}
+
                   className="w-16 h-16 rounded-full object-cover"
                 />
 
