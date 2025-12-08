@@ -71,19 +71,19 @@ const ValidationDemandesPage: React.FC = () => {
 
       const rhDemandes: DemandeDetail[] = rhList.map((d: any) => ({
         id: d.id,
-        description: d.description,
+        description: d.description || "-",
         montant: Number(d.montant || 0),
         statut: normalizeStatus(d.status),
         source: "rh",
         cordo_valide: Boolean(d.cordo_valide),
-        paiements: (d.payements || []).map((p: any) => ({
+        paiements: (d.paiements || []).map((p: any) => ({
           montant: Number(p.montant || 0),
           statut: normalizeStatus(p.status),
         })),
         articles: (d.achats || []).map((a: any) => ({
           nom: a.article || "-",
-          quantite: Number(a.nombre),
-          prix_unitaire: Number(a.montant),
+          quantite: Number(a.nombre || 1),
+          prix_unitaire: Number(a.montant || 0),
           statut: normalizeStatus(a.statut),
         })),
         decaissement_cree: Boolean(d.decaissement_cree),
@@ -96,7 +96,7 @@ const ValidationDemandesPage: React.FC = () => {
       const stockDemandes: DemandeDetail[] = stockList.map((d: any) => ({
         id: d.id,
         numero: d.numero,
-        description: d.description || d.numero,
+        description: d.description || d.numero || "-",
         montant: Number(d.montant_estime || 0),
         statut: normalizeStatus(d.statut),
         source: "stock",
@@ -237,7 +237,9 @@ const ValidationDemandesPage: React.FC = () => {
                         {d.articles.map((a, i) => (
                           <li key={i}>
                             {a.nom} — {a.quantite} × {a.prix_unitaire.toLocaleString()} Ar
-                            <span className={`ml-2 ${badgeColor(a.statut || "")}`}>{a.statut}</span>
+                            {a.statut && (
+                              <span className={`ml-2 ${badgeColor(a.statut)}`}>{a.statut}</span>
+                            )}
                           </li>
                         ))}
                       </ul>
@@ -251,7 +253,9 @@ const ValidationDemandesPage: React.FC = () => {
                         {d.paiements.map((p, i) => (
                           <li key={i}>
                             {p.montant.toLocaleString()} Ar
-                            <span className={`ml-2 ${badgeColor(p.statut || "")}`}>{p.statut}</span>
+                            {p.statut && (
+                              <span className={`ml-2 ${badgeColor(p.statut)}`}>{p.statut}</span>
+                            )}
                           </li>
                         ))}
                       </ul>
