@@ -1,10 +1,10 @@
-// src/pages/finance/DemandesDecaissement.tsx
 import React, { useEffect, useState } from "react";
-import { financeApi } from "@/lib/financeApi";
+import { financeApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import * as XLSX from "xlsx";
@@ -80,7 +80,9 @@ const DemandesDecaissement = () => {
 
   return (
     <div className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold">Demandes de Décaissement</h1>
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Demandes de Décaissement</h1>
+      </div>
 
       <div className="flex gap-4">
         <Input placeholder="Rechercher..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="flex-1" />
@@ -89,17 +91,19 @@ const DemandesDecaissement = () => {
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Liste des items</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle>Liste des items</CardTitle>
+        </CardHeader>
         <CardContent>
           <Table>
-            <TableHead>
+            <TableHeader>
               <TableRow>
-                <TableCell className="text-center">Description</TableCell>
-                <TableCell className="text-center">Montant</TableCell>
-                <TableCell className="text-center">Statut</TableCell>
-                <TableCell className="text-center">Actions</TableCell>
+                <TableHead className="text-center">Description</TableHead>
+                <TableHead className="text-center">Montant</TableHead>
+                <TableHead className="text-center">Statut</TableHead>
+                <TableHead className="text-center">Actions</TableHead>
               </TableRow>
-            </TableHead>
+            </TableHeader>
             <TableBody>
               {filteredItems.length ? filteredItems.map(i => (
                 <TableRow key={i.id}>
@@ -122,7 +126,9 @@ const DemandesDecaissement = () => {
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[400px]">
-          <DialogHeader><DialogTitle>Modifier le statut</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Modifier le statut</DialogTitle>
+          </DialogHeader>
           <div className="space-y-4">
             <Button onClick={() => handleUpdateStatut("en_attente")}>En attente</Button>
             <Button onClick={() => handleUpdateStatut("validé")}>Validé</Button>
