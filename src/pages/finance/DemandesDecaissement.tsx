@@ -10,7 +10,7 @@ type ValidationDetail = {
   numero: string;
   description: string;
   montant: number;
-  statut: string; // en_attente | approuve | rejete
+  statut: string;
   decaissement_cree: boolean;
   cordo_valide: boolean;
 };
@@ -36,21 +36,25 @@ const DemandesDecaissementPage: React.FC = () => {
     try {
       const res = await financeApi.getValidations();
 
-      const validations = (res.results || []).map((v: any) => ({
+      const list = Array.isArray(res?.results) ? res.results : [];
+
+      const validations: ValidationDetail[] = list.map((v: any) => ({
         id: v.id,
         numero: v.numero,
         description: v.description,
         montant: Number(v.montant),
-        statut: v.statut,
-        decaissement_cree: v.decaissement_cree ?? false,
-        cordo_valide: v.cordo_valide ?? false,
+        statut: v.statut?.toLowerCase(),
+        decaissement_cree: Boolean(v.decaissement_cree),
+        cordo_valide: Boolean(v.cordo_valide),
       }));
 
-      // ne garder que les demandes approuvées ou déjà en décaissement
-      setDemandes(validations.filter(v => v.statut === "approuve" || v.decaissement_cree));
+      // Garder seulement les approuvés ou déjà en décaissement
+      setDemandes(
+        validations.filter(v => v.statut === "approuve" || v.decaissement_cree)
+      );
     } catch (err) {
       console.error(err);
-      toast.error("Erreur chargement validations.");
+      toast.error("Erreur lors du chargement.");
     } finally {
       setLoading(false);
     }
@@ -67,10 +71,7 @@ const DemandesDecaissementPage: React.FC = () => {
   };
 
   const handleCreateDecaissement = async () => {
-    if (!selectedIds.length) {
-      toast.error("Sélectionnez au moins une demande !");
-      return;
-    }
+    if (!selectedIds.length) return toast.error("Sélectionnez au moins une demande !");
     try {
       await financeApi.createDemandeDecaissement(selectedIds);
       toast.success("Décaissement créé !");
@@ -112,15 +113,25 @@ const DemandesDecaissementPage: React.FC = () => {
                     disabled={d.decaissement_cree}
                   />
                 </TableCell>
+
                 <TableCell>
-                  <span className="font-semibold">{d.numero}</span> — {d.description}
+                  <strong>{d.numero}</strong> — {d.description}
                   <div className="mt-1 space-x-2">
-                    {d.decaissement_cree && <span className={badgeColor("decaisse")}>Décaissement créé</span>}
-                    {d.cordo_valide && <span className={badgeColor("cordo_valide")}>Cordo validé</span>}
+                    {d.decaissement_cree && (
+                      <span className={badgeColor("decaisse")}>Décaissement créé</span>
+                    )}
+                    {d.cordo_valide && (
+                      <span className={badgeColor("cordo_valide")}>Cordo validé</span>
+                    )}
                   </div>
                 </TableCell>
+
                 <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
-                <TableCell><span className={badgeColor(d.statut)}>{d.statut}</span></TableCell>
+
+                <TableCell>
+                  <span className={badgeColor(d.statut)}>{d.statut}</span>
+                </TableCell>
+
               </TableRow>
             ))}
           </TableBody>

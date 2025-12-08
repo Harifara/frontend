@@ -1,83 +1,190 @@
 // src/pages/finance/ValidationDemandesPage.tsx
 import React, { useEffect, useState } from "react";
 import {
-  Table, TableHeader, TableBody, TableRow, TableCell, TableHead,
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { toast } from "react-hot-toast";
-import { financeApi } from "@/lib/api";
+import { stockApi, rhApi, financeApi } from "@/lib/api";
 
 // -----------------
 // Types
 // -----------------
-type ArticleDetail = { nom: string; quantite: number; prix_unitaire: number };
-type PaiementDetail = { montant: number };
+type ArticleDetail = { nom: string; quantite: number; prix_unitaire: number; statut?: string };
+type PaiementDetail = { montant: number; statut?: string };
 
-type ValidationDetail = {
+type DemandeDetail = {
   id: string;
-  numero: string;
-  description: string;
+  numero?: string;
+  description?: string;
   montant: number;
   statut: string;
-  service_origine: "rh_service" | "stock_service";
+  source: "rh" | "stock";
   articles?: ArticleDetail[];
   paiements?: PaiementDetail[];
+  decaissement_cree?: boolean;
+  cordo_valide?: boolean;
 };
 
-const badgeColor = (s: string) => {
-  switch (s) {
+// -----------------
+// Badge couleur
+// -----------------
+const badgeColor = (status: string) => {
+  switch (status?.toLowerCase()) {
     case "approuve": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
     case "rejete": return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
-    default: return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    case "en_attente": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    case "decaisse": return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
+    case "cordo_valide": return "bg-purple-100 text-purple-800 px-2 py-1 rounded text-xs font-semibold";
+    default: return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
   }
 };
 
+// -----------------
+// Composant
+// -----------------
 const ValidationDemandesPage: React.FC = () => {
-  const [demandes, setDemandes] = useState<ValidationDetail[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [demandes, setDemandes] = useState<DemandeDetail[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const loadData = async () => {
+  const normalizeStatus = (s?: string) => s?.toLowerCase().replace(/\s/g, "_") || "en_attente";
+
+  const extractList = (res: any) =>
+    Array.isArray(res?.results) ? res.results :
+    Array.isArray(res) ? res : [];
+
+  // -----------------
+  // Fetch
+  // -----------------
+  const fetchDemandes = async () => {
     setLoading(true);
     try {
-      const res = await financeApi.getValidations();
+      // ----------------- RH API -----------------
+      const rhRes = await rhApi.getDemandes();
+      const rhList = extractList(rhRes);
 
-      const list = (res.results || []).map((v: any) => ({
-        id: v.id,
-        numero: v.numero,
-        description: v.description,
-        montant: Number(v.montant),
-        statut: v.statut,
-        service_origine: v.service_origine,
-        articles: v.articles || [],
-        paiements: v.paiements || [],
+      const rhDemandes: DemandeDetail[] = rhList.map((d: any) => ({
+        id: d.id,
+        description: d.description,
+        montant: Number(d.montant || 0),
+        statut: normalizeStatus(d.status),
+        source: "rh",
+        cordo_valide: Boolean(d.cordo_valide),
+        paiements: (d.payements || []).map((p: any) => ({
+          montant: Number(p.montant || 0),
+          statut: normalizeStatus(p.status),
+        })),
+        articles: (d.achats || []).map((a: any) => ({
+          nom: a.article || "-",
+          quantite: Number(a.nombre),
+          prix_unitaire: Number(a.montant),
+          statut: normalizeStatus(a.statut),
+        })),
+        decaissement_cree: Boolean(d.decaissement_cree),
       }));
 
-      setDemandes(list);
-    } catch (e) {
-      toast.error("Erreur chargement.");
-      console.error(e);
+      // ----------------- STOCK API -----------------
+      const stockRes = await stockApi.getDemandesAchat();
+      const stockList = extractList(stockRes);
+
+      const stockDemandes: DemandeDetail[] = stockList.map((d: any) => ({
+        id: d.id,
+        numero: d.numero,
+        description: d.description || d.numero,
+        montant: Number(d.montant_estime || 0),
+        statut: normalizeStatus(d.statut),
+        source: "stock",
+        cordo_valide: Boolean(d.cordo_valide),
+        articles: [{
+          nom: d.article_nom || (d.article?.nom ?? "Article"),
+          quantite: Number(d.quantite || 1),
+          prix_unitaire: Number(d.montant_estime || 0),
+          statut: normalizeStatus(d.statut),
+        }],
+        paiements: [],
+        decaissement_cree: Boolean(d.decaissement_cree),
+      }));
+
+      setDemandes([...rhDemandes, ...stockDemandes]);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur lors du chargement.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    loadData();
+    fetchDemandes();
   }, []);
 
-  const valider = async (id: string, action: "approuve" | "rejete") => {
+  // -----------------
+  // Actions
+  // -----------------
+  const handleApprove = async (d: DemandeDetail) => {
     try {
-      await financeApi.validateDemande(id, action);
-      toast.success(`Demande ${action}`);
-      loadData();
-    } catch (e: any) {
-      toast.error(e.message || "Erreur.");
+      if (d.source === "rh") await rhApi.approveDemande(d.id);
+      else await stockApi.validerDemandeAchat(d.id);
+
+      toast.success("Demande approuvée.");
+      fetchDemandes();
+    } catch {
+      toast.error("Erreur lors de l'approbation.");
     }
   };
 
+  const handleReject = async (d: DemandeDetail) => {
+    try {
+      if (d.source === "rh") await rhApi.rejectDemande(d.id);
+      else await stockApi.rejeterDemandeAchat(d.id, "Rejet finance");
+
+      toast.success("Demande rejetée.");
+      fetchDemandes();
+    } catch {
+      toast.error("Erreur lors du rejet.");
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selected);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelected(newSet);
+  };
+
+  const handleDecaisserSelection = async () => {
+    if (!selected.size) return toast.error("Aucune demande sélectionnée.");
+
+    try {
+      await financeApi.createDemandeDecaissement([...selected]);
+      toast.success("Décaissement créé !");
+      setSelected(new Set());
+      fetchDemandes();
+    } catch (err: any) {
+      toast.error(err.message || "Erreur lors du décaissement");
+    }
+  };
+
+  // -----------------
+  // Render
+  // -----------------
   return (
     <div className="p-6">
-      <h1 className="text-xl font-bold mb-4">Validation des Demandes</h1>
+      <h1 className="text-2xl font-bold mb-4">Validation des Demandes</h1>
+
+      <Button
+        className="mb-4"
+        onClick={handleDecaisserSelection}
+        disabled={selected.size === 0}
+      >
+        Créer demande de décaissement
+      </Button>
 
       {loading ? (
         <p>Chargement...</p>
@@ -85,7 +192,7 @@ const ValidationDemandesPage: React.FC = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Numéro</TableHead>
+              <TableHead>Sélection</TableHead>
               <TableHead>Description</TableHead>
               <TableHead>Montant</TableHead>
               <TableHead>Détails</TableHead>
@@ -93,29 +200,62 @@ const ValidationDemandesPage: React.FC = () => {
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
+
           <TableBody>
-            {demandes.map(d => (
+            {demandes.map((d) => (
               <TableRow key={d.id}>
-                <TableCell>{d.numero}</TableCell>
-                <TableCell>{d.description}</TableCell>
+                <TableCell>
+                  <input
+                    type="checkbox"
+                    disabled={d.statut !== "approuve" || d.decaissement_cree}
+                    checked={selected.has(d.id)}
+                    onChange={() => toggleSelect(d.id)}
+                  />
+                </TableCell>
+
+                <TableCell>
+                  {d.description}
+                  {d.numero && <span className="text-gray-500"> ({d.numero})</span>}
+
+                  <div className="mt-1 space-x-2">
+                    {d.decaissement_cree && (
+                      <span className={badgeColor("decaisse")}>Décaissement créé</span>
+                    )}
+                    {d.cordo_valide && (
+                      <span className={badgeColor("cordo_valide")}>Cordo validé</span>
+                    )}
+                  </div>
+                </TableCell>
+
                 <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
 
-                {/* DETAILS */}
                 <TableCell>
-                  {d.service_origine === "stock_service" && (
-                    <ul className="text-sm list-disc ml-4">
-                      {d.articles?.map((a, i) => (
-                        <li key={i}>{a.nom} — {a.quantite} × {a.prix_unitaire.toLocaleString()} Ar</li>
-                      ))}
-                    </ul>
+                  {d.articles?.length > 0 && (
+                    <div>
+                      <strong>Articles :</strong>
+                      <ul className="ml-4 list-disc">
+                        {d.articles.map((a, i) => (
+                          <li key={i}>
+                            {a.nom} — {a.quantite} × {a.prix_unitaire.toLocaleString()} Ar
+                            <span className={`ml-2 ${badgeColor(a.statut || "")}`}>{a.statut}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
 
-                  {d.service_origine === "rh_service" && (
-                    <ul className="text-sm list-disc ml-4">
-                      {d.paiements?.map((p, i) => (
-                        <li key={i}>Paiement : {p.montant.toLocaleString()} Ar</li>
-                      ))}
-                    </ul>
+                  {d.paiements?.length > 0 && (
+                    <div className="mt-2">
+                      <strong>Paiements :</strong>
+                      <ul className="ml-4 list-disc">
+                        {d.paiements.map((p, i) => (
+                          <li key={i}>
+                            {p.montant.toLocaleString()} Ar
+                            <span className={`ml-2 ${badgeColor(p.statut || "")}`}>{p.statut}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
                 </TableCell>
 
@@ -124,16 +264,22 @@ const ValidationDemandesPage: React.FC = () => {
                 </TableCell>
 
                 <TableCell>
-                  {d.statut === "en_attente" && (
-                    <div className="space-x-2">
-                      <Button size="sm" onClick={() => valider(d.id, "approuve")}>Approuver</Button>
-                      <Button size="sm" variant="destructive" onClick={() => valider(d.id, "rejete")}>
-                        Rejeter
-                      </Button>
-                    </div>
-                  )}
-                </TableCell>
+                  <Button
+                    onClick={() => handleApprove(d)}
+                    disabled={d.statut !== "en_attente" || !d.cordo_valide}
+                  >
+                    Approuver
+                  </Button>
 
+                  <Button
+                    variant="destructive"
+                    className="ml-2"
+                    onClick={() => handleReject(d)}
+                    disabled={d.statut !== "en_attente" || !d.cordo_valide}
+                  >
+                    Rejeter
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
