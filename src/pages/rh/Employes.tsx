@@ -55,10 +55,19 @@ const Employes: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const getPhotoUrl = (photo?: string) => {
-    if (!photo) return DEFAULT_USER_ICON;
-    if (photo.startsWith("http")) return photo;
-    return `${MEDIA_URL.replace(/\/$/, "")}/${photo.replace(/^\/+/, "")}`;
+    if (!photo) {
+      console.log("Aucune photo fournie, utilisation de l'icône par défaut.");
+      return DEFAULT_USER_ICON;
+    }
+    if (photo.startsWith("http")) {
+      console.log("Photo URL externe:", photo);
+      return photo;
+    }
+    const url = `${MEDIA_URL.replace(/\/$/, "")}/${photo.replace(/^\/+/, "")}`;
+    console.log("Photo URL générée:", url);
+    return url;
   };
+
 
 
 
@@ -240,10 +249,13 @@ const Employes: React.FC = () => {
                           className="w-full h-full object-cover"
                           onError={(event) => {
                             const target = event.target as HTMLImageElement;
+                            console.error("Erreur de chargement de l'image pour:", e.nom_employer, "URL:", target.src);
                             target.onerror = null;
                             target.src = DEFAULT_USER_ICON;
                           }}
+                          onLoad={() => console.log("Image chargée avec succès pour:", e.nom_employer, "URL:", getPhotoUrl(e.photo_profil))}
                         />
+
 
                       </div>
                     </TableCell>
@@ -293,7 +305,6 @@ const Employes: React.FC = () => {
                 <SelectTrigger><SelectValue placeholder="Sélectionner diplôme" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="bacc">BACC</SelectItem>
-                  <SelectItem value="bacc+1">BACC+1</SelectItem>
                   <SelectItem value="bacc+2">BACC+2</SelectItem>
                   <SelectItem value="licence">Licence</SelectItem>
                   <SelectItem value="master">Master</SelectItem>
