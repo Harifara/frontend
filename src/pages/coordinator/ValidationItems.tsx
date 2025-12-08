@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { coordinateurApi } from "@/lib/coordinateurApi";
+import { coordinateurApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
