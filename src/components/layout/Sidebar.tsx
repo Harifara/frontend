@@ -60,7 +60,7 @@ const navigation = [
   { name: "Catégories", href: "/rh/categories", icon: ClipboardList, roles: ["admin", "responsable_stock"] },
   { name: "Articles", href: "/stock/articles", icon: ClipboardList, roles: ["admin", "responsable_stock"] },
   { name: "Gestion de stock", href: "/stock/gestion-stock", icon: ClipboardList, roles: ["admin", "responsable_stock", "magasinier"] },
-  { name: "Mouvements de stock", href: "/stock/mouvement-stock", icon: ClipboardList, roles: ["admin", "responsable_stock", "magasinier"] },
+  { name: "Mouvements de stock", href: "/stock/mouvement-stock", icon: ClipboardList, roles: ["admin", "magasinier"] },
   { name: "Demandes de réapprovisionnement", href: "/stock/demandes-reappro", icon: ClipboardList, roles: ["admin", "responsable_stock", "magasinier"] },
   { name: "Demandes d'achat", href: "/stock/demandes-achat", icon: ClipboardList, roles: ["admin", "responsable_stock"] },
 
