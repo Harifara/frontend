@@ -64,9 +64,11 @@ const navigation = [
   { name: "Demandes de réapprovisionnement", href: "/stock/demandes-reappro", icon: ClipboardList, roles: ["admin", "responsable_stock", "magasinier"] },
   { name: "Demandes d'achat", href: "/stock/demandes-achat", icon: ClipboardList, roles: ["admin", "responsable_stock"] },
 
-  { name: "Validation des demandes", href: "/finance/validation-demandes", icon: ClipboardList, roles: ["admin", "responsable_finance"] },
+  
   { name: "Dépenses", href: "/finance/depenses", icon: ClipboardList, roles: ["admin", "responsable_finance"] },
   { name: "Demandes de décaissement", href: "/finance/demandes-decaissement", icon: ClipboardList, roles: ["admin", "responsable_finance"] },
+
+  { name: "Validation des items", href: "/coordinator/validation-items", icon: ClipboardList, roles: ["coordinateur"] },
 ];
 
 // Fonction pour initiales utilisateur

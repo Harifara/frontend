@@ -1,106 +1,229 @@
 import React, { useEffect, useState } from "react";
-import { financeApi } from "@/lib/api";
-import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
+import { financeApi } from "@/lib/financeApi";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { toast } from "react-hot-toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
+import * as XLSX from "xlsx";
+import { createPDFDoc } from "@/lib/pdfTemplate";
 
 interface Depense {
-  id: string;
+  id?: string;
   numero: string;
-  montant: number;
   description: string;
+  montant: number;
   statut: string;
-  type_depense: { nom: string };
-  date_creation: string;
 }
 
-export default function DepensePage() {
+const Depenses = () => {
   const [depenses, setDepenses] = useState<Depense[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Depense | null>(null);
+  const [form, setForm] = useState<Depense>({ numero: "", description: "", montant: 0, statut: "en_attente" });
+  const { toast } = useToast();
 
-  const fetchDepenses = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const data: Depense[] = await financeApi.getDepenses();
+      const data = await financeApi.getDepenses();
       setDepenses(data);
     } catch (err: any) {
-      console.error(err);
-      toast.error(err?.message || "Erreur lors de la récupération des dépenses");
+      toast({ title: "Erreur", description: err.message || "Impossible de charger les dépenses.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchDepenses();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  const handleMarquerPayee = async (id: string) => {
+  // 🔧 Modals
+  const openAddModal = () => {
+    setEditing(null);
+    setForm({ numero: "", description: "", montant: 0, statut: "en_attente" });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (depense: Depense) => {
+    setEditing(depense);
+    setForm(depense);
+    setIsModalOpen(true);
+  };
+
+  const openDeleteModal = (id: string) => {
+    setSelectedIdToDelete(id);
+    setIsDeleteModalOpen(true);
+  };
+
+  // ✅ Enregistrement
+  const handleSubmit = async () => {
+    if (!form.numero || !form.description || !form.montant) {
+      toast({ title: "Champs manquants", description: "Veuillez remplir tous les champs.", variant: "destructive" });
+      return;
+    }
+
     try {
-      await financeApi.validerDepense(id); // Appel de validation
-      toast.success("Dépense marquée comme payée");
-      fetchDepenses();
+      if (editing?.id) {
+        await financeApi.updateDepense(editing.id, form);
+        toast({ title: "Succès", description: "Dépense modifiée avec succès" });
+      } else {
+        await financeApi.createDepense(form);
+        toast({ title: "Succès", description: "Dépense ajoutée avec succès" });
+      }
+      fetchData();
+      setIsModalOpen(false);
     } catch (err: any) {
-      console.error(err);
-      toast.error(err?.message || "Erreur lors de la validation");
+      toast({ title: "Erreur", description: err.message || "Erreur lors de l'enregistrement", variant: "destructive" });
     }
   };
 
-  const handleAnnuler = async (id: string) => {
+  // ❌ Suppression
+  const confirmDelete = async () => {
+    if (!selectedIdToDelete) return;
     try {
-      await financeApi.rejeterDepense(id, "Annulée par le responsable");
-      toast.success("Dépense annulée");
-      fetchDepenses();
+      await financeApi.deleteDepense(selectedIdToDelete);
+      toast({ title: "Succès", description: "Dépense supprimée avec succès" });
+      fetchData();
     } catch (err: any) {
-      console.error(err);
-      toast.error(err?.message || "Erreur lors de l'annulation");
+      toast({ title: "Erreur", description: err.message || "La suppression a échoué", variant: "destructive" });
+    } finally {
+      setIsDeleteModalOpen(false);
+      setSelectedIdToDelete(null);
     }
   };
+
+  // 🧾 Export PDF
+  const exportPDF = async () => {
+    const data = depenses.map(d => [d.numero, d.description, d.montant, d.statut]);
+    const columns = ["Numéro", "Description", "Montant", "Statut"];
+    await createPDFDoc("Liste des Dépenses", data, columns, "depenses.pdf");
+  };
+
+  // 📊 Export Excel
+  const exportExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      depenses.map(d => ({ Numéro: d.numero, Description: d.description, Montant: d.montant, Statut: d.statut }))
+    );
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Dépenses");
+    XLSX.writeFile(workbook, "depenses.xlsx");
+  };
+
+  const filteredDepenses = depenses.filter(d =>
+    d.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    d.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    d.statut.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) return <p className="p-8 text-center">Chargement...</p>;
 
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Dépenses</h1>
-      {loading ? (
-        <p>Chargement...</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableCell>Numéro</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>Montant</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Statut</TableCell>
-              <TableCell>Date de création</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {depenses.map((depense) => (
-              <TableRow key={depense.id}>
-                <TableCell>{depense.numero}</TableCell>
-                <TableCell>{depense.type_depense.nom}</TableCell>
-                <TableCell>{depense.montant.toLocaleString()} Ar</TableCell>
-                <TableCell>{depense.description}</TableCell>
-                <TableCell>{depense.statut}</TableCell>
-                <TableCell>{new Date(depense.date_creation).toLocaleDateString()}</TableCell>
-                <TableCell className="flex gap-2">
-                  {depense.statut === "en_attente" && (
-                    <>
-                      <Button onClick={() => handleMarquerPayee(depense.id)} variant="success">
-                        Marquer payée
-                      </Button>
-                      <Button onClick={() => handleAnnuler(depense.id)} variant="destructive">
-                        Annuler
-                      </Button>
-                    </>
-                  )}
-                </TableCell>
+    <div className="p-8 space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold">Dépenses</h1>
+        <Button onClick={openAddModal}>Ajouter une dépense</Button>
+      </div>
+
+      <div className="flex gap-4">
+        <Input
+          placeholder="Rechercher par numéro, description ou statut..."
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="flex-1"
+        />
+        <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
+        <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Liste des Dépenses</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-center">Numéro</TableHead>
+                <TableHead className="text-center">Description</TableHead>
+                <TableHead className="text-center">Montant</TableHead>
+                <TableHead className="text-center">Statut</TableHead>
+                <TableHead className="text-center">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+            </TableHeader>
+            <TableBody>
+              {filteredDepenses.length ? filteredDepenses.map(d => (
+                <TableRow key={d.id}>
+                  <TableCell className="text-center">{d.numero}</TableCell>
+                  <TableCell className="text-center">{d.description}</TableCell>
+                  <TableCell className="text-center">{d.montant}</TableCell>
+                  <TableCell className="text-center">{d.statut}</TableCell>
+                  <TableCell className="flex gap-2 justify-center">
+                    <Button size="sm" variant="outline" onClick={() => openEditModal(d)}>Modifier</Button>
+                    <Button size="sm" variant="destructive" onClick={() => openDeleteModal(d.id!)}>Supprimer</Button>
+                  </TableCell>
+                </TableRow>
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-6">Aucune dépense trouvée.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Modals */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>{editing ? "Modifier la dépense" : "Ajouter une dépense"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Numéro</Label>
+              <Input value={form.numero} onChange={e => setForm({ ...form, numero: e.target.value })} />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+            </div>
+            <div>
+              <Label>Montant</Label>
+              <Input type="number" value={form.montant} onChange={e => setForm({ ...form, montant: Number(e.target.value) })} />
+            </div>
+            <div>
+              <Label>Statut</Label>
+              <Input value={form.statut} onChange={e => setForm({ ...form, statut: e.target.value })} />
+            </div>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button onClick={handleSubmit}>{editing ? "Modifier" : "Ajouter"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Êtes-vous sûr de vouloir supprimer cette dépense ? Cette action est irréversible.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={confirmDelete}>Supprimer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
-}
+};
+
+export default Depenses;

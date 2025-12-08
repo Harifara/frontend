@@ -959,66 +959,79 @@ getStocksAutresMagasinsRaw: async (articleId: string) => {
 };
 
 
-// ==========================
-// FINANCE API (Validations et Décaissements)
-// ==========================
 export const financeApi = {
-
-  // --------------------------
-  // Validations demandes
-  // --------------------------
-  getValidations: async () => {
+  // ------------------------
+  // DEMANDES DE DECAISSEMENT
+  // ------------------------
+  getDecaissements: async () => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/validations-demandes/`, {
-      headers: getHeaders(token),
-    });
+    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/`, { headers: getHeaders(token) });
   },
 
-  getValidation: async (id: string) => {
+  getDecaissement: async (id: string) => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/validations-demandes/${cleanUUID(id)}/`, {
-      headers: getHeaders(token),
-    });
+    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, { headers: getHeaders(token) });
   },
 
-  approuver: async (id: string, commentaire: string = "") => {
+  createDecaissement: async (payload: any) => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/validations-demandes/${cleanUUID(id)}/approuver/`, {
+    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/`, {
       method: "POST",
       headers: getHeaders(token),
-      body: JSON.stringify({ commentaire }),
+      body: JSON.stringify(payload),
     });
   },
 
-  rejeter: async (id: string, commentaire: string = "") => {
+  updateDecaissement: async (id: string, payload: any) => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/validations-demandes/${cleanUUID(id)}/rejeter/`, {
-      method: "POST",
+    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
+      method: "PATCH",
       headers: getHeaders(token),
-      body: JSON.stringify({ commentaire }),
+      body: JSON.stringify(payload),
     });
   },
 
-  // --------------------------
-  // Dépenses
-  // --------------------------
+  deleteDecaissement: async (id: string) => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
+      method: "DELETE",
+      headers: getHeaders(token),
+    });
+  },
+
+  // ------------------------
+  // ITEMS DE DECAISSEMENT
+  // ------------------------
+  getItems: async () => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/finance/items/`, { headers: getHeaders(token) });
+  },
+
+  updateItem: async (id: string, statut: string) => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/finance/items/${cleanUUID(id)}/`, {
+      method: "PATCH",
+      headers: getHeaders(token),
+      body: JSON.stringify({ statut }),
+    });
+  },
+
+  // ------------------------
+  // DEPENSES
+  // ------------------------
   getDepenses: async () => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/depenses/`, {
-      headers: getHeaders(token),
-    });
+    return fetchWithLog(`${API_BASE_URL}/finance/depenses/`, { headers: getHeaders(token) });
   },
 
   getDepense: async (id: string) => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/`, {
-      headers: getHeaders(token),
-    });
+    return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(id)}/`, { headers: getHeaders(token) });
   },
 
   createDepense: async (payload: any) => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/depenses/`, {
+    return fetchWithLog(`${API_BASE_URL}/finance/depenses/`, {
       method: "POST",
       headers: getHeaders(token),
       body: JSON.stringify(payload),
@@ -1027,7 +1040,7 @@ export const financeApi = {
 
   updateDepense: async (id: string, payload: any) => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/`, {
+    return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(id)}/`, {
       method: "PATCH",
       headers: getHeaders(token),
       body: JSON.stringify(payload),
@@ -1036,83 +1049,48 @@ export const financeApi = {
 
   deleteDepense: async (id: string) => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/`, {
+    return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(id)}/`, {
       method: "DELETE",
       headers: getHeaders(token),
     });
   },
+};
 
-  validerDepense: async (id: string) => {
+
+export const coordinateurApi = {
+  // ------------------------
+  // ITEMS À VALIDER
+  // ------------------------
+  getValidations: async () => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/valider/`, {
-      method: "POST",
-      headers: getHeaders(token),
-    });
+    return fetchWithLog(`${API_BASE_URL}/coordinator/validations/`, { headers: getHeaders(token) });
   },
 
-  rejeterDepense: async (id: string, commentaire: string = "") => {
+  createValidation: async (payload: {
+    item_decaissement: string;
+    coordinateur_id: string;
+    statut: string;
+    commentaire?: string;
+  }) => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/depenses/${cleanUUID(id)}/rejeter/`, {
-      method: "POST",
-      headers: getHeaders(token),
-      body: JSON.stringify({ commentaire }),
-    });
-  },
-
-  // --------------------------
-  // DEMANDES DE DECAISSEMENT
-  // --------------------------
-  getDemandesDecaissement: async () => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/`, {
-      headers: getHeaders(token),
-    });
-  },
-
-  getDemandeDecaissement: async (id: string) => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/${cleanUUID(id)}/`, {
-      headers: getHeaders(token),
-    });
-  },
-
-  createDemandeDecaissement: async (payload: any) => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/`, {
+    return fetchWithLog(`${API_BASE_URL}/coordinator/validations/`, {
       method: "POST",
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
   },
 
-  updateDemandeDecaissement: async (id: string, payload: any) => {
+  approveItem: async (id: string) => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/${cleanUUID(id)}/`, {
-      method: "PATCH",
-      headers: getHeaders(token),
-      body: JSON.stringify(payload),
-    });
-  },
-
-  deleteDemandeDecaissement: async (id: string) => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/${cleanUUID(id)}/`, {
-      method: "DELETE",
-      headers: getHeaders(token),
-    });
-  },
-
-  validerDemandeDecaissement: async (id: string) => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/${cleanUUID(id)}/valider/`, {
+    return fetchWithLog(`${API_BASE_URL}/coordinator/items/${cleanUUID(id)}/approve/`, {
       method: "POST",
       headers: getHeaders(token),
     });
   },
 
-  rejeterDemandeDecaissement: async (id: string, commentaire: string = "") => {
+  rejectItem: async (id: string, commentaire: string = "") => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/demandes-decaissement/${cleanUUID(id)}/rejeter/`, {
+    return fetchWithLog(`${API_BASE_URL}/coordinator/items/${cleanUUID(id)}/reject/`, {
       method: "POST",
       headers: getHeaders(token),
       body: JSON.stringify({ commentaire }),

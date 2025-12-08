@@ -1,14 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { financeApi } from "@/lib/financeApi";
+import { coordinateurApi } from "@/lib/coordinateurApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from "xlsx";
-import { createPDFDoc } from "@/lib/pdfTemplate";
 
 interface Item {
   id: string;
@@ -17,18 +14,17 @@ interface Item {
   statut: string;
 }
 
-const DemandesDecaissement = () => {
+const ValidationItems = () => {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Item | null>(null);
+  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const { toast } = useToast();
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const data = await financeApi.getItems();
+      const data = await coordinateurApi.getValidations();
       setItems(data);
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Impossible de charger les items.", variant: "destructive" });
@@ -39,60 +35,44 @@ const DemandesDecaissement = () => {
 
   useEffect(() => { fetchData(); }, []);
 
-  const openEditModal = (item: Item) => {
-    setEditing(item);
+  const openValidationModal = (item: Item) => {
+    setSelectedItem(item);
     setIsModalOpen(true);
   };
 
-  const handleUpdateStatut = async (statut: string) => {
-    if (!editing) return;
+  const handleApprove = async () => {
+    if (!selectedItem) return;
     try {
-      await financeApi.updateItem(editing.id, statut);
-      toast({ title: "Succès", description: `Statut mis à jour à "${statut}"` });
+      await coordinateurApi.approveItem(selectedItem.id);
+      toast({ title: "Succès", description: "Item approuvé" });
       fetchData();
       setIsModalOpen(false);
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de mettre à jour le statut.", variant: "destructive" });
+      toast({ title: "Erreur", description: err.message || "Impossible d'approuver.", variant: "destructive" });
     }
   };
 
-  const filteredItems = items.filter(i =>
-    i.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    i.statut.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const exportPDF = async () => {
-    const data = filteredItems.map(i => [i.description, i.montant, i.statut]);
-    const columns = ["Description", "Montant", "Statut"];
-    await createPDFDoc("Demandes de Décaissement", data, columns, "demandes_decaissement.pdf");
-  };
-
-  const exportExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(
-      filteredItems.map(i => ({ Description: i.description, Montant: i.montant, Statut: i.statut }))
-    );
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "DemandesDecaissement");
-    XLSX.writeFile(workbook, "demandes_decaissement.xlsx");
+  const handleReject = async () => {
+    if (!selectedItem) return;
+    try {
+      await coordinateurApi.rejectItem(selectedItem.id, "Rejeté par coordinateur");
+      toast({ title: "Succès", description: "Item rejeté" });
+      fetchData();
+      setIsModalOpen(false);
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message || "Impossible de rejeter.", variant: "destructive" });
+    }
   };
 
   if (loading) return <p className="p-8 text-center">Chargement...</p>;
 
   return (
     <div className="p-8 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Demandes de Décaissement</h1>
-      </div>
-
-      <div className="flex gap-4">
-        <Input placeholder="Rechercher..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="flex-1" />
-        <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
-        <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
-      </div>
+      <h1 className="text-3xl font-bold">Validation des Items</h1>
 
       <Card>
         <CardHeader>
-          <CardTitle>Liste des items</CardTitle>
+          <CardTitle>Liste des items à valider</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -105,18 +85,18 @@ const DemandesDecaissement = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredItems.length ? filteredItems.map(i => (
+              {items.length ? items.map(i => (
                 <TableRow key={i.id}>
                   <TableCell className="text-center">{i.description}</TableCell>
                   <TableCell className="text-center">{i.montant}</TableCell>
                   <TableCell className="text-center">{i.statut}</TableCell>
                   <TableCell className="flex gap-2 justify-center">
-                    <Button size="sm" variant="outline" onClick={() => openEditModal(i)}>Modifier Statut</Button>
+                    <Button size="sm" variant="outline" onClick={() => openValidationModal(i)}>Valider / Rejeter</Button>
                   </TableCell>
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-6">Aucun item trouvé.</TableCell>
+                  <TableCell colSpan={4} className="text-center py-6">Aucun item à valider.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -127,12 +107,11 @@ const DemandesDecaissement = () => {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[400px]">
           <DialogHeader>
-            <DialogTitle>Modifier le statut</DialogTitle>
+            <DialogTitle>Valider ou rejeter l'item</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <Button onClick={() => handleUpdateStatut("en_attente")}>En attente</Button>
-            <Button onClick={() => handleUpdateStatut("validé")}>Validé</Button>
-            <Button onClick={() => handleUpdateStatut("rejeté")} variant="destructive">Rejeté</Button>
+          <div className="flex flex-col gap-4">
+            <Button onClick={handleApprove}>Approuver</Button>
+            <Button onClick={handleReject} variant="destructive">Rejeter</Button>
           </div>
           <DialogFooter className="mt-4">
             <Button onClick={() => setIsModalOpen(false)} variant="outline">Annuler</Button>
@@ -143,4 +122,4 @@ const DemandesDecaissement = () => {
   );
 };
 
-export default DemandesDecaissement;
+export default ValidationItems;

@@ -24,7 +24,7 @@ interface Employer {
   email: string;
   telephone?: string;
   status_employer: "actif" | "inactif" | "conge" | "suspendu";
-  diplome?: "bacc" | "bacc+1" | "bacc+2" | "licence" | "master";
+  diplome?: "bacc" | "bacc+2" | "licence" | "master";
   domaine_etude?: string;
   date_naissance?: string;
   date_entree: string;
@@ -56,16 +56,10 @@ const Employes: React.FC = () => {
   const navigate = useNavigate();
   const getPhotoUrl = (photo?: string) => {
     if (!photo) return DEFAULT_USER_ICON;
-
-    // Si l'URL commence par http ou https, retourne telle quelle
-    if (photo.startsWith("http") || photo.startsWith("https")) return photo;
-
-    // Si l'URL commence par "/", concatène correctement MEDIA_URL
-    if (photo.startsWith("/")) return `${MEDIA_URL.replace(/\/?$/, "")}${photo}`;
-
-    // Sinon ajoute "/" entre MEDIA_URL et photo
-    return `${MEDIA_URL.replace(/\/?$/, "/")}${photo}`;
+    if (photo.startsWith("http")) return photo;
+    return `${MEDIA_URL.replace(/\/$/, "")}/${photo.replace(/^\/+/, "")}`;
   };
+
 
 
   // Chargement initial
@@ -241,21 +235,16 @@ const Employes: React.FC = () => {
                         title="Voir le profil"
                       >
                         <img
-                          src={
-                            e.photo_profil
-                              ? e.photo_profil.startsWith("http")
-                                ? e.photo_profil
-                                : `${MEDIA_URL.replace(/\/?$/, "/")}${e.photo_profil.replace(/^\/+/, "")}`
-                              : DEFAULT_USER_ICON
-                          }
+                          src={getPhotoUrl(e.photo_profil)}
                           alt={e.nom_employer}
                           className="w-full h-full object-cover"
                           onError={(event) => {
                             const target = event.target as HTMLImageElement;
-                            target.onerror = null;               // éviter boucle infinie
-                            target.src = DEFAULT_USER_ICON;      // afficher icône par défaut
+                            target.onerror = null;
+                            target.src = DEFAULT_USER_ICON;
                           }}
                         />
+
                       </div>
                     </TableCell>
 
