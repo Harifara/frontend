@@ -59,14 +59,17 @@ const Employes: React.FC = () => {
       console.log("Aucune photo fournie, utilisation de l'icône par défaut.");
       return DEFAULT_USER_ICON;
     }
-    if (photo.startsWith("http")) {
-      console.log("Photo URL externe:", photo);
-      return photo;
+    let url = photo.startsWith("http") ? photo : `${MEDIA_URL.replace(/\/$/, "")}/${photo.replace(/^\/+/, "")}`;
+
+    // Forcer HTTPS
+    if (url.startsWith("http://")) {
+      url = url.replace("http://", "https://");
     }
-    const url = `${MEDIA_URL.replace(/\/$/, "")}/${photo.replace(/^\/+/, "")}`;
-    console.log("Photo URL générée:", url);
+
+    console.log("Photo URL finale:", url);
     return url;
   };
+
 
 
 
