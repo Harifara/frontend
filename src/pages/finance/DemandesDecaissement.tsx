@@ -55,8 +55,8 @@ const normalizeStock = (s: any): Item => ({
 const extractList = (response: any) => {
   if (!response) return [];
   if (Array.isArray(response)) return response;
-  if (Array.isArray(response.results)) return response.results;
-  if (Array.isArray(response.data)) return response.data;
+  if (response.data && Array.isArray(response.data)) return response.data;
+  if (response.results && Array.isArray(response.results)) return response.results;
   return [];
 };
 
@@ -75,6 +75,10 @@ const DemandesDecaissement: React.FC = () => {
   const [rejectionComment, setRejectionComment] = useState("");
   const [page, setPage] = useState(1);
   const { toast } = useToast();
+
+  // Nouveaux états pour création de demande
+  const [newDescription, setNewDescription] = useState("");
+  const [newMontant, setNewMontant] = useState<number>(0);
 
   // Debounce search
   useEffect(() => {
@@ -121,12 +125,9 @@ const DemandesDecaissement: React.FC = () => {
 
       const merged = Array.from(mergedMap.values()).sort((a, b) => b.montant - a.montant);
 
-      console.log("Merged items:", merged);
-
       setItems(merged);
       setPage(1);
     } catch (err: any) {
-      console.error(err);
       toast({ title: "Erreur", description: err?.message || "Impossible de charger les demandes.", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -136,6 +137,20 @@ const DemandesDecaissement: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Création d'une demande
+  const handleCreate = async () => {
+    try {
+      await financeApi.createDecaissement({ description: newDescription, montant: newMontant });
+      toast({ title: "Succès", description: "Demande créée." });
+      setIsModalOpen(false);
+      setNewDescription("");
+      setNewMontant(0);
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err?.message || "Impossible de créer la demande.", variant: "destructive" });
+    }
+  };
 
   const filtered = useMemo(() => {
     if (!debouncedSearch) return items;
@@ -147,15 +162,36 @@ const DemandesDecaissement: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  const exportPDF = async () => {
+    const data = filtered.map((i) => [i.description, i.montant, i.statut, i.source]);
+    const columns = ["Description", "Montant", "Statut", "Source"];
+    await createPDFDoc("Demandes de Décaissement (Toutes sources)", data, columns, "demandes_decaissement_toutes_sources.pdf");
+    toast({ title: "Export", description: "PDF exporté." });
+  };
+
+  const exportExcel = () => {
+    const worksheet = XLSX.utils.json_to_sheet(
+      filtered.map((i) => ({ Description: i.description, Montant: i.montant, Statut: i.statut, Source: i.source }))
+    );
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "DemandesDecaissement");
+    XLSX.writeFile(workbook, "demandes_decaissement_toutes_sources.xlsx");
+    toast({ title: "Export", description: "Excel exporté." });
+  };
+
   if (loading) return <p className="p-8 text-center">Chargement...</p>;
 
   return (
     <div className="p-8 space-y-6">
-      <Input
-        placeholder="Rechercher..."
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
-      />
+      <div className="flex justify-between items-center mb-4">
+        <Input
+          placeholder="Rechercher..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-1/2"
+        />
+        <Button onClick={() => setIsModalOpen(true)}>Créer une demande</Button>
+      </div>
 
       <Table>
         <TableHeader>
@@ -167,28 +203,48 @@ const DemandesDecaissement: React.FC = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pageItems.map((item) => (
-            <TableRow key={`${item.source}:${item.id}`}>
-              <TableCell>{item.description}</TableCell>
-              <TableCell>{item.montant}</TableCell>
-              <TableCell>{item.statut}</TableCell>
-              <TableCell>{item.source}</TableCell>
+          {pageItems.map((i) => (
+            <TableRow key={`${i.source}:${i.id}`}>
+              <TableCell>{i.description}</TableCell>
+              <TableCell>{i.montant}</TableCell>
+              <TableCell>{i.statut}</TableCell>
+              <TableCell>{i.source}</TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
 
-      <div className="flex justify-between items-center mt-4">
-        <Button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>
-          Précédent
-        </Button>
-        <span>
-          Page {page} / {totalPages}
-        </span>
-        <Button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}>
-          Suivant
-        </Button>
+      {/* Pagination */}
+      <div className="flex justify-between mt-4">
+        <Button onClick={() => setPage(Math.max(1, page - 1))}>Précédent</Button>
+        <span>Page {page} / {totalPages}</span>
+        <Button onClick={() => setPage(Math.min(totalPages, page + 1))}>Suivant</Button>
       </div>
+
+      {/* Modal de création */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nouvelle demande de décaissement</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Input
+              placeholder="Description"
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+            />
+            <Input
+              placeholder="Montant"
+              type="number"
+              value={newMontant}
+              onChange={(e) => setNewMontant(Number(e.target.value))}
+            />
+          </div>
+          <DialogFooter>
+            <Button onClick={handleCreate}>Créer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
