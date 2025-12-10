@@ -13,7 +13,6 @@ import { createPDFDoc } from "@/lib/pdfTemplate";
 
 interface TypeAchat {
   id?: string;
-  type_achat: string;
   nom: string;
   description?: string;
 }
@@ -28,7 +27,6 @@ const TypeAchatPage = () => {
   const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
 
   const [form, setForm] = useState<TypeAchat>({
-    type_achat: "",
     nom: "",
     description: "",
   });
@@ -63,7 +61,7 @@ const TypeAchatPage = () => {
       setForm(item);
     } else {
       setEditingItem(null);
-      setForm({ type_achat: "", nom: "", description: "" });
+      setForm({ nom: "", description: "" });
     }
     setIsModalOpen(true);
   };
@@ -76,7 +74,7 @@ const TypeAchatPage = () => {
   // Submit form
   const handleSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!form.type_achat || !form.nom) {
+    if (!form.nom) {
       toast({
         title: "Erreur",
         description: "Veuillez remplir tous les champs obligatoires.",
@@ -132,7 +130,6 @@ const TypeAchatPage = () => {
 
   // Filtre recherche
   const filteredTypes = types.filter((t) =>
-    t.type_achat.toLowerCase().includes(searchTerm.toLowerCase()) ||
     t.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (t.description || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -140,11 +137,10 @@ const TypeAchatPage = () => {
   // Export PDF
   const exportPDF = async () => {
     const data = filteredTypes.map((t) => [
-      t.type_achat,
       t.nom,
       t.description || "",
     ]);
-    const columns = ["Type", "Nom", "Description"];
+    const columns = ["Nom", "Description"];
     await createPDFDoc("Liste des Types d'Achats", data, columns, "types_achat.pdf");
   };
 
@@ -152,7 +148,6 @@ const TypeAchatPage = () => {
   const exportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
       filteredTypes.map((t) => ({
-        Type: t.type_achat,
         Nom: t.nom,
         Description: t.description || "",
       }))
@@ -173,7 +168,7 @@ const TypeAchatPage = () => {
 
       <div className="flex gap-4">
         <Input
-          placeholder="Rechercher par type, nom ou description..."
+          placeholder="Rechercher par nom ou description..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="flex-1"
@@ -190,7 +185,6 @@ const TypeAchatPage = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-center">Type</TableHead>
                 <TableHead className="text-center">Nom</TableHead>
                 <TableHead className="text-center">Description</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
@@ -201,7 +195,6 @@ const TypeAchatPage = () => {
               {filteredTypes.length ? (
                 filteredTypes.map((t) => (
                   <TableRow key={t.id}>
-                    <TableCell className="text-center">{t.type_achat}</TableCell>
                     <TableCell className="text-center">{t.nom}</TableCell>
                     <TableCell className="text-center">{t.description || "-"}</TableCell>
                     <TableCell className="text-center space-x-2">
@@ -234,14 +227,7 @@ const TypeAchatPage = () => {
           </DialogHeader>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label>Type d'Achat</Label>
-              <Input
-                value={form.type_achat}
-                onChange={(e) => setForm({ ...form, type_achat: e.target.value })}
-                required
-              />
-            </div>
+            
 
             <div>
               <Label>Nom</Label>
