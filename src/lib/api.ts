@@ -953,11 +953,10 @@ getStocksAutresMagasinsRaw: async (articleId: string) => {
 
 };
 
-
 export const financeApi = {
-  // ------------------------
+  // ========================
   // DEMANDES DE DECAISSEMENT
-  // ------------------------
+  // ========================
   getDecaissements: async (): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/decaissements/`, { headers: getHeaders(token) });
@@ -968,19 +967,19 @@ export const financeApi = {
     return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, { headers: getHeaders(token) });
   },
 
-  createDecaissement: async (payload: any): Promise<Response> => {
+  createDecaissement: async (payload: DecaissementPayload): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/decaissements/`, {
-      method: "POST",
+      method: 'POST',
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
   },
 
-  updateDecaissement: async (id: string, payload: any): Promise<Response> => {
+  updateDecaissement: async (id: string, payload: Partial<DecaissementPayload>): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
-      method: "PATCH",
+      method: 'PATCH',
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
@@ -989,31 +988,14 @@ export const financeApi = {
   deleteDecaissement: async (id: string): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
-      method: "DELETE",
+      method: 'DELETE',
       headers: getHeaders(token),
     });
   },
 
-  // ------------------------
-  // ITEMS DE DECAISSEMENT
-  // ------------------------
-  getItems: async (): Promise<Response> => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/items/`, { headers: getHeaders(token) });
-  },
-
-  updateItemStatus: async (id: string, statut: string): Promise<Response> => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/items/${cleanUUID(id)}/update-status/`, {
-      method: "POST", // POST pour l'action custom update-status
-      headers: getHeaders(token),
-      body: JSON.stringify({ statut }),
-    });
-  },
-
-  // ------------------------
+  // ========================
   // DEPENSES
-  // ------------------------
+  // ========================
   getDepenses: async (): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/depenses/`, { headers: getHeaders(token) });
@@ -1024,19 +1006,19 @@ export const financeApi = {
     return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(id)}/`, { headers: getHeaders(token) });
   },
 
-  createDepense: async (payload: any): Promise<Response> => {
+  createDepense: async (payload: DepensePayload): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/depenses/`, {
-      method: "POST",
+      method: 'POST',
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
   },
 
-  updateDepense: async (id: string, payload: any): Promise<Response> => {
+  updateDepense: async (id: string, payload: Partial<DepensePayload>): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(id)}/`, {
-      method: "PATCH",
+      method: 'PATCH',
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
@@ -1045,11 +1027,12 @@ export const financeApi = {
   deleteDepense: async (id: string): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(id)}/`, {
-      method: "DELETE",
+      method: 'DELETE',
       headers: getHeaders(token),
     });
   },
 };
+
 
 
 export const coordinateurApi = {

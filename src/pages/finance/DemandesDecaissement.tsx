@@ -1,182 +1,79 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { financeApi, rhApi, stockApi } from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useEffect, useState } from "react";
+import { financeApi } from "@/lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import * as XLSX from "xlsx";
-import { createPDFDoc } from "@/lib/pdfTemplate";
 
-type Source = "finance" | "rh" | "stock";
-
-interface Item {
+interface DepenseItem {
   id: string;
   description: string;
   montant: number;
   statut: string;
-  source: Source;
-  raw?: any;
-  parent_decaissement_id?: string;
 }
 
-interface ItemForm {
-  description: string;
-  montant: number;
+interface Decaissement {
+  id: string;
+  source_service: string;
+  created_by: string;
+  date_creation: string;
+  total_montant: number;
+  statut: string;
+  depenses: DepenseItem[];
 }
 
 const PAGE_SIZE = 20;
 
-const DemandesDecaissement: React.FC<{ userId: string }> = ({ userId }) => {
-  const [items, setItems] = useState<Item[]>([]);
+const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
+  const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [page, setPage] = useState(1);
-  const [newItems, setNewItems] = useState<ItemForm[]>([{ description: "", montant: 0 }]);
+  const [newDepenses, setNewDepenses] = useState<{ description: string; montant: number }[]>([
+    { description: "", montant: 0 },
+  ]);
   const { toast } = useToast();
 
-  // ==================== Helper functions ====================
-  const normalizeRh = (d: any): Item => ({
-    id: d.id,
-    description: d.description || d.title || `Demande RH ${d.id}`,
-    montant: Number(d.montant || d.montant_total || 0),
-    statut: (d.status || d.statut || "en_attente").toString(),
-    source: "rh",
-    raw: d,
-  });
-
-  const normalizeStock = (s: any): Item => ({
-    id: s.id,
-    description:
-      s.numero || s.justification || (s.article ? `${s.article.nom || s.article}` : `Demande Achat ${s.id}`),
-    montant: Number(s.montant_estime || s.montant || 0),
-    statut: (s.statut || s.statut_finance || "en_attente").toString(),
-    source: "stock",
-    raw: s,
-  });
-
-  const extractList = (response: any) => {
-    if (!response) return [];
-    if (Array.isArray(response)) return response;
-    if (response.data && Array.isArray(response.data)) return response.data;
-    if (response.results && Array.isArray(response.results)) return response.results;
-    return [];
-  };
-
-  // ==================== Fetch data ====================
-  const fetchData = async () => {
+  // ---------------- Fetch all decaissements ----------------
+  const fetchDecaissements = async () => {
     setLoading(true);
     try {
-      const [rhRes, stockRes] = await Promise.all([
-        rhApi.getDemandes().catch(() => []),
-        stockApi.getDemandesAchat().catch(() => []),
-      ]);
-
-      const rhList = extractList(rhRes).map(normalizeRh);
-      const stockList = extractList(stockRes).map(normalizeStock);
-
-      const mergedMap = new Map<string, Item>();
-      [...rhList, ...stockList].forEach((it) => {
-        const key = `${it.source}:${it.id}`;
-        if (!mergedMap.has(key)) mergedMap.set(key, it);
-      });
-
-      const merged = Array.from(mergedMap.values()).sort((a, b) => b.montant - a.montant);
-      setItems(merged);
-      setPage(1);
+      const res = await financeApi.getDecaissements();
+      const data = await res.json();
+      setDecaissements(data);
     } catch (err: any) {
-      toast({ title: "Erreur", description: err?.message || "Impossible de charger les demandes.", variant: "destructive" });
+      toast({ title: "Erreur", description: err?.message || "Impossible de charger les décaissements.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchDecaissements(); }, []);
 
-  // ==================== Search ====================
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim().toLowerCase()), 300);
-    return () => clearTimeout(t);
-  }, [searchTerm]);
-
-  const filtered = useMemo(() => {
-    if (!debouncedSearch) return items;
-    return items.filter((i) =>
-      `${i.description} ${i.statut} ${i.source}`.toLowerCase().includes(debouncedSearch)
-    );
-  }, [items, debouncedSearch]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  // ==================== Nouvelle demande manuelle ====================
-  const addNewItem = () => setNewItems([...newItems, { description: "", montant: 0 }]);
-  const removeNewItem = (index: number) => setNewItems(newItems.filter((_, i) => i !== index));
-  const updateNewItem = (index: number, field: keyof ItemForm, value: string | number) => {
-    const newState = [...newItems];
-    newState[index][field] = field === "montant" ? Number(value) : String(value);
-    setNewItems(newState);
+  // ---------------- Modal - ajouter dépense ----------------
+  const addNewDepense = () => setNewDepenses([...newDepenses, { description: "", montant: 0 }]);
+  const removeNewDepense = (index: number) => setNewDepenses(newDepenses.filter((_, i) => i !== index));
+  const updateNewDepense = (index: number, field: "description" | "montant", value: string | number) => {
+    const updated = [...newDepenses];
+    updated[index][field] = field === "montant" ? Number(value) : String(value);
+    setNewDepenses(updated);
   };
-  const handleCreateDemande = async () => {
-    const payload = { items: newItems.filter(i => i.description && i.montant > 0), created_by: userId };
-    if (payload.items.length === 0) {
-      toast({ title: "Erreur", description: "Ajoutez au moins un item valide.", variant: "destructive" });
+
+  const handleCreateDecaissement = async () => {
+    const payload = { items: newDepenses.filter(d => d.description && d.montant > 0), created_by: userId };
+    if (!payload.items.length) {
+      toast({ title: "Erreur", description: "Ajoutez au moins une dépense valide.", variant: "destructive" });
       return;
     }
     try {
       await financeApi.createDecaissement(payload);
-      toast({ title: "Succès", description: "Demande créée." });
-      setNewItems([{ description: "", montant: 0 }]);
+      toast({ title: "Succès", description: "Décaissement créé." });
+      setNewDepenses([{ description: "", montant: 0 }]);
       setIsModalOpen(false);
-      fetchData();
+      fetchDecaissements();
     } catch (err: any) {
-      toast({ title: "Erreur", description: err?.message || "Impossible de créer la demande.", variant: "destructive" });
+      toast({ title: "Erreur", description: err?.message || "Impossible de créer le décaissement.", variant: "destructive" });
     }
-  };
-
-  // ==================== Envoyer les demandes reçues (RH/Stock) ====================
-  const handleSendToDecaissement = async () => {
-    const payload = {
-      items: filtered.map(i => ({
-        description: i.description,
-        montant: i.montant,
-        source_demande_rh_id: i.source === "rh" ? i.id : null,
-        source_demande_stock_id: i.source === "stock" ? i.id : null,
-      })),
-      created_by: userId,
-    };
-    if (payload.items.length === 0) {
-      toast({ title: "Info", description: "Aucune demande à envoyer.", variant: "destructive" });
-      return;
-    }
-    try {
-      await financeApi.createDecaissement(payload);
-      toast({ title: "Succès", description: "Demandes envoyées pour décaissement." });
-      fetchData();
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err?.message || "Impossible d'envoyer les demandes.", variant: "destructive" });
-    }
-  };
-
-  // ==================== Export PDF/Excel ====================
-  const exportPDF = async () => {
-    const data = filtered.map((i) => [i.description, i.montant, i.statut, i.source]);
-    const columns = ["Description", "Montant", "Statut", "Source"];
-    await createPDFDoc("Demandes de Décaissement", data, columns, "demandes_decaissement.pdf");
-    toast({ title: "Export", description: "PDF exporté." });
-  };
-
-  const exportExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(
-      filtered.map((i) => ({ Description: i.description, Montant: i.montant, Statut: i.statut, Source: i.source }))
-    );
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "DemandesDecaissement");
-    XLSX.writeFile(workbook, "demandes_decaissement.xlsx");
-    toast({ title: "Export", description: "Excel exporté." });
   };
 
   if (loading) return <p className="p-8 text-center">Chargement...</p>;
@@ -184,46 +81,29 @@ const DemandesDecaissement: React.FC<{ userId: string }> = ({ userId }) => {
   return (
     <div className="p-8 space-y-6">
       <div className="flex justify-between items-center mb-4">
-        <Input
-          placeholder="Rechercher..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-1/3"
-        />
-        <div className="flex gap-2">
-          <Button onClick={() => setIsModalOpen(true)}>Nouvelle demande</Button>
-          <Button onClick={handleSendToDecaissement}>Envoyer demandes reçues</Button>
-          <Button onClick={exportPDF}>Exporter PDF</Button>
-          <Button onClick={exportExcel}>Exporter Excel</Button>
-        </div>
+        <Button onClick={() => setIsModalOpen(true)}>Nouvelle demande</Button>
       </div>
 
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Description</TableHead>
-            <TableHead>Montant</TableHead>
-            <TableHead>Statut</TableHead>
             <TableHead>Source</TableHead>
+            <TableHead>Date</TableHead>
+            <TableHead>Total</TableHead>
+            <TableHead>Statut</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {pageItems.map((i) => (
-            <TableRow key={`${i.source}-${i.id}`}>
-              <TableCell>{i.description}</TableCell>
-              <TableCell>{i.montant}</TableCell>
-              <TableCell>{i.statut}</TableCell>
-              <TableCell>{i.source}</TableCell>
+          {decaissements.map((d) => (
+            <TableRow key={d.id}>
+              <TableCell>{d.source_service}</TableCell>
+              <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
+              <TableCell>{d.total_montant}</TableCell>
+              <TableCell>{d.statut}</TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-
-      <div className="flex justify-between items-center mt-2">
-        <Button disabled={page === 1} onClick={() => setPage(page - 1)}>Précédent</Button>
-        <span>Page {page} / {totalPages}</span>
-        <Button disabled={page === totalPages} onClick={() => setPage(page + 1)}>Suivant</Button>
-      </div>
 
       {/* Modal création nouvelle demande */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -232,28 +112,28 @@ const DemandesDecaissement: React.FC<{ userId: string }> = ({ userId }) => {
             <DialogTitle>Nouvelle demande de décaissement</DialogTitle>
           </DialogHeader>
 
-          {newItems.map((item, index) => (
+          {newDepenses.map((dep, index) => (
             <div key={index} className="flex gap-2 items-center">
               <Input
                 placeholder="Description"
-                value={item.description}
-                onChange={(e) => updateNewItem(index, "description", e.target.value)}
+                value={dep.description}
+                onChange={(e) => updateNewDepense(index, "description", e.target.value)}
               />
               <Input
                 type="number"
                 placeholder="Montant"
-                value={item.montant}
-                onChange={(e) => updateNewItem(index, "montant", e.target.value)}
+                value={dep.montant}
+                onChange={(e) => updateNewDepense(index, "montant", e.target.value)}
               />
-              {newItems.length > 1 && (
-                <Button variant="destructive" onClick={() => removeNewItem(index)}>Supprimer</Button>
+              {newDepenses.length > 1 && (
+                <Button variant="destructive" onClick={() => removeNewDepense(index)}>Supprimer</Button>
               )}
             </div>
           ))}
-          <Button onClick={addNewItem}>Ajouter un item</Button>
+          <Button onClick={addNewDepense}>Ajouter une dépense</Button>
 
           <DialogFooter>
-            <Button onClick={handleCreateDemande}>Créer la demande</Button>
+            <Button onClick={handleCreateDecaissement}>Créer le décaissement</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -261,4 +141,4 @@ const DemandesDecaissement: React.FC<{ userId: string }> = ({ userId }) => {
   );
 };
 
-export default DemandesDecaissement;
+export default DecaissementsPage;
