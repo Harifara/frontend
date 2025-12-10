@@ -1,6 +1,6 @@
 
 export const API_BASE_URL = "https://api.ecartmada.com/api";
-export const MEDIA_URL = "http://api.ecartmada.com/media/";
+export const MEDIA_URL = "https://api.ecartmada.com/media/";
 
 
 
