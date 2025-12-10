@@ -21,20 +21,24 @@ interface Decaissement {
   depenses: DepenseItem[];
 }
 
+const PAGE_SIZE = 10;
+
 const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newDepenses, setNewDepenses] = useState<DepenseItem[]>([{ description: "", montant: 0 }]);
+  const [page, setPage] = useState(1);
   const { toast } = useToast();
 
-  // ---------------- Fetch decaissements ----------------
+  // ---------------- Fetch décaissements ----------------
   const fetchDecaissements = async () => {
     setLoading(true);
     try {
       const res = await financeApi.getDecaissements();
       const data = await res.json();
       setDecaissements(data);
+      setPage(1);
     } catch (err: any) {
       toast({ title: "Erreur", description: err?.message || "Impossible de charger les décaissements.", variant: "destructive" });
     } finally {
@@ -44,7 +48,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
 
   useEffect(() => { fetchDecaissements(); }, []);
 
-  // ---------------- Gestion des dépenses dans la modal ----------------
+  // ---------------- Gestion des dépenses dans modal ----------------
   const addDepense = () => setNewDepenses([...newDepenses, { description: "", montant: 0 }]);
   const removeDepense = (index: number) => setNewDepenses(newDepenses.filter((_, i) => i !== index));
   const updateDepense = (index: number, field: "description" | "montant", value: string | number) => {
@@ -76,6 +80,10 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
 
   if (loading) return <p className="p-8 text-center">Chargement...</p>;
 
+  // ---------------- Pagination ----------------
+  const totalPages = Math.max(1, Math.ceil(decaissements.length / PAGE_SIZE));
+  const pageItems = decaissements.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
   return (
     <div className="p-8 space-y-6">
       <div className="flex justify-between items-center mb-4">
@@ -92,7 +100,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {decaissements.map(d => (
+          {pageItems.map(d => (
             <TableRow key={d.id}>
               <TableCell>{d.source_service}</TableCell>
               <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
@@ -102,6 +110,12 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
           ))}
         </TableBody>
       </Table>
+
+      <div className="flex justify-between items-center mt-2">
+        <Button disabled={page === 1} onClick={() => setPage(page - 1)}>Précédent</Button>
+        <span>Page {page} / {totalPages}</span>
+        <Button disabled={page === totalPages} onClick={() => setPage(page + 1)}>Suivant</Button>
+      </div>
 
       {/* Modal création décaissement */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
