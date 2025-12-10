@@ -21,44 +21,10 @@ interface Item {
   parent_decaissement_id?: string;
 }
 
-const normalizeRh = (d: any): Item => ({
-  id: d.id,
-  description: d.description || d.title || `Demande RH ${d.id}`,
-  montant: Number(d.montant || d.montant_total || 0),
-  statut: (d.status || d.statut || "en_attente").toString(),
-  source: "rh",
-  raw: d,
-});
-
-const normalizeFinance = (f: any): Item => ({
-  id: f.id,
-  description: f.description || f.nom || `Item finance ${f.id}`,
-  montant: Number(f.montant || f.total_montant || 0),
-  statut: (f.statut || f.status || "en_attente").toString(),
-  source: "finance",
-  raw: f,
-  parent_decaissement_id: f.decaissement || f.decaissement_id,
-});
-
-const normalizeStock = (s: any): Item => ({
-  id: s.id,
-  description:
-    s.numero ||
-    s.justification ||
-    (s.article ? `${s.article.nom || s.article}` : `Demande Achat ${s.id}`),
-  montant: Number(s.montant_estime || s.montant || 0),
-  statut: (s.statut || s.statut_finance || "en_attente").toString(),
-  source: "stock",
-  raw: s,
-});
-
-const extractList = (response: any) => {
-  if (!response) return [];
-  if (Array.isArray(response)) return response;
-  if (response.data && Array.isArray(response.data)) return response.data;
-  if (response.results && Array.isArray(response.results)) return response.results;
-  return [];
-};
+interface ItemForm {
+  description: string;
+  montant: number;
+}
 
 const PAGE_SIZE = 20;
 
@@ -70,22 +36,53 @@ const DemandesDecaissement: React.FC = () => {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<Item | null>(null);
-  const [detailsItem, setDetailsItem] = useState<Item | null>(null);
   const [commentModalOpen, setCommentModalOpen] = useState(false);
   const [rejectionComment, setRejectionComment] = useState("");
   const [page, setPage] = useState(1);
+  const [newItems, setNewItems] = useState<ItemForm[]>([{ description: "", montant: 0 }]);
   const { toast } = useToast();
 
-  // Nouveaux états pour création de demande
-  const [newDescription, setNewDescription] = useState("");
-  const [newMontant, setNewMontant] = useState<number>(0);
+  // ==================== Helper functions ====================
+  const normalizeRh = (d: any): Item => ({
+    id: d.id,
+    description: d.description || d.title || `Demande RH ${d.id}`,
+    montant: Number(d.montant || d.montant_total || 0),
+    statut: (d.status || d.statut || "en_attente").toString(),
+    source: "rh",
+    raw: d,
+  });
 
-  // Debounce search
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim().toLowerCase()), 300);
-    return () => clearTimeout(t);
-  }, [searchTerm]);
+  const normalizeFinance = (f: any): Item => ({
+    id: f.id,
+    description: f.description || f.nom || `Item finance ${f.id}`,
+    montant: Number(f.montant || f.total_montant || 0),
+    statut: (f.statut || f.status || "en_attente").toString(),
+    source: "finance",
+    raw: f,
+    parent_decaissement_id: f.decaissement || f.decaissement_id,
+  });
 
+  const normalizeStock = (s: any): Item => ({
+    id: s.id,
+    description:
+      s.numero ||
+      s.justification ||
+      (s.article ? `${s.article.nom || s.article}` : `Demande Achat ${s.id}`),
+    montant: Number(s.montant_estime || s.montant || 0),
+    statut: (s.statut || s.statut_finance || "en_attente").toString(),
+    source: "stock",
+    raw: s,
+  });
+
+  const extractList = (response: any) => {
+    if (!response) return [];
+    if (Array.isArray(response)) return response;
+    if (response.data && Array.isArray(response.data)) return response.data;
+    if (response.results && Array.isArray(response.results)) return response.results;
+    return [];
+  };
+
+  // ==================== Fetch data ====================
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -116,7 +113,7 @@ const DemandesDecaissement: React.FC = () => {
       const rhList = extractList(rhRes).map(normalizeRh);
       const stockList = extractList(stockRes).map(normalizeStock);
 
-      // Merge and dedupe by source+id
+      // Merge and dedupe
       const mergedMap = new Map<string, Item>();
       [...finList, ...rhList, ...stockList].forEach((it) => {
         const key = `${it.source}:${it.id}`;
@@ -124,7 +121,6 @@ const DemandesDecaissement: React.FC = () => {
       });
 
       const merged = Array.from(mergedMap.values()).sort((a, b) => b.montant - a.montant);
-
       setItems(merged);
       setPage(1);
     } catch (err: any) {
@@ -134,23 +130,13 @@ const DemandesDecaissement: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  // Création d'une demande
-  const handleCreate = async () => {
-    try {
-      await financeApi.createDecaissement({ description: newDescription, montant: newMontant });
-      toast({ title: "Succès", description: "Demande créée." });
-      setIsModalOpen(false);
-      setNewDescription("");
-      setNewMontant(0);
-      fetchData();
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err?.message || "Impossible de créer la demande.", variant: "destructive" });
-    }
-  };
+  // ==================== Search ====================
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim().toLowerCase()), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
 
   const filtered = useMemo(() => {
     if (!debouncedSearch) return items;
@@ -162,10 +148,37 @@ const DemandesDecaissement: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  // ==================== Gestion création nouvelle demande ====================
+  const addNewItem = () => setNewItems([...newItems, { description: "", montant: 0 }]);
+  const removeNewItem = (index: number) => setNewItems(newItems.filter((_, i) => i !== index));
+  const updateNewItem = (index: number, field: keyof ItemForm, value: string | number) => {
+    const newState = [...newItems];
+    newState[index][field] = field === "montant" ? Number(value) : String(value);
+    setNewItems(newState);
+  };
+
+  const handleCreateDemande = async () => {
+    const payload = { items: newItems.filter(i => i.description && i.montant > 0) };
+    if (payload.items.length === 0) {
+      toast({ title: "Erreur", description: "Ajoutez au moins un item valide.", variant: "destructive" });
+      return;
+    }
+    try {
+      await financeApi.createDecaissement(payload);
+      toast({ title: "Succès", description: "Demande créée." });
+      setNewItems([{ description: "", montant: 0 }]);
+      setIsModalOpen(false);
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err?.message || "Impossible de créer la demande.", variant: "destructive" });
+    }
+  };
+
+  // ==================== Export PDF/Excel ====================
   const exportPDF = async () => {
     const data = filtered.map((i) => [i.description, i.montant, i.statut, i.source]);
     const columns = ["Description", "Montant", "Statut", "Source"];
-    await createPDFDoc("Demandes de Décaissement (Toutes sources)", data, columns, "demandes_decaissement_toutes_sources.pdf");
+    await createPDFDoc("Demandes de Décaissement", data, columns, "demandes_decaissement.pdf");
     toast({ title: "Export", description: "PDF exporté." });
   };
 
@@ -175,7 +188,7 @@ const DemandesDecaissement: React.FC = () => {
     );
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "DemandesDecaissement");
-    XLSX.writeFile(workbook, "demandes_decaissement_toutes_sources.xlsx");
+    XLSX.writeFile(workbook, "demandes_decaissement.xlsx");
     toast({ title: "Export", description: "Excel exporté." });
   };
 
@@ -188,9 +201,13 @@ const DemandesDecaissement: React.FC = () => {
           placeholder="Rechercher..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-1/2"
+          className="w-1/3"
         />
-        <Button onClick={() => setIsModalOpen(true)}>Créer une demande</Button>
+        <div className="flex gap-2">
+          <Button onClick={() => setIsModalOpen(true)}>Nouvelle demande</Button>
+          <Button onClick={exportPDF}>Exporter PDF</Button>
+          <Button onClick={exportExcel}>Exporter Excel</Button>
+        </div>
       </div>
 
       <Table>
@@ -204,7 +221,7 @@ const DemandesDecaissement: React.FC = () => {
         </TableHeader>
         <TableBody>
           {pageItems.map((i) => (
-            <TableRow key={`${i.source}:${i.id}`}>
+            <TableRow key={`${i.source}-${i.id}`}>
               <TableCell>{i.description}</TableCell>
               <TableCell>{i.montant}</TableCell>
               <TableCell>{i.statut}</TableCell>
@@ -214,34 +231,41 @@ const DemandesDecaissement: React.FC = () => {
         </TableBody>
       </Table>
 
-      {/* Pagination */}
-      <div className="flex justify-between mt-4">
-        <Button onClick={() => setPage(Math.max(1, page - 1))}>Précédent</Button>
+      <div className="flex justify-between items-center mt-2">
+        <Button disabled={page === 1} onClick={() => setPage(page - 1)}>Précédent</Button>
         <span>Page {page} / {totalPages}</span>
-        <Button onClick={() => setPage(Math.min(totalPages, page + 1))}>Suivant</Button>
+        <Button disabled={page === totalPages} onClick={() => setPage(page + 1)}>Suivant</Button>
       </div>
 
-      {/* Modal de création */}
+      {/* Modal création nouvelle demande */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
+        <DialogContent className="space-y-4">
           <DialogHeader>
             <DialogTitle>Nouvelle demande de décaissement</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              placeholder="Description"
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-            />
-            <Input
-              placeholder="Montant"
-              type="number"
-              value={newMontant}
-              onChange={(e) => setNewMontant(Number(e.target.value))}
-            />
-          </div>
+
+          {newItems.map((item, index) => (
+            <div key={index} className="flex gap-2 items-center">
+              <Input
+                placeholder="Description"
+                value={item.description}
+                onChange={(e) => updateNewItem(index, "description", e.target.value)}
+              />
+              <Input
+                type="number"
+                placeholder="Montant"
+                value={item.montant}
+                onChange={(e) => updateNewItem(index, "montant", e.target.value)}
+              />
+              {newItems.length > 1 && (
+                <Button variant="destructive" onClick={() => removeNewItem(index)}>Supprimer</Button>
+              )}
+            </div>
+          ))}
+          <Button onClick={addNewItem}>Ajouter un item</Button>
+
           <DialogFooter>
-            <Button onClick={handleCreate}>Créer</Button>
+            <Button onClick={handleCreateDemande}>Créer la demande</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
