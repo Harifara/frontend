@@ -14,7 +14,7 @@ type ItemStatut = "en_attente" | "valide" | "rejete";
 interface Item {
   id: string;
   description: string;
-  montant: string | number; // Django Decimal may come as string
+  montant: string | number;
   statut: ItemStatut;
 }
 
@@ -36,8 +36,9 @@ const DemandesDecaissement: React.FC = () => {
     setLoading(true);
     try {
       const data = await financeApi.getItems();
-      // Defensive: ensure shapes are correct
-      const normalized: Item[] = data.map((it: any) => ({
+      // Support pagination { results: [...] } or array [...]
+      const rawList = Array.isArray(data) ? data : data?.results ?? [];
+      const normalized: Item[] = rawList.map((it: any) => ({
         id: String(it.id),
         description: it.description ?? "",
         montant: it.montant ?? 0,
@@ -68,7 +69,14 @@ const DemandesDecaissement: React.FC = () => {
   const handleUpdateStatut = async (statut: ItemStatut) => {
     if (!editing) return;
     try {
-      await financeApi.updateItemStatut(editing.id, { statut });
+      // financeApi expose updateItemStatut and updateItem (alias) — try both if necessary
+      if (financeApi.updateItemStatut) {
+        await financeApi.updateItemStatut(editing.id, { statut });
+      } else if ((financeApi as any).updateItem) {
+        await (financeApi as any).updateItem(editing.id, statut);
+      } else {
+        throw new Error("Méthode d'API introuvable pour mettre à jour l'item.");
+      }
       toast({ title: "Succès", description: `Statut mis à jour : ${STATUT_LABELS[statut]}` });
       await fetchData();
       setIsModalOpen(false);
