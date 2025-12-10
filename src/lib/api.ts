@@ -1,9 +1,11 @@
 
 export const API_BASE_URL = "https://api.ecartmada.com/api";
+export const MEDIA_URL = "http://api.ecartmada.com/media/";
 
 
-export const MEDIA_URL =
-  window.__CONFIG__?.MEDIA_URL || import.meta.env.VITE_MEDIA_URL || "https://api.ecartmada.com/rh_service/media/";
+
+// export const MEDIA_URL =
+//   window.__CONFIG__?.MEDIA_URL || import.meta.env.VITE_MEDIA_URL || "https://api.ecartmada.com/rh_service/media/";
 
 
 const DRF_TOKEN_KEY = "drf_token";
