@@ -328,18 +328,7 @@ const Employes: React.FC = () => {
             </div>
 
             {/* Statut */}
-            <div>
-              <Label>Statut</Label>
-              <Select value={form.status_employer || ""} onValueChange={val => setForm({ ...form, status_employer: val as Employer["status_employer"] })}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner statut" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="actif">Actif</SelectItem>
-                  <SelectItem value="inactif">Inactif</SelectItem>
-                  <SelectItem value="conge">En congé</SelectItem>
-                  <SelectItem value="suspendu">Suspendu</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+           
           </div>
 
           <DialogFooter className="mt-4">
