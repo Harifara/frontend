@@ -958,17 +958,17 @@ export const financeApi = {
   // ------------------------
   // DEMANDES DE DECAISSEMENT
   // ------------------------
-  getDecaissements: async () => {
+  getDecaissements: async (): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/decaissements/`, { headers: getHeaders(token) });
   },
 
-  getDecaissement: async (id: string) => {
+  getDecaissement: async (id: string): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, { headers: getHeaders(token) });
   },
 
-  createDecaissement: async (payload: any) => {
+  createDecaissement: async (payload: any): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/decaissements/`, {
       method: "POST",
@@ -977,7 +977,7 @@ export const financeApi = {
     });
   },
 
-  updateDecaissement: async (id: string, payload: any) => {
+  updateDecaissement: async (id: string, payload: any): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
       method: "PATCH",
@@ -986,7 +986,7 @@ export const financeApi = {
     });
   },
 
-  deleteDecaissement: async (id: string) => {
+  deleteDecaissement: async (id: string): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
       method: "DELETE",
@@ -997,15 +997,15 @@ export const financeApi = {
   // ------------------------
   // ITEMS DE DECAISSEMENT
   // ------------------------
-  getItems: async () => {
+  getItems: async (): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/items/`, { headers: getHeaders(token) });
   },
 
-  updateItem: async (id: string, statut: string) => {
+  updateItemStatus: async (id: string, statut: string): Promise<Response> => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/items/${cleanUUID(id)}/`, {
-      method: "PATCH",
+    return fetchWithLog(`${API_BASE_URL}/finance/items/${cleanUUID(id)}/update-status/`, {
+      method: "POST", // POST pour l'action custom update-status
       headers: getHeaders(token),
       body: JSON.stringify({ statut }),
     });
@@ -1014,17 +1014,17 @@ export const financeApi = {
   // ------------------------
   // DEPENSES
   // ------------------------
-  getDepenses: async () => {
+  getDepenses: async (): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/depenses/`, { headers: getHeaders(token) });
   },
 
-  getDepense: async (id: string) => {
+  getDepense: async (id: string): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(id)}/`, { headers: getHeaders(token) });
   },
 
-  createDepense: async (payload: any) => {
+  createDepense: async (payload: any): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/depenses/`, {
       method: "POST",
@@ -1033,7 +1033,7 @@ export const financeApi = {
     });
   },
 
-  updateDepense: async (id: string, payload: any) => {
+  updateDepense: async (id: string, payload: any): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(id)}/`, {
       method: "PATCH",
@@ -1042,7 +1042,7 @@ export const financeApi = {
     });
   },
 
-  deleteDepense: async (id: string) => {
+  deleteDepense: async (id: string): Promise<Response> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(id)}/`, {
       method: "DELETE",
@@ -1054,15 +1054,20 @@ export const financeApi = {
 
 export const coordinateurApi = {
   // ------------------------
-  // ITEMS À VALIDER
+  // Récupérer toutes les validations
   // ------------------------
   getValidations: async () => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/coordinator/validations/`, { headers: getHeaders(token) });
+    return fetchWithLog(`${API_BASE_URL}/coordinator/validations/`, {
+      headers: getHeaders(token),
+    });
   },
 
+  // ------------------------
+  // Créer une validation
+  // ------------------------
   createValidation: async (payload: {
-    item_decaissement: string;
+    item_decaissement_id: string; // corrigé le nom du champ
     coordinateur_id: string;
     statut: string;
     commentaire?: string;
@@ -1075,17 +1080,23 @@ export const coordinateurApi = {
     });
   },
 
+  // ------------------------
+  // Valider un item (approve)
+  // ------------------------
   approveItem: async (id: string) => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/coordinator/items/${cleanUUID(id)}/approve/`, {
+    return fetchWithLog(`${API_BASE_URL}/coordinator/validations/${cleanUUID(id)}/approve/`, {
       method: "POST",
       headers: getHeaders(token),
     });
   },
 
+  // ------------------------
+  // Rejeter un item avec commentaire
+  // ------------------------
   rejectItem: async (id: string, commentaire: string = "") => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/coordinator/items/${cleanUUID(id)}/reject/`, {
+    return fetchWithLog(`${API_BASE_URL}/coordinator/validations/${cleanUUID(id)}/reject/`, {
       method: "POST",
       headers: getHeaders(token),
       body: JSON.stringify({ commentaire }),

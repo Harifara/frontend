@@ -3,64 +3,74 @@ import { coordinateurApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
-interface Item {
+interface ValidationItem {
   id: string;
-  description: string;
-  montant: number;
+  item_decaissement_id: string;
+  coordinateur_id: string;
   statut: string;
+  commentaire?: string;
+  date_validation: string;
+  raw?: any;
 }
 
-const ValidationItems = () => {
-  const [items, setItems] = useState<Item[]>([]);
+const ValidationCoordinateurPage = () => {
+  const [items, setItems] = useState<ValidationItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<Item | null>(null);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [commentModalOpen, setCommentModalOpen] = useState(false);
+  const [rejectionComment, setRejectionComment] = useState("");
+  const [selectedItem, setSelectedItem] = useState<ValidationItem | null>(null);
+
   const { toast } = useToast();
 
-  const fetchData = async () => {
+  const fetchValidations = async () => {
     setLoading(true);
     try {
-      const data = await coordinateurApi.getValidations();
+      const res = await coordinateurApi.getValidations();
+      const data = Array.isArray(res?.data) ? res.data : res.results || [];
       setItems(data);
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de charger les items.", variant: "destructive" });
+      toast({ title: "Erreur", description: err.message || "Impossible de charger les validations.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchValidations();
+  }, []);
 
-  const openValidationModal = (item: Item) => {
-    setSelectedItem(item);
-    setIsModalOpen(true);
-  };
-
-  const handleApprove = async () => {
-    if (!selectedItem) return;
+  const handleApprove = async (item: ValidationItem) => {
+    setActionLoadingId(item.id);
     try {
-      await coordinateurApi.approveItem(selectedItem.id);
-      toast({ title: "Succès", description: "Item approuvé" });
-      fetchData();
-      setIsModalOpen(false);
+      await coordinateurApi.approveItem(item.id);
+      toast({ title: "Succès", description: "Item validé." });
+      fetchValidations();
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible d'approuver.", variant: "destructive" });
+      toast({ title: "Erreur", description: err.message || "Impossible de valider l'item.", variant: "destructive" });
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
   const handleReject = async () => {
     if (!selectedItem) return;
+    setActionLoadingId(selectedItem.id);
     try {
-      await coordinateurApi.rejectItem(selectedItem.id, "Rejeté par coordinateur");
-      toast({ title: "Succès", description: "Item rejeté" });
-      fetchData();
-      setIsModalOpen(false);
+      await coordinateurApi.rejectItem(selectedItem.id, rejectionComment);
+      toast({ title: "Succès", description: "Item rejeté." });
+      setCommentModalOpen(false);
+      setRejectionComment("");
+      setSelectedItem(null);
+      fetchValidations();
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de rejeter.", variant: "destructive" });
+      toast({ title: "Erreur", description: err.message || "Impossible de rejeter l'item.", variant: "destructive" });
+    } finally {
+      setActionLoadingId(null);
     }
   };
 
@@ -68,7 +78,7 @@ const ValidationItems = () => {
 
   return (
     <div className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold">Validation des Items</h1>
+      <h1 className="text-3xl font-bold">Validations Coordinateur</h1>
 
       <Card>
         <CardHeader>
@@ -78,25 +88,42 @@ const ValidationItems = () => {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-center">Description</TableHead>
-                <TableHead className="text-center">Montant</TableHead>
-                <TableHead className="text-center">Statut</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
+                <TableHead>ID Item</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead>Commentaire</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.length ? items.map(i => (
+              {items.length ? items.map((i) => (
                 <TableRow key={i.id}>
-                  <TableCell className="text-center">{i.description}</TableCell>
-                  <TableCell className="text-center">{i.montant}</TableCell>
-                  <TableCell className="text-center">{i.statut}</TableCell>
-                  <TableCell className="flex gap-2 justify-center">
-                    <Button size="sm" variant="outline" onClick={() => openValidationModal(i)}>Valider / Rejeter</Button>
+                  <TableCell>{i.item_decaissement_id}</TableCell>
+                  <TableCell>{i.statut}</TableCell>
+                  <TableCell>{i.commentaire || "-"}</TableCell>
+                  <TableCell>{new Date(i.date_validation).toLocaleString()}</TableCell>
+                  <TableCell className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleApprove(i)}
+                      disabled={actionLoadingId === i.id}
+                    >
+                      {actionLoadingId === i.id ? "..." : "Valider"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => { setSelectedItem(i); setCommentModalOpen(true); }}
+                      disabled={actionLoadingId === i.id}
+                    >
+                      {actionLoadingId === i.id ? "..." : "Rejeter"}
+                    </Button>
                   </TableCell>
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-6">Aucun item à valider.</TableCell>
+                  <TableCell colSpan={5} className="text-center py-6">Aucun item à valider.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -104,17 +131,25 @@ const ValidationItems = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[400px]">
+      {/* Modal Rejet avec commentaire */}
+      <Dialog open={commentModalOpen} onOpenChange={setCommentModalOpen}>
+        <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>Valider ou rejeter l'item</DialogTitle>
+            <DialogTitle>Rejet / Commentaire</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col gap-4">
-            <Button onClick={handleApprove}>Approuver</Button>
-            <Button onClick={handleReject} variant="destructive">Rejeter</Button>
+          <div className="space-y-4">
+            <p className="text-sm">Indiquez un commentaire pour le rejet (optionnel).</p>
+            <Input
+              placeholder="Commentaire"
+              value={rejectionComment}
+              onChange={(e) => setRejectionComment(e.target.value)}
+            />
           </div>
-          <DialogFooter className="mt-4">
-            <Button onClick={() => setIsModalOpen(false)} variant="outline">Annuler</Button>
+          <DialogFooter className="mt-4 flex gap-2">
+            <Button onClick={() => { setCommentModalOpen(false); setRejectionComment(""); setSelectedItem(null); }} variant="outline">Annuler</Button>
+            <Button variant="destructive" onClick={handleReject} disabled={!selectedItem || actionLoadingId === selectedItem.id}>
+              {actionLoadingId === (selectedItem?.id ?? null) ? "..." : "Confirmer le rejet"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -122,4 +157,4 @@ const ValidationItems = () => {
   );
 };
 
-export default ValidationItems;
+export default ValidationCoordinateurPage;
