@@ -7,10 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useToast } from "@/hooks/use-toast";
 
 interface DepenseItem {
-  id: string;
   description: string;
   montant: number;
-  statut: string;
 }
 
 interface Decaissement {
@@ -23,18 +21,14 @@ interface Decaissement {
   depenses: DepenseItem[];
 }
 
-const PAGE_SIZE = 20;
-
 const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newDepenses, setNewDepenses] = useState<{ description: string; montant: number }[]>([
-    { description: "", montant: 0 },
-  ]);
+  const [newDepenses, setNewDepenses] = useState<DepenseItem[]>([{ description: "", montant: 0 }]);
   const { toast } = useToast();
 
-  // ---------------- Fetch all decaissements ----------------
+  // ---------------- Fetch decaissements ----------------
   const fetchDecaissements = async () => {
     setLoading(true);
     try {
@@ -50,18 +44,22 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
 
   useEffect(() => { fetchDecaissements(); }, []);
 
-  // ---------------- Modal - ajouter dépense ----------------
-  const addNewDepense = () => setNewDepenses([...newDepenses, { description: "", montant: 0 }]);
-  const removeNewDepense = (index: number) => setNewDepenses(newDepenses.filter((_, i) => i !== index));
-  const updateNewDepense = (index: number, field: "description" | "montant", value: string | number) => {
+  // ---------------- Gestion des dépenses dans la modal ----------------
+  const addDepense = () => setNewDepenses([...newDepenses, { description: "", montant: 0 }]);
+  const removeDepense = (index: number) => setNewDepenses(newDepenses.filter((_, i) => i !== index));
+  const updateDepense = (index: number, field: "description" | "montant", value: string | number) => {
     const updated = [...newDepenses];
     updated[index][field] = field === "montant" ? Number(value) : String(value);
     setNewDepenses(updated);
   };
 
   const handleCreateDecaissement = async () => {
-    const payload = { items: newDepenses.filter(d => d.description && d.montant > 0), created_by: userId };
-    if (!payload.items.length) {
+    const payload = {
+      depenses: newDepenses.filter(d => d.description && d.montant > 0),
+      created_by: userId,
+      source_service: "finance",
+    };
+    if (!payload.depenses.length) {
       toast({ title: "Erreur", description: "Ajoutez au moins une dépense valide.", variant: "destructive" });
       return;
     }
@@ -94,7 +92,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {decaissements.map((d) => (
+          {decaissements.map(d => (
             <TableRow key={d.id}>
               <TableCell>{d.source_service}</TableCell>
               <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
@@ -105,7 +103,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
         </TableBody>
       </Table>
 
-      {/* Modal création nouvelle demande */}
+      {/* Modal création décaissement */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="space-y-4">
           <DialogHeader>
@@ -117,20 +115,21 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
               <Input
                 placeholder="Description"
                 value={dep.description}
-                onChange={(e) => updateNewDepense(index, "description", e.target.value)}
+                onChange={(e) => updateDepense(index, "description", e.target.value)}
               />
               <Input
                 type="number"
                 placeholder="Montant"
                 value={dep.montant}
-                onChange={(e) => updateNewDepense(index, "montant", e.target.value)}
+                onChange={(e) => updateDepense(index, "montant", e.target.value)}
               />
               {newDepenses.length > 1 && (
-                <Button variant="destructive" onClick={() => removeNewDepense(index)}>Supprimer</Button>
+                <Button variant="destructive" onClick={() => removeDepense(index)}>Supprimer</Button>
               )}
             </div>
           ))}
-          <Button onClick={addNewDepense}>Ajouter une dépense</Button>
+
+          <Button onClick={addDepense}>Ajouter une dépense</Button>
 
           <DialogFooter>
             <Button onClick={handleCreateDecaissement}>Créer le décaissement</Button>
