@@ -55,8 +55,8 @@ const normalizeStock = (s: any): Item => ({
 const extractList = (response: any) => {
   if (!response) return [];
   if (Array.isArray(response)) return response;
-  if (response.data && Array.isArray(response.data)) return response.data;
-  if (response.results && Array.isArray(response.results)) return response.results;
+  if (Array.isArray(response.results)) return response.results;
+  if (Array.isArray(response.data)) return response.data;
   return [];
 };
 
@@ -121,9 +121,12 @@ const DemandesDecaissement: React.FC = () => {
 
       const merged = Array.from(mergedMap.values()).sort((a, b) => b.montant - a.montant);
 
+      console.log("Merged items:", merged);
+
       setItems(merged);
       setPage(1);
     } catch (err: any) {
+      console.error(err);
       toast({ title: "Erreur", description: err?.message || "Impossible de charger les demandes.", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -133,76 +136,6 @@ const DemandesDecaissement: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
-
-  const openEditModal = (item: Item) => {
-    setEditing(item);
-    setIsModalOpen(true);
-  };
-
-  const openDetails = (item: Item) => setDetailsItem(item);
-
-  const updateStatusWithOptionalComment = async (item: Item, statut: string, comment?: string) => {
-    setActionLoadingId(item.id);
-    try {
-      if (item.source === "finance") {
-        await financeApi.updateItem(item.id, statut);
-      } else if (item.source === "rh") {
-        if (statut.toLowerCase().includes("valid")) {
-          await (rhApi.approveDemande?.(item.id) ?? rhApi.updateDemande(item.id, { status: "approuve" }));
-        } else if (statut.toLowerCase().includes("rejet")) {
-          await (rhApi.rejectDemande?.(item.id, comment) ?? rhApi.updateDemande(item.id, { status: "rejete", commentaire: comment || "" }));
-        } else {
-          await rhApi.updateDemande(item.id, { status: statut }).catch(() => {});
-        }
-      } else if (item.source === "stock") {
-        if (statut.toLowerCase().includes("valid")) {
-          await (stockApi.validerDemandeAchat?.(item.id) ?? stockApi.updateDemandeAchat?.(item.id, { statut: "valide" }));
-        } else if (statut.toLowerCase().includes("rejet")) {
-          await (stockApi.rejeterDemandeAchat?.(item.id, comment || "") ?? stockApi.updateDemandeAchat?.(item.id, { statut: "rejete", commentaire: comment || "" }));
-        } else {
-          await stockApi.updateDemandeAchat?.(item.id, { statut }).catch(() => {});
-        }
-      }
-
-      toast({ title: "Succès", description: `Statut mis à jour à "${statut}"` });
-      await fetchData();
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err?.message || "Impossible de mettre à jour le statut.", variant: "destructive" });
-    } finally {
-      setActionLoadingId(null);
-      setIsModalOpen(false);
-      setCommentModalOpen(false);
-      setRejectionComment("");
-    }
-  };
-
-  const handleUpdateStatut = async (statut: string) => {
-    if (!editing) return;
-    if (statut.toLowerCase().includes("rejet")) {
-      setCommentModalOpen(true);
-    } else {
-      await updateStatusWithOptionalComment(editing, statut);
-    }
-  };
-
-  const confirmRejectWithComment = async () => {
-    if (!editing) return;
-    await updateStatusWithOptionalComment(editing, "rejete", rejectionComment);
-  };
-
-  const quickApprove = async (item: Item) => {
-    setEditing(item);
-    await updateStatusWithOptionalComment(item, "valide");
-  };
-
-  const quickReject = async (item: Item) => {
-    setEditing(item);
-    if (item.source === "stock" || item.source === "rh") {
-      setCommentModalOpen(true);
-    } else {
-      await updateStatusWithOptionalComment(item, "rejete");
-    }
-  };
 
   const filtered = useMemo(() => {
     if (!debouncedSearch) return items;
@@ -214,28 +147,48 @@ const DemandesDecaissement: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  const exportPDF = async () => {
-    const data = filtered.map((i) => [i.description, i.montant, i.statut, i.source]);
-    const columns = ["Description", "Montant", "Statut", "Source"];
-    await createPDFDoc("Demandes de Décaissement (Toutes sources)", data, columns, "demandes_decaissement_toutes_sources.pdf");
-    toast({ title: "Export", description: "PDF exporté." });
-  };
-
-  const exportExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(
-      filtered.map((i) => ({ Description: i.description, Montant: i.montant, Statut: i.statut, Source: i.source }))
-    );
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "DemandesDecaissement");
-    XLSX.writeFile(workbook, "demandes_decaissement_toutes_sources.xlsx");
-    toast({ title: "Export", description: "Excel exporté." });
-  };
-
   if (loading) return <p className="p-8 text-center">Chargement...</p>;
 
   return (
     <div className="p-8 space-y-6">
-      {/* ... reste du rendu identique au code initial, avec pagination et modals ... */}
+      <Input
+        placeholder="Rechercher..."
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Description</TableHead>
+            <TableHead>Montant</TableHead>
+            <TableHead>Statut</TableHead>
+            <TableHead>Source</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {pageItems.map((item) => (
+            <TableRow key={`${item.source}:${item.id}`}>
+              <TableCell>{item.description}</TableCell>
+              <TableCell>{item.montant}</TableCell>
+              <TableCell>{item.statut}</TableCell>
+              <TableCell>{item.source}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      <div className="flex justify-between items-center mt-4">
+        <Button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>
+          Précédent
+        </Button>
+        <span>
+          Page {page} / {totalPages}
+        </span>
+        <Button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages}>
+          Suivant
+        </Button>
+      </div>
     </div>
   );
 };
