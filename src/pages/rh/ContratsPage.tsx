@@ -496,22 +496,6 @@ const ContratsPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Statut */}
-            <div>
-              <Label>Status</Label>
-              <select
-                className="border rounded p-2 w-full"
-                value={editing?.status_contrat ?? ""}
-                onChange={e => setEditing(prev => ({ ...prev, status_contrat: e.target.value }))}
-              >
-                <option value="actif">Actif</option>
-                <option value="expire">Expiré</option>
-                <option value="resilie">Résilié</option>
-                <option value="suspendu">Suspendu</option>
-                <option value="termine">Terminé</option>
-              </select>
-            </div>
-
             {/* Date début */}
             <div>
               <Label>Date début</Label>
@@ -538,11 +522,6 @@ const ContratsPage: React.FC = () => {
               </div>
             )}
 
-            {/* Fichier contrat */}
-            <div className="col-span-2">
-              <Label>Contrat (PDF)</Label>
-              <Input type="file" accept="application/pdf" onChange={e => setFileToUpload(e.target.files?.[0] ?? null)} />
-            </div>
 
           </div>
 
