@@ -1,3 +1,4 @@
+// src/pages/stock/StockManagement.tsx
 import React, { useEffect, useState } from "react";
 import {
   Table,
@@ -80,7 +81,7 @@ const StockManagement: React.FC = () => {
   useEffect(() => {
     const fetchUserAndData = async () => {
       try {
-        const userData = await stockApi.getCurrentUser(); // /auth/me
+        const userData = await stockApi.getCurrentUser();
         setCurrentUser(userData);
 
         const [stocksData, articlesData, magasinsData] = await Promise.all([
@@ -100,11 +101,10 @@ const StockManagement: React.FC = () => {
         });
       }
     };
-
     fetchUserAndData();
   }, []);
 
-  // ✅ Alertes stocks faibles
+  // Alertes stocks faibles
   useEffect(() => {
     const lowStocks = stocks.filter((s) => s.quantite <= s.seuil_alerte);
     if (lowStocks.length > 0) {
@@ -195,6 +195,17 @@ const StockManagement: React.FC = () => {
   // -----------------------
   // Export PDF & Excel
   // -----------------------
+  const filteredStocks = stocks
+    .filter(
+      (s) =>
+        s.article.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.magasin.nom.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter((s) => {
+      if (currentUser?.role === "magasinier") return s.magasin.id === currentUser.magasin_id;
+      return true;
+    });
+
   const exportPDF = async () => {
     const data = filteredStocks.map((s) => [
       s.article.nom,
@@ -221,22 +232,6 @@ const StockManagement: React.FC = () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "Stocks");
     XLSX.writeFile(workbook, "stocks.xlsx");
   };
-
-  // -----------------------
-  // Filtrage des stocks
-  // -----------------------
-  const filteredStocks = stocks
-    .filter(
-      (s) =>
-        s.article.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.magasin.nom.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .filter((s) => {
-      if (currentUser?.role === "magasinier") {
-        return s.magasin.id === currentUser.magasin_id;
-      }
-      return true;
-    });
 
   // -----------------------
   // Rendu
