@@ -1,189 +1,178 @@
-// src/pages/finance/DecaissementsPage.tsx
 import React, { useEffect, useState } from "react";
-import { financeApi, rhApi, stockApi } from "@/lib/api";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { financeApi } from "@/lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
 
-// ------------------
-// Types
-// ------------------
-interface Demande {
+interface Decaissement {
   id: string;
-  source: "RH" | "Stock";
-  description: string;
-  montant: number;
-  status: string;
+  source_service: string;
+  created_by: string;
+  statut: string;
+  depenses?: Depense[];
 }
 
-// ------------------
-// Badge couleur
-// ------------------
-const badgeColor = (status: string) => {
-  switch (status.toLowerCase()) {
-    case "approuve":
-    case "valide":
-      return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
-    case "rejete":
-      return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
-    case "en_attente":
-      return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
-    default:
-      return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
-  }
-};
+interface Depense {
+  id: string;
+  description: string;
+  montant: number;
+  statut_paiement: string;
+}
 
-// ------------------
-// Composant
-// ------------------
-const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
-  const [demandes, setDemandes] = useState<Demande[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedDemandes, setSelectedDemandes] = useState<string[]>([]);
-  const [detailsDemande, setDetailsDemande] = useState<Demande | null>(null);
-  const { toast } = useToast();
+const DemandesDecaissement = () => {
+  const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
+  const [selectedDecaissement, setSelectedDecaissement] = useState<Decaissement | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [newSourceService, setNewSourceService] = useState("");
+  const [newCreatedBy, setNewCreatedBy] = useState("");
 
-  // -----------------
-  // Fetch demandes RH + Stock
-  // -----------------
-  const fetchData = async () => {
-    setIsLoading(true);
+  // 🔹 Fetch liste des décaissements
+  const fetchDecaissements = async () => {
     try {
-      const [rhRes, stockRes] = await Promise.all([rhApi.getDemandes(), stockApi.getDemandesAchat()]);
-
-      const rhDemandes: Demande[] = (rhRes.results || rhRes).map((d: any) => ({
-        id: d.id,
-        source: "RH",
-        description: d.description,
-        montant: d.montant_total || 0,
-        status: d.status || "en_attente",
-      }));
-
-      const stockDemandes: Demande[] = (stockRes.results || stockRes).map((d: any) => ({
-        id: d.id,
-        source: "Stock",
-        description: d.article?.nom || d.numero || "-",
-        montant: d.montant_estime || 0,
-        status: d.statut || "en_attente",
-      }));
-
-      setDemandes([...rhDemandes, ...stockDemandes]);
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de charger les demandes.", variant: "destructive" });
+      const data = await financeApi.getDecaissements();
+      setDecaissements(data);
+    } catch (err) {
+      console.error(err);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
+    }
+  };
+
+  // 🔹 Fetch détails d’un décaissement
+  const fetchDecaissementDetail = async (id: string) => {
+    try {
+      const data = await financeApi.getDecaissement(id);
+      setSelectedDecaissement(data);
+    } catch (err) {
+      console.error(err);
     }
   };
 
   useEffect(() => {
-    fetchData();
+    fetchDecaissements();
   }, []);
 
-  // -----------------
-  // Créer un décaissement avec les demandes sélectionnées
-  // -----------------
+  // 🔹 Création d’un décaissement
   const handleCreateDecaissement = async () => {
-    if (!selectedDemandes.length) {
-      toast({ title: "Sélection requise", description: "Veuillez sélectionner au moins une demande.", variant: "destructive" });
-      return;
-    }
     try {
-      await financeApi.createDemandeDecaissement({
-        created_by: userId,
-        demande_ids: selectedDemandes,
+      await financeApi.createDecaissement({
+        source_service: newSourceService,
+        created_by: newCreatedBy,
       });
-      toast({ title: "Succès", description: "Décaissement créé avec succès.", variant: "success" });
-      setSelectedDemandes([]);
-      fetchData();
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de créer le décaissement.", variant: "destructive" });
+      setDialogOpen(false);
+      setNewSourceService("");
+      setNewCreatedBy("");
+      fetchDecaissements();
+    } catch (err) {
+      console.error(err);
     }
   };
 
-  if (isLoading) return <p className="p-8 text-center">Chargement...</p>;
+  // 🔹 Valider un décaissement
+  const handleValider = async (id: string) => {
+    try {
+      await financeApi.validateDepense(id);
+      if (selectedDecaissement?.id === id) fetchDecaissementDetail(id);
+      fetchDecaissements();
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // 🔹 Rejeter un décaissement
+  const handleRejeter = async (id: string) => {
+    try {
+      // Ici on peut ajouter un commentaire si nécessaire
+      console.log("Rejeter décaissement", id);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   return (
-    <div className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold mb-4">Décaissements</h1>
+    <div className="p-4">
+      <h1 className="text-2xl font-bold mb-4">Demandes de Décaissement</h1>
+      <Button onClick={() => setDialogOpen(true)}>Créer un décaissement</Button>
 
-      <div className="flex gap-2 mb-4">
-        <Button onClick={handleCreateDecaissement} disabled={!selectedDemandes.length}>
-          Créer un décaissement avec les demandes sélectionnées
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Liste des Demandes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Sélection</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Détails</TableHead>
+      {loading ? (
+        <p className="mt-4">Chargement...</p>
+      ) : (
+        <Table className="mt-4">
+          <TableHeader>
+            <TableRow>
+              <TableHead>ID</TableHead>
+              <TableHead>Service</TableHead>
+              <TableHead>Créé par</TableHead>
+              <TableHead>Statut</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {decaissements.map((d) => (
+              <TableRow key={d.id}>
+                <TableCell>{d.id}</TableCell>
+                <TableCell>{d.source_service}</TableCell>
+                <TableCell>{d.created_by}</TableCell>
+                <TableCell>{d.statut}</TableCell>
+                <TableCell className="space-x-2">
+                  <Button variant="outline" onClick={() => fetchDecaissementDetail(d.id)}>
+                    Voir
+                  </Button>
+                  <Button onClick={() => handleValider(d.id)}>Valider</Button>
+                  <Button variant="destructive" onClick={() => handleRejeter(d.id)}>
+                    Rejeter
+                  </Button>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {demandes.length ? (
-                demandes.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell>
-                      <input
-                        type="checkbox"
-                        checked={selectedDemandes.includes(d.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) setSelectedDemandes((prev) => [...prev, d.id]);
-                          else setSelectedDemandes((prev) => prev.filter((id) => id !== d.id));
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>{d.description}</TableCell>
-                    <TableCell>{d.source}</TableCell>
-                    <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
-                    <TableCell><span className={badgeColor(d.status)}>{d.status}</span></TableCell>
-                    <TableCell>
-                      <Button size="sm" variant="outline" onClick={() => setDetailsDemande(d)}>Voir</Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">Aucune demande disponible.</TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            ))}
+          </TableBody>
+        </Table>
+      )}
 
-      {/* -------------------- */}
-      {/* Modal détails de la demande */}
-      {/* -------------------- */}
-      <Dialog open={!!detailsDemande} onOpenChange={() => setDetailsDemande(null)}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader><DialogTitle>Détails de la demande</DialogTitle></DialogHeader>
-          {detailsDemande && (
-            <div className="space-y-4">
-              <p><strong>Description:</strong> {detailsDemande.description}</p>
-              <p><strong>Source:</strong> {detailsDemande.source}</p>
-              <p><strong>Montant:</strong> {detailsDemande.montant.toLocaleString()} Ar</p>
-              <p><strong>Status:</strong> <span className={badgeColor(detailsDemande.status)}>{detailsDemande.status}</span></p>
+      {/* 🔹 Dialog pour création d’un décaissement */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Créer un décaissement</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label>Service</label>
+              <Input value={newSourceService} onChange={(e) => setNewSourceService(e.target.value)} />
             </div>
-          )}
+            <div>
+              <label>Créé par</label>
+              <Input value={newCreatedBy} onChange={(e) => setNewCreatedBy(e.target.value)} />
+            </div>
+          </div>
           <DialogFooter>
-            <Button onClick={() => setDetailsDemande(null)}>Fermer</Button>
+            <Button onClick={handleCreateDecaissement}>Créer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 🔹 Détails du décaissement sélectionné */}
+      {selectedDecaissement && (
+        <div className="mt-6 p-4 border rounded">
+          <h2 className="text-xl font-semibold mb-2">Décaissement {selectedDecaissement.id}</h2>
+          <p>Service : {selectedDecaissement.source_service}</p>
+          <p>Créé par : {selectedDecaissement.created_by}</p>
+          <p>Statut : {selectedDecaissement.statut}</p>
+
+          <h3 className="text-lg font-semibold mt-4">Dépenses</h3>
+          <ul className="mt-2 space-y-1">
+            {selectedDecaissement.depenses?.map((d) => (
+              <li key={d.id}>
+                {d.description} - {d.montant} Ariary - {d.statut_paiement}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
 
-export default DecaissementsPage;
+export default DemandesDecaissement;
