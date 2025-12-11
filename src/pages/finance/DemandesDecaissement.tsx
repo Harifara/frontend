@@ -24,7 +24,13 @@ interface Decaissement {
   depenses: Depense[];
 }
 
-export const DemandesDecaissement: React.FC = () => {
+interface DecaissementPayload {
+  source_service: string;
+  total_montant: number;
+  depenses?: { description: string; montant: number }[];
+}
+
+const DemandesDecaissement: React.FC = () => {
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Decaissement | null>(null);
@@ -70,10 +76,8 @@ export const DemandesDecaissement: React.FC = () => {
     }
 
     try {
-      await financeApi.createDepense({
-        demande: selected.id,
-        description: newDepenseDesc,
-        montant: newDepenseMontant,
+      await financeApi.updateDecaissement(selected.id, {
+        depenses: [...selected.depenses, { description: newDepenseDesc, montant: newDepenseMontant }],
       });
       setNewDepenseDesc("");
       setNewDepenseMontant(0);
@@ -105,22 +109,24 @@ export const DemandesDecaissement: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {decaissements.length ? decaissements.map((d) => (
-              <TableRow key={d.id}>
-                <TableCell>{d.source_service}</TableCell>
-                <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
-                <TableCell>{d.total_montant.toLocaleString()}</TableCell>
-                <TableCell>{d.statut}</TableCell>
-                <TableCell className="space-x-2">
-                  <Button onClick={() => setSelected(d)}>Voir / Modifier</Button>
-                  {d.statut === "non_envoyee" && (
-                    <Button variant="outline" onClick={() => handleEnvoyer(d.id)}>
-                      Envoyer au coordo
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            )) : (
+            {decaissements.length ? (
+              decaissements.map((d) => (
+                <TableRow key={d.id}>
+                  <TableCell>{d.source_service}</TableCell>
+                  <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
+                  <TableCell>{d.total_montant.toLocaleString()}</TableCell>
+                  <TableCell>{d.statut}</TableCell>
+                  <TableCell className="space-x-2">
+                    <Button onClick={() => setSelected(d)}>Voir / Modifier</Button>
+                    {d.statut === "non_envoyee" && (
+                      <Button variant="outline" onClick={() => handleEnvoyer(d.id)}>
+                        Envoyer au coordo
+                      </Button>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-4">
                   Aucune demande trouvée.
@@ -140,9 +146,15 @@ export const DemandesDecaissement: React.FC = () => {
 
           {selected && (
             <div>
-              <p><strong>Source:</strong> {selected.source_service}</p>
-              <p><strong>Total:</strong> {selected.total_montant.toLocaleString()}</p>
-              <p><strong>Statut:</strong> {selected.statut}</p>
+              <p>
+                <strong>Source:</strong> {selected.source_service}
+              </p>
+              <p>
+                <strong>Total:</strong> {selected.total_montant.toLocaleString()}
+              </p>
+              <p>
+                <strong>Statut:</strong> {selected.statut}
+              </p>
 
               <h3 className="mt-4 font-semibold">Dépenses</h3>
               <Table>
@@ -177,10 +189,7 @@ export const DemandesDecaissement: React.FC = () => {
                   value={newDepenseMontant}
                   onChange={(e) => setNewDepenseMontant(parseFloat(e.target.value))}
                 />
-                <Button
-                  disabled={!newDepenseDesc || !newDepenseMontant}
-                  onClick={handleAddDepense}
-                >
+                <Button disabled={!newDepenseDesc || !newDepenseMontant} onClick={handleAddDepense}>
                   Ajouter
                 </Button>
               </div>
