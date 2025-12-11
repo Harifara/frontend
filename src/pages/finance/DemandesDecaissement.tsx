@@ -11,22 +11,22 @@ import { useToast } from "@/hooks/use-toast";
 // ------------------
 // Types
 // ------------------
-interface Achat { 
-  id: string; 
-  article: string; 
-  montant: number; 
-  nombre: number; 
+interface Achat {
+  id: string;
+  article: string;
+  montant: number;
+  nombre: number;
   statut: string;
 }
 
-interface Payement { 
-  id: string; 
-  montant: number; 
+interface Payement {
+  id: string;
+  montant: number;
   status: string;
 }
 
-interface Depense { 
-  description: string; 
+interface Depense {
+  description: string;
   montant: number;
 }
 
@@ -67,6 +67,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [detailsDemande, setDetailsDemande] = useState<Demande | null>(null);
   const [openNewDemande, setOpenNewDemande] = useState(false);
+  const [selectedDemandes, setSelectedDemandes] = useState<string[]>([]);
   const { toast } = useToast();
 
   // -----------------
@@ -109,6 +110,25 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
       fetchData();
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Impossible de créer la demande.", variant: "destructive" });
+    }
+  };
+
+  // -----------------
+  // Envoi demandes sélectionnées
+  // -----------------
+  const handleSendSelected = async () => {
+    if (!selectedDemandes.length) {
+      toast({ title: "Aucune sélection", description: "Veuillez sélectionner au moins une demande.", variant: "destructive" });
+      return;
+    }
+
+    try {
+      await financeApi.sendDemandesDecaissement({ demandeIds: selectedDemandes });
+      toast({ title: "Succès", description: "Demandes envoyées pour décaissement.", variant: "success" });
+      setSelectedDemandes([]);
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message || "Impossible d'envoyer les demandes.", variant: "destructive" });
     }
   };
 
@@ -193,7 +213,10 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
     <div className="p-8 space-y-6">
       <h1 className="text-3xl font-bold mb-4">Décaissements</h1>
 
-      <Button onClick={() => setOpenNewDemande(true)}>Nouvelle demande</Button>
+      <div className="flex gap-2 mb-4">
+        <Button onClick={() => setOpenNewDemande(true)}>Nouvelle demande</Button>
+        <Button onClick={handleSendSelected} disabled={!selectedDemandes.length}>Envoyer les demandes sélectionnées</Button>
+      </div>
 
       <Card>
         <CardHeader>
@@ -203,6 +226,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Sélection</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Montant</TableHead>
@@ -213,6 +237,16 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
             <TableBody>
               {demandes.length ? demandes.map(d => (
                 <TableRow key={d.id}>
+                  <TableCell>
+                    <input
+                      type="checkbox"
+                      checked={selectedDemandes.includes(d.id)}
+                      onChange={e => {
+                        if (e.target.checked) setSelectedDemandes(prev => [...prev, d.id]);
+                        else setSelectedDemandes(prev => prev.filter(id => id !== d.id));
+                      }}
+                    />
+                  </TableCell>
                   <TableCell>{d.description}</TableCell>
                   <TableCell>{d.source}</TableCell>
                   <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
@@ -223,7 +257,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4">Aucune demande disponible.</TableCell>
+                  <TableCell colSpan={6} className="text-center py-4">Aucune demande disponible.</TableCell>
                 </TableRow>
               )}
             </TableBody>
