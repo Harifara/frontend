@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 // ------------------
@@ -24,6 +25,11 @@ interface Payement {
   status: string 
 }
 
+interface Depense { 
+  description: string; 
+  montant: number 
+}
+
 interface Demande {
   id: string;
   source: "RH" | "Stock";
@@ -32,6 +38,7 @@ interface Demande {
   status: string;
   achats: Achat[];
   payements: Payement[];
+  depenses?: Depense[];
 }
 
 // ------------------
@@ -59,7 +66,40 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [detailsDemande, setDetailsDemande] = useState<Demande | null>(null);
+  const [openNewDemande, setOpenNewDemande] = useState(false);
   const { toast } = useToast();
+
+  // -----------------
+  // Formulaire création demande
+  // -----------------
+  const [newDemande, setNewDemande] = useState<{ source_service: "RH" | "Stock"; depenses: Depense[] }>({
+    source_service: "RH",
+    depenses: [{ description: "", montant: 0 }]
+  });
+
+  const addDepense = () => setNewDemande(prev => ({ ...prev, depenses: [...prev.depenses, { description: "", montant: 0 }] }));
+  const removeDepense = (index: number) => setNewDemande(prev => ({ ...prev, depenses: prev.depenses.filter((_, i) => i !== index) }));
+
+  const handleDepenseChange = (index: number, field: "description" | "montant", value: string | number) => {
+    const depenses = [...newDemande.depenses];
+    depenses[index][field] = field === "montant" ? Number(value) : String(value);
+    setNewDemande(prev => ({ ...prev, depenses }));
+  };
+
+  const handleCreateDemande = async () => {
+    try {
+      await financeApi.createDemande({
+        ...newDemande,
+        created_by: userId
+      });
+      toast({ title: "Succès", description: "Demande créée", variant: "success" });
+      setOpenNewDemande(false);
+      setNewDemande({ source_service: "RH", depenses: [{ description: "", montant: 0 }] });
+      fetchData();
+    } catch (err: any) {
+      toast({ title: "Erreur", description: err.message || "Impossible de créer la demande.", variant: "destructive" });
+    }
+  };
 
   // -----------------
   // Fetch demandes
@@ -69,7 +109,6 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
     try {
       const [rhRes, stockRes] = await Promise.all([rhApi.getDemandes(), stockApi.getDemandesAchat()]);
 
-      // RH
       const rhDemandes: Demande[] = (rhRes.results || rhRes).map((d: any) => ({
         id: d.id,
         source: "RH",
@@ -80,7 +119,6 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
         payements: d.payements || [],
       }));
 
-      // Stock
       const stockDemandes: Demande[] = (stockRes.results || stockRes).map((d: any) => ({
         id: d.id,
         source: "Stock",
@@ -98,13 +136,8 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
       }));
 
       setDemandes([...rhDemandes, ...stockDemandes]);
-
     } catch (err: any) {
-      toast({ 
-        title: "Erreur", 
-        description: err.message || "Impossible de charger les demandes.", 
-        variant: "destructive" 
-      });
+      toast({ title: "Erreur", description: err.message || "Impossible de charger les demandes.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -117,6 +150,8 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
   return (
     <div className="p-8 space-y-6">
       <h1 className="text-3xl font-bold mb-4">Décaissements</h1>
+
+      <Button onClick={() => setOpenNewDemande(true)}>Nouvelle demande</Button>
 
       <Card>
         <CardHeader>
@@ -141,9 +176,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
                   <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
                   <TableCell><span className={badgeColor(d.status)}>{d.status}</span></TableCell>
                   <TableCell>
-                    <Button size="sm" variant="outline" onClick={() => setDetailsDemande(d)}>
-                      Voir
-                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setDetailsDemande(d)}>Voir</Button>
                   </TableCell>
                 </TableRow>
               )) : (
@@ -161,10 +194,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
       {/* -------------------- */}
       <Dialog open={!!detailsDemande} onOpenChange={() => setDetailsDemande(null)}>
         <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Détails de la demande</DialogTitle>
-          </DialogHeader>
-
+          <DialogHeader><DialogTitle>Détails de la demande</DialogTitle></DialogHeader>
           {detailsDemande && (
             <div className="space-y-4">
               <p><strong>Description:</strong> {detailsDemande.description}</p>
@@ -199,11 +229,68 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
                   </ul>
                 </div>
               )}
+
+              {detailsDemande.depenses && detailsDemande.depenses.length > 0 && (
+                <div>
+                  <strong>Dépenses :</strong>
+                  <ul className="ml-4 list-disc">
+                    {detailsDemande.depenses.map((dep, idx) => (
+                      <li key={idx}>{dep.description} - {dep.montant.toLocaleString()} Ar</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
-
           <DialogFooter>
             <Button onClick={() => setDetailsDemande(null)}>Fermer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* -------------------- */}
+      {/* Modal création nouvelle demande */}
+      {/* -------------------- */}
+      <Dialog open={openNewDemande} onOpenChange={() => setOpenNewDemande(false)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader><DialogTitle>Nouvelle demande de décaissement</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block mb-1">Source du service</label>
+              <select
+                value={newDemande.source_service}
+                onChange={e => setNewDemande(prev => ({ ...prev, source_service: e.target.value as "RH" | "Stock" }))}
+                className="w-full border p-2 rounded"
+              >
+                <option value="RH">RH</option>
+                <option value="Stock">Stock</option>
+              </select>
+            </div>
+
+            <div>
+              <strong>Dépenses :</strong>
+              {newDemande.depenses.map((dep, idx) => (
+                <div key={idx} className="flex gap-2 mb-2">
+                  <Input
+                    placeholder="Description"
+                    value={dep.description}
+                    onChange={e => handleDepenseChange(idx, "description", e.target.value)}
+                  />
+                  <Input
+                    type="number"
+                    placeholder="Montant"
+                    value={dep.montant}
+                    onChange={e => handleDepenseChange(idx, "montant", e.target.value)}
+                  />
+                  <Button variant="destructive" onClick={() => removeDepense(idx)}>Supprimer</Button>
+                </div>
+              ))}
+              <Button size="sm" onClick={addDepense}>Ajouter une dépense</Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleCreateDemande}>Créer</Button>
+            <Button variant="outline" onClick={() => setOpenNewDemande(false)}>Annuler</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
