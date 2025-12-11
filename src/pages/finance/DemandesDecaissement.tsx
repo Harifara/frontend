@@ -81,13 +81,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
   };
 
   useEffect(() => { fetchData(); }, []);
-  // Remplace dans ton fetchData
-  const [rhRes, stockRes, decRes] = await Promise.all([
-    rhApi.getDemandes(),
-    stockApi.getDemandes(), // <-- endpoint correct
-    financeApi.getDecaissements()
-  ]);
-
+  
   // ---------------- Créer décaissement ----------------
   const handleCreateDecaissement = async () => {
     if (selectedDemandes.length === 0) {
