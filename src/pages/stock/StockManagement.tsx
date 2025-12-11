@@ -1,4 +1,3 @@
-// src/pages/stock/StockManagement.tsx
 import React, { useEffect, useState } from "react";
 import {
   Table,
@@ -50,7 +49,7 @@ interface User {
   id: string;
   username: string;
   role: string;
-  magasin_id?: string; // uniquement si magasinier
+  magasin_id?: string;
 }
 
 const StockManagement: React.FC = () => {
@@ -79,10 +78,10 @@ const StockManagement: React.FC = () => {
   // Fetch User & Data
   // -----------------------
   useEffect(() => {
-    const fetchUserAndData = async () => {
+    const fetchData = async () => {
       try {
-        const userData = await stockApi.getCurrentUser();
-        setCurrentUser(userData);
+        const user = await stockApi.getCurrentUser(); // Récupère l'utilisateur connecté
+        setCurrentUser(user);
 
         const [stocksData, articlesData, magasinsData] = await Promise.all([
           stockApi.getStocks(),
@@ -101,12 +100,12 @@ const StockManagement: React.FC = () => {
         });
       }
     };
-    fetchUserAndData();
+    fetchData();
   }, []);
 
   // Alertes stocks faibles
   useEffect(() => {
-    const lowStocks = stocks.filter((s) => s.quantite <= s.seuil_alerte);
+    const lowStocks = stocks.filter(s => s.quantite <= s.seuil_alerte);
     if (lowStocks.length > 0) {
       toast({
         title: "⚠ Alerte stock",
@@ -121,13 +120,9 @@ const StockManagement: React.FC = () => {
   // -----------------------
   const handleSave = async () => {
     try {
-      const selectedArticle = articles.find((a) => a.id === form.article);
+      const selectedArticle = articles.find(a => a.id === form.article);
       if (selectedArticle?.type_categorie === "consommable" && !form.date_peremption) {
-        toast({
-          title: "Erreur",
-          description: "Les consommables doivent avoir une date de péremption.",
-          variant: "destructive",
-        });
+        toast({ title: "Erreur", description: "Les consommables doivent avoir une date de péremption.", variant: "destructive" });
         return;
       }
 
@@ -149,15 +144,11 @@ const StockManagement: React.FC = () => {
 
       setOpenModal(false);
       setEditingStock(null);
-      setForm({ article: "", magasin: "", quantite: 0, seuil_alerte: 10, date_peremption: "" });
+      setForm({ article: "", magasin: currentUser?.role === "magasinier" ? currentUser.magasin_id || "" : "", quantite: 0, seuil_alerte: 10, date_peremption: "" });
       const updatedStocks = await stockApi.getStocks();
       setStocks(updatedStocks);
     } catch (error: any) {
-      toast({
-        title: "Erreur",
-        description: error.message || "Impossible d'enregistrer le stock.",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: error.message || "Impossible d'enregistrer le stock.", variant: "destructive" });
     }
   };
 
@@ -195,19 +186,8 @@ const StockManagement: React.FC = () => {
   // -----------------------
   // Export PDF & Excel
   // -----------------------
-  const filteredStocks = stocks
-    .filter(
-      (s) =>
-        s.article.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.magasin.nom.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .filter((s) => {
-      if (currentUser?.role === "magasinier") return s.magasin.id === currentUser.magasin_id;
-      return true;
-    });
-
   const exportPDF = async () => {
-    const data = filteredStocks.map((s) => [
+    const data = filteredStocks.map(s => [
       s.article.nom,
       s.magasin.nom,
       `${s.quantite} ${s.article.unite_mesure || ""}`,
@@ -220,7 +200,7 @@ const StockManagement: React.FC = () => {
 
   const exportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      filteredStocks.map((s) => ({
+      filteredStocks.map(s => ({
         Article: s.article.nom,
         Magasin: s.magasin.nom,
         Quantité: s.quantite,
@@ -234,8 +214,21 @@ const StockManagement: React.FC = () => {
   };
 
   // -----------------------
-  // Rendu
+  // Filtrage des stocks
   // -----------------------
+  const filteredStocks = stocks
+    .filter(
+      s =>
+        s.article.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.magasin.nom.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter(s => {
+      if (currentUser?.role === "magasinier") {
+        return s.magasin.id === currentUser.magasin_id;
+      }
+      return true;
+    });
+
   return (
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center mb-4">
@@ -254,7 +247,7 @@ const StockManagement: React.FC = () => {
         className="mb-4"
       />
 
-      {stocks.some((s) => s.quantite <= s.seuil_alerte) && (
+      {filteredStocks.some(s => s.quantite <= s.seuil_alerte) && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           ⚠ Certains articles ont un stock faible !
         </div>
@@ -276,13 +269,11 @@ const StockManagement: React.FC = () => {
             {filteredStocks.length ? (
               filteredStocks.map((s) => (
                 <TableRow key={s.id} className={s.quantite <= s.seuil_alerte ? "bg-red-50" : ""}>
-                  <TableCell>{s.article?.nom || "—"}</TableCell>
-                  <TableCell>{s.magasin?.nom || "—"}</TableCell>
+                  <TableCell>{s.article.nom}</TableCell>
+                  <TableCell>{s.magasin.nom}</TableCell>
                   <TableCell>
                     {s.quantite} {s.article.unite_mesure || "—"}
-                    {s.quantite <= s.seuil_alerte && (
-                      <span className="text-red-600 ml-2 font-semibold">⚠ Stock bas</span>
-                    )}
+                    {s.quantite <= s.seuil_alerte && <span className="text-red-600 ml-2 font-semibold">⚠ Stock bas</span>}
                   </TableCell>
                   <TableCell>{s.seuil_alerte}</TableCell>
                   <TableCell>{s.date_peremption || "—"}</TableCell>
@@ -300,100 +291,6 @@ const StockManagement: React.FC = () => {
           </TableBody>
         </Table>
       </div>
-
-      {/* Modal Ajouter/Modifier */}
-      <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editingStock ? "Modifier le Stock" : "Ajouter un Stock"}</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div>
-              <Label>Article</Label>
-              <Select
-                value={form.article}
-                onValueChange={(val) => setForm({ ...form, article: val })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un article" />
-                </SelectTrigger>
-                <SelectContent>
-                  {articles.map((a) => (
-                    <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Magasin</Label>
-              <Select
-                value={form.magasin}
-                onValueChange={(val) => setForm({ ...form, magasin: val })}
-                disabled={currentUser?.role === "magasinier"}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sélectionnez un magasin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {magasins
-                    .filter(m => currentUser?.role !== "magasinier" || m.id === currentUser?.magasin_id)
-                    .map((m) => (
-                      <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Quantité</Label>
-              <Input
-                type="number"
-                value={form.quantite}
-                onChange={(e) => setForm({ ...form, quantite: Number(e.target.value) })}
-              />
-            </div>
-
-            <div>
-              <Label>Seuil d’Alerte</Label>
-              <Input
-                type="number"
-                value={form.seuil_alerte}
-                onChange={(e) => setForm({ ...form, seuil_alerte: Number(e.target.value) })}
-              />
-            </div>
-
-            <div>
-              <Label>Date de Péremption</Label>
-              <Input
-                type="date"
-                value={form.date_peremption || ""}
-                onChange={(e) => setForm({ ...form, date_peremption: e.target.value })}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpenModal(false)}>Annuler</Button>
-            <Button onClick={handleSave}>Enregistrer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Suppression */}
-      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmer la suppression</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p>Voulez-vous vraiment supprimer le stock de <strong>{stockToDelete?.article.nom}</strong> dans <strong>{stockToDelete?.magasin.nom}</strong> ?</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>Annuler</Button>
-            <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
