@@ -208,7 +208,6 @@ export default function PageDemandesAchat() {
               <TableCell>Commentaire Finance</TableCell>
               <TableCell>Statut Réception</TableCell>
               <TableCell>Date Réception</TableCell>
-              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHeader>
           <TableBody>
