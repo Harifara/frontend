@@ -2,19 +2,18 @@ import React, { useEffect, useState } from "react";
 import { financeApi, rhApi, stockApi } from "@/lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { MultiSelect } from "@/components/ui/multi-select";
 import { useToast } from "@/hooks/use-toast";
 
 // -------------------------
 // Interfaces
 // -------------------------
-interface DepenseItem {
+interface Demande {
   id: string;
+  source: "RH" | "Stock";
   description: string;
   montant: number;
-  statut: string;
+  status: string;
 }
 
 interface Decaissement {
@@ -24,14 +23,7 @@ interface Decaissement {
   date_creation: string;
   total_montant: number;
   statut: string;
-  depenses: DepenseItem[];
-}
-
-interface Demande {
-  id: string;
-  description: string;
-  montant: number;
-  status: string;
+  depenses: any[];
 }
 
 // Badge couleur
@@ -45,43 +37,52 @@ const badgeColor = (statut: string) => {
 };
 
 const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
+  const [demandes, setDemandes] = useState<Demande[]>([]);
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
-  const [demandesRH, setDemandesRH] = useState<Demande[]>([]);
-  const [demandesStock, setDemandesStock] = useState<Demande[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDemandes, setSelectedDemandes] = useState<string[]>([]);
   const { toast } = useToast();
 
   // ---------------- Fetch Décaissements & demandes ----------------
-  const fetchDecaissements = async () => {
+  const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await financeApi.getDecaissements();
-      const data = await res.json();
-      setDecaissements(data);
+      const [rhRes, stockRes, decRes] = await Promise.all([
+        rhApi.getDemandes(),
+        stockApi.getDemandesAchat(),
+        financeApi.getDecaissements()
+      ]);
+
+      // Normaliser toutes les demandes
+      const rh = (rhRes.results || rhRes).map((d: any) => ({
+        id: d.id,
+        source: "RH" as const,
+        description: d.description,
+        montant: d.montant,
+        status: d.status,
+      }));
+
+      const stock = (stockRes.results || stockRes).map((d: any) => ({
+        id: d.id,
+        source: "Stock" as const,
+        description: d.article?.nom || d.description || "-",
+        montant: d.montant_estime || d.montant || 0,
+        status: d.statut || "en_attente",
+      }));
+
+      setDemandes([...rh, ...stock]);
+      const decaissementsData = await decRes.json();
+      setDecaissements(decaissementsData);
+
     } catch (err: any) {
-      toast({ title: "Erreur", description: err?.message || "Impossible de charger les décaissements.", variant: "destructive" });
+      toast({ title: "Erreur", description: err?.message || "Impossible de charger les données.", variant: "destructive" });
     } finally { setLoading(false); }
   };
 
-  const fetchDemandes = async () => {
-    try {
-      const rh = await rhApi.getDemandes();
-      const stock = await stockApi.getDemandesAchat();
-      setDemandesRH(rh.results || rh);
-      setDemandesStock(stock.results || stock);
-    } catch (err: any) {
-      toast({ title: "Erreur", description: err?.message || "Impossible de charger les demandes.", variant: "destructive" });
-    }
-  };
+  useEffect(() => { fetchData(); }, []);
 
-  useEffect(() => {
-    fetchDecaissements();
-    fetchDemandes();
-  }, []);
-
-  // ---------------- Créer un décaissement ----------------
+  // ---------------- Créer décaissement ----------------
   const handleCreateDecaissement = async () => {
     if (selectedDemandes.length === 0) {
       toast({ title: "Erreur", description: "Veuillez sélectionner au moins une demande.", variant: "destructive" });
@@ -89,78 +90,69 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
     }
 
     try {
-      const payload = { demande_ids: selectedDemandes };
-      await financeApi.createDecaissement(payload);
+      await financeApi.createDecaissement({ demande_ids: selectedDemandes });
       toast({ title: "Succès", description: "Décaissement créé." });
       setIsModalOpen(false);
       setSelectedDemandes([]);
-      fetchDecaissements();
+      fetchData();
     } catch (err: any) {
       toast({ title: "Erreur", description: err?.message || "Impossible de créer le décaissement.", variant: "destructive" });
     }
   };
 
+  const toggleDemandeSelection = (id: string) => {
+    setSelectedDemandes(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
   if (loading) return <p className="p-8 text-center">Chargement...</p>;
+
+  // Total des demandes sélectionnées
+  const totalSelected = selectedDemandes.reduce((acc, id) => {
+    const d = demandes.find(x => x.id === id);
+    return acc + (d?.montant || 0);
+  }, 0);
 
   return (
     <div className="p-8 space-y-6">
       <h1 className="text-3xl font-bold mb-4">Décaissements</h1>
+
       <Button onClick={() => setIsModalOpen(true)}>Créer un décaissement</Button>
 
-      {/* ---------------- Table des décaissements ---------------- */}
+      {/* ---------------- Tableau des demandes ---------------- */}
+      <h2 className="text-xl font-semibold mt-6">Toutes les demandes</h2>
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Sélection</TableHead>
             <TableHead>Source</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Total</TableHead>
+            <TableHead>Description</TableHead>
+            <TableHead>Montant</TableHead>
             <TableHead>Statut</TableHead>
-            <TableHead>Dépenses</TableHead>
-            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {decaissements.length ? decaissements.map(d => (
+          {demandes.map(d => (
             <TableRow key={d.id}>
-              <TableCell>{d.source_service}</TableCell>
-              <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
-              <TableCell>{d.total_montant.toLocaleString()} Ar</TableCell>
-              <TableCell><span className={badgeColor(d.statut)}>{d.statut}</span></TableCell>
               <TableCell>
-                <ul className="ml-2 list-disc">
-                  {d.depenses.map(dep => (
-                    <li key={dep.id}>
-                      {dep.description} - {dep.montant.toLocaleString()} Ar
-                      {" "}<span className={badgeColor(dep.statut)}>{dep.statut}</span>
-                    </li>
-                  ))}
-                </ul>
+                <input
+                  type="checkbox"
+                  checked={selectedDemandes.includes(d.id)}
+                  onChange={() => toggleDemandeSelection(d.id)}
+                />
               </TableCell>
-              <TableCell className="space-x-2">
-                {d.statut === "en_attente" && (
-                  <>
-                    <Button size="sm" variant="outline" onClick={async () => {
-                      await financeApi.updateDecaissement(d.id, { statut: "valide" });
-                      toast({ title: "Décaissement approuvé" });
-                      fetchDecaissements();
-                    }}>Approuver</Button>
-                    <Button size="sm" variant="destructive" onClick={async () => {
-                      if (!confirm("Rejeter ce décaissement ?")) return;
-                      await financeApi.updateDecaissement(d.id, { statut: "rejete" });
-                      toast({ title: "Décaissement rejeté" });
-                      fetchDecaissements();
-                    }}>Rejeter</Button>
-                  </>
-                )}
-              </TableCell>
+              <TableCell>{d.source}</TableCell>
+              <TableCell>{d.description}</TableCell>
+              <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
+              <TableCell><span className={badgeColor(d.status)}>{d.status}</span></TableCell>
             </TableRow>
-          )) : (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center py-6">Aucun décaissement trouvé.</TableCell>
-            </TableRow>
-          )}
+          ))}
         </TableBody>
       </Table>
+
+      {/* Total sélectionné */}
+      <p className="mt-2 font-medium">Total sélectionné: {totalSelected.toLocaleString()} Ar</p>
 
       {/* ---------------- Modal Création ---------------- */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -168,28 +160,10 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
           <DialogHeader>
             <DialogTitle>Créer un décaissement</DialogTitle>
           </DialogHeader>
-
-          <div className="space-y-4">
-            <p className="font-medium">Sélectionner les demandes à inclure :</p>
-
-            <MultiSelect
-              items={[
-                ...demandesRH.map(d => ({ value: d.id, label: `RH: ${d.description} (${d.montant} Ar)` })),
-                ...demandesStock.map(d => ({ value: d.id, label: `Stock: ${d.description} (${d.montant} Ar)` }))
-              ]}
-              selected={selectedDemandes}
-              onChange={setSelectedDemandes}
-            />
-
-            <p>Total estimé: {selectedDemandes.reduce((acc, id) => {
-              const d = [...demandesRH, ...demandesStock].find(x => x.id === id);
-              return acc + (d?.montant || 0);
-            }, 0).toLocaleString()} Ar</p>
-          </div>
-
+          <p>Sélectionnez les demandes à inclure depuis le tableau ci-dessus.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Annuler</Button>
-            <Button onClick={handleCreateDecaissement}>Créer</Button>
+            <Button onClick={handleCreateDecaissement}>Créer ({totalSelected.toLocaleString()} Ar)</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
