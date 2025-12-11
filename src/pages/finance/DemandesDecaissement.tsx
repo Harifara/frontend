@@ -1,3 +1,4 @@
+// src/pages/finance/DemandesDecaissement.tsx
 import React, { useEffect, useState } from "react";
 import { financeApi } from "@/lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -5,31 +6,37 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
-interface Decaissement {
-  id: string;
-  source_service: string;
-  created_by: string;
-  statut: string;
-  depenses?: Depense[];
-}
-
+// Types pour les données
 interface Depense {
   id: string;
   description: string;
   montant: number;
-  statut_paiement: string;
+  statut: string;
+  date_creation: string;
 }
 
-const DemandesDecaissement = () => {
-  const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
-  const [selectedDecaissement, setSelectedDecaissement] = useState<Decaissement | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [newSourceService, setNewSourceService] = useState("");
-  const [newCreatedBy, setNewCreatedBy] = useState("");
+interface Decaissement {
+  id: string;
+  source_service: string;
+  date_creation: string;
+  total_montant: number;
+  statut: string;
+  depenses: Depense[];
+}
 
-  // 🔹 Fetch liste des décaissements
+// -------------------------
+// Composant principal
+// -------------------------
+export const DemandesDecaissement: React.FC = () => {
+  const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [selected, setSelected] = useState<Decaissement | null>(null);
+  const [newDepenseDesc, setNewDepenseDesc] = useState<string>("");
+  const [newDepenseMontant, setNewDepenseMontant] = useState<number>(0);
+
+  // Charger les demandes
   const fetchDecaissements = async () => {
+    setLoading(true);
     try {
       const data = await financeApi.getDecaissements();
       setDecaissements(data);
@@ -40,71 +47,41 @@ const DemandesDecaissement = () => {
     }
   };
 
-  // 🔹 Fetch détails d’un décaissement
-  const fetchDecaissementDetail = async (id: string) => {
-    try {
-      const data = await financeApi.getDecaissement(id);
-      setSelectedDecaissement(data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
   useEffect(() => {
     fetchDecaissements();
   }, []);
 
-  // 🔹 Création d’un décaissement
-  const handleCreateDecaissement = async () => {
-    try {
-      await financeApi.createDecaissement({
-        source_service: newSourceService,
-        created_by: newCreatedBy,
-      });
-      setDialogOpen(false);
-      setNewSourceService("");
-      setNewCreatedBy("");
-      fetchDecaissements();
-    } catch (err) {
-      console.error(err);
-    }
+  // Actions
+  const handleEnvoyer = async (id: string) => {
+    await financeApi.envoyerAuCoordo(id);
+    fetchDecaissements();
   };
 
-  // 🔹 Valider un décaissement
-  const handleValider = async (id: string) => {
-    try {
-      await financeApi.validateDepense(id);
-      if (selectedDecaissement?.id === id) fetchDecaissementDetail(id);
-      fetchDecaissements();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  // 🔹 Rejeter un décaissement
-  const handleRejeter = async (id: string) => {
-    try {
-      // Ici on peut ajouter un commentaire si nécessaire
-      console.log("Rejeter décaissement", id);
-    } catch (err) {
-      console.error(err);
-    }
+  const handleAddDepense = async () => {
+    if (!selected) return;
+    await financeApi.createDepense({
+      demande: selected.id,
+      description: newDepenseDesc,
+      montant: newDepenseMontant,
+    });
+    setNewDepenseDesc("");
+    setNewDepenseMontant(0);
+    fetchDecaissements();
   };
 
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Demandes de Décaissement</h1>
-      <Button onClick={() => setDialogOpen(true)}>Créer un décaissement</Button>
 
       {loading ? (
-        <p className="mt-4">Chargement...</p>
+        <p>Chargement...</p>
       ) : (
-        <Table className="mt-4">
+        <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>ID</TableHead>
-              <TableHead>Service</TableHead>
-              <TableHead>Créé par</TableHead>
+              <TableHead>Source</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Total</TableHead>
               <TableHead>Statut</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -112,18 +89,17 @@ const DemandesDecaissement = () => {
           <TableBody>
             {decaissements.map((d) => (
               <TableRow key={d.id}>
-                <TableCell>{d.id}</TableCell>
                 <TableCell>{d.source_service}</TableCell>
-                <TableCell>{d.created_by}</TableCell>
+                <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
+                <TableCell>{d.total_montant.toFixed(2)}</TableCell>
                 <TableCell>{d.statut}</TableCell>
-                <TableCell className="space-x-2">
-                  <Button variant="outline" onClick={() => fetchDecaissementDetail(d.id)}>
-                    Voir
-                  </Button>
-                  <Button onClick={() => handleValider(d.id)}>Valider</Button>
-                  <Button variant="destructive" onClick={() => handleRejeter(d.id)}>
-                    Rejeter
-                  </Button>
+                <TableCell>
+                  <Button onClick={() => setSelected(d)}>Voir / Modifier</Button>
+                  {d.statut === "non_envoyee" && (
+                    <Button className="ml-2" onClick={() => handleEnvoyer(d.id)}>
+                      Envoyer au coordo
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -131,46 +107,62 @@ const DemandesDecaissement = () => {
         </Table>
       )}
 
-      {/* 🔹 Dialog pour création d’un décaissement */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+      {/* Dialog pour détails d'une demande */}
+      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Créer un décaissement</DialogTitle>
+            <DialogTitle>Détails de la demande</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+
+          {selected && (
             <div>
-              <label>Service</label>
-              <Input value={newSourceService} onChange={(e) => setNewSourceService(e.target.value)} />
+              <p><strong>Source:</strong> {selected.source_service}</p>
+              <p><strong>Total:</strong> {selected.total_montant.toFixed(2)}</p>
+              <p><strong>Statut:</strong> {selected.statut}</p>
+
+              <h3 className="mt-4 font-semibold">Dépenses</h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Montant</TableHead>
+                    <TableHead>Statut</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {selected.depenses.map((dep) => (
+                    <TableRow key={dep.id}>
+                      <TableCell>{dep.description}</TableCell>
+                      <TableCell>{dep.montant.toFixed(2)}</TableCell>
+                      <TableCell>{dep.statut}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <h3 className="mt-4 font-semibold">Ajouter une dépense</h3>
+              <div className="flex gap-2 mt-2">
+                <Input
+                  placeholder="Description"
+                  value={newDepenseDesc}
+                  onChange={(e) => setNewDepenseDesc(e.target.value)}
+                />
+                <Input
+                  type="number"
+                  placeholder="Montant"
+                  value={newDepenseMontant}
+                  onChange={(e) => setNewDepenseMontant(parseFloat(e.target.value))}
+                />
+                <Button onClick={handleAddDepense}>Ajouter</Button>
+              </div>
             </div>
-            <div>
-              <label>Créé par</label>
-              <Input value={newCreatedBy} onChange={(e) => setNewCreatedBy(e.target.value)} />
-            </div>
-          </div>
+          )}
+
           <DialogFooter>
-            <Button onClick={handleCreateDecaissement}>Créer</Button>
+            <Button onClick={() => setSelected(null)}>Fermer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* 🔹 Détails du décaissement sélectionné */}
-      {selectedDecaissement && (
-        <div className="mt-6 p-4 border rounded">
-          <h2 className="text-xl font-semibold mb-2">Décaissement {selectedDecaissement.id}</h2>
-          <p>Service : {selectedDecaissement.source_service}</p>
-          <p>Créé par : {selectedDecaissement.created_by}</p>
-          <p>Statut : {selectedDecaissement.statut}</p>
-
-          <h3 className="text-lg font-semibold mt-4">Dépenses</h3>
-          <ul className="mt-2 space-y-1">
-            {selectedDecaissement.depenses?.map((d) => (
-              <li key={d.id}>
-                {d.description} - {d.montant} Ariary - {d.statut_paiement}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 };
