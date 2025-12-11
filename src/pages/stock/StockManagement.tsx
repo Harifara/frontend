@@ -45,14 +45,24 @@ interface Stock {
   date_peremption?: string | null;
 }
 
+interface User {
+  id: string;
+  username: string;
+  role: string;
+  magasin_id?: string; // uniquement si magasinier
+}
+
 const StockManagement: React.FC = () => {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [magasins, setMagasins] = useState<Magasin[]>([]);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
   const [openModal, setOpenModal] = useState(false);
   const [editingStock, setEditingStock] = useState<Stock | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [stockToDelete, setStockToDelete] = useState<Stock | null>(null);
+
   const [form, setForm] = useState({
     article: "",
     magasin: "",
@@ -60,48 +70,43 @@ const StockManagement: React.FC = () => {
     seuil_alerte: 10,
     date_peremption: "",
   });
+
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
   // -----------------------
-  // Fetch Data
+  // Fetch User & Data
   // -----------------------
-  const getStocks = async () => {
-    try {
-      const data = await stockApi.getStocks();
-      setStocks(data);
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message || "Impossible de charger les stocks.", variant: "destructive" });
-    }
-  };
-
-  const getArticles = async () => {
-    try {
-      const data = await stockApi.getArticles();
-      setArticles(data);
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message || "Impossible de charger les articles.", variant: "destructive" });
-    }
-  };
-
-  const getMagasins = async () => {
-    try {
-      const data = await stockApi.getMagasins();
-      setMagasins(data);
-    } catch (error: any) {
-      toast({ title: "Erreur", description: error.message || "Impossible de charger les magasins.", variant: "destructive" });
-    }
-  };
-
   useEffect(() => {
-    getStocks();
-    getArticles();
-    getMagasins();
+    const fetchUserAndData = async () => {
+      try {
+        const userData = await stockApi.getCurrentUser(); // /auth/me
+        setCurrentUser(userData);
+
+        const [stocksData, articlesData, magasinsData] = await Promise.all([
+          stockApi.getStocks(),
+          stockApi.getArticles(),
+          stockApi.getMagasins(),
+        ]);
+
+        setStocks(stocksData);
+        setArticles(articlesData);
+        setMagasins(magasinsData);
+      } catch (error: any) {
+        toast({
+          title: "Erreur",
+          description: error.message || "Impossible de charger les données.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    fetchUserAndData();
   }, []);
 
-  // ✅ Toast automatique si stocks faibles
+  // ✅ Alertes stocks faibles
   useEffect(() => {
-    const lowStocks = stocks.filter(s => s.quantite <= s.seuil_alerte);
+    const lowStocks = stocks.filter((s) => s.quantite <= s.seuil_alerte);
     if (lowStocks.length > 0) {
       toast({
         title: "⚠ Alerte stock",
@@ -116,9 +121,13 @@ const StockManagement: React.FC = () => {
   // -----------------------
   const handleSave = async () => {
     try {
-      const selectedArticle = articles.find(a => a.id === form.article);
+      const selectedArticle = articles.find((a) => a.id === form.article);
       if (selectedArticle?.type_categorie === "consommable" && !form.date_peremption) {
-        toast({ title: "Erreur", description: "Les consommables doivent avoir une date de péremption.", variant: "destructive" });
+        toast({
+          title: "Erreur",
+          description: "Les consommables doivent avoir une date de péremption.",
+          variant: "destructive",
+        });
         return;
       }
 
@@ -141,9 +150,14 @@ const StockManagement: React.FC = () => {
       setOpenModal(false);
       setEditingStock(null);
       setForm({ article: "", magasin: "", quantite: 0, seuil_alerte: 10, date_peremption: "" });
-      getStocks();
+      const updatedStocks = await stockApi.getStocks();
+      setStocks(updatedStocks);
     } catch (error: any) {
-      toast({ title: "Erreur", description: error.message || "Impossible d'enregistrer le stock.", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: error.message || "Impossible d'enregistrer le stock.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -171,7 +185,8 @@ const StockManagement: React.FC = () => {
       toast({ title: "Succès", description: "Stock supprimé avec succès" });
       setDeleteModalOpen(false);
       setStockToDelete(null);
-      getStocks();
+      const updatedStocks = await stockApi.getStocks();
+      setStocks(updatedStocks);
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message || "La suppression a échoué", variant: "destructive" });
     }
@@ -181,7 +196,7 @@ const StockManagement: React.FC = () => {
   // Export PDF & Excel
   // -----------------------
   const exportPDF = async () => {
-    const data = stocks.map(s => [
+    const data = filteredStocks.map((s) => [
       s.article.nom,
       s.magasin.nom,
       `${s.quantite} ${s.article.unite_mesure || ""}`,
@@ -194,7 +209,7 @@ const StockManagement: React.FC = () => {
 
   const exportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      stocks.map(s => ({
+      filteredStocks.map((s) => ({
         Article: s.article.nom,
         Magasin: s.magasin.nom,
         Quantité: s.quantite,
@@ -207,12 +222,25 @@ const StockManagement: React.FC = () => {
     XLSX.writeFile(workbook, "stocks.xlsx");
   };
 
-  const filteredStocks = stocks.filter(
-    (s) =>
-      s.article.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      s.magasin.nom.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // -----------------------
+  // Filtrage des stocks
+  // -----------------------
+  const filteredStocks = stocks
+    .filter(
+      (s) =>
+        s.article.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.magasin.nom.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .filter((s) => {
+      if (currentUser?.role === "magasinier") {
+        return s.magasin.id === currentUser.magasin_id;
+      }
+      return true;
+    });
 
+  // -----------------------
+  // Rendu
+  // -----------------------
   return (
     <div className="p-6 space-y-4">
       <div className="flex justify-between items-center mb-4">
@@ -231,8 +259,7 @@ const StockManagement: React.FC = () => {
         className="mb-4"
       />
 
-      {/* 🔔 Message global d’alerte */}
-      {stocks.some(s => s.quantite <= s.seuil_alerte) && (
+      {stocks.some((s) => s.quantite <= s.seuil_alerte) && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           ⚠ Certains articles ont un stock faible !
         </div>
@@ -253,10 +280,7 @@ const StockManagement: React.FC = () => {
           <TableBody>
             {filteredStocks.length ? (
               filteredStocks.map((s) => (
-                <TableRow
-                  key={s.id}
-                  className={s.quantite <= s.seuil_alerte ? "bg-red-50" : ""}
-                >
+                <TableRow key={s.id} className={s.quantite <= s.seuil_alerte ? "bg-red-50" : ""}>
                   <TableCell>{s.article?.nom || "—"}</TableCell>
                   <TableCell>{s.magasin?.nom || "—"}</TableCell>
                   <TableCell>
@@ -311,14 +335,17 @@ const StockManagement: React.FC = () => {
               <Select
                 value={form.magasin}
                 onValueChange={(val) => setForm({ ...form, magasin: val })}
+                disabled={currentUser?.role === "magasinier"}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Sélectionnez un magasin" />
                 </SelectTrigger>
                 <SelectContent>
-                  {magasins.map((m) => (
-                    <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
-                  ))}
+                  {magasins
+                    .filter(m => currentUser?.role !== "magasinier" || m.id === currentUser?.magasin_id)
+                    .map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
