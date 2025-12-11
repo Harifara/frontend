@@ -56,6 +56,21 @@ const badgeColor = (statut: string) => {
 };
 
 // -----------------------------
+// Extraire l'ID utilisateur depuis le token JWT
+// -----------------------------
+const getUserIdFromToken = (): string => {
+  const token = localStorage.getItem("access_token");
+  if (!token) return "";
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    return payload.user_id || "";
+  } catch (err) {
+    console.error("Impossible d'extraire user_id du token:", err);
+    return "";
+  }
+};
+
+// -----------------------------
 // Composant principal
 // -----------------------------
 const DemandesDecaissement: React.FC = () => {
@@ -67,11 +82,6 @@ const DemandesDecaissement: React.FC = () => {
   const [newDepenseDesc, setNewDepenseDesc] = useState("");
   const [newDepenseMontant, setNewDepenseMontant] = useState<number | "">(0);
   const [error, setError] = useState("");
-
-  // -----------------------------
-  // Récupérer l'ID utilisateur depuis le token (localStorage)
-  // -----------------------------
-  const userId = localStorage.getItem("user_id") || ""; // à remplacer selon ton stockage
 
   // -----------------------------
   // Charger toutes les données
@@ -106,12 +116,18 @@ const DemandesDecaissement: React.FC = () => {
     source_id: string,
     montant: number
   ) => {
+    const userId = getUserIdFromToken();
+    if (!userId) {
+      setError("Impossible de récupérer l'utilisateur connecté.");
+      return;
+    }
+
     try {
       await financeApi.createDecaissement({ 
         source_service: source_type, 
         source_id, 
         total_montant: montant,
-        created_by: userId, // <-- ajouté pour corriger l'erreur 400
+        created_by: userId,
       });
       fetchAll();
     } catch (err: any) {
