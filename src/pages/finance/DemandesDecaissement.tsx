@@ -16,18 +16,18 @@ interface Achat {
   article: string; 
   montant: number; 
   nombre: number; 
-  statut: string 
+  statut: string;
 }
 
 interface Payement { 
   id: string; 
   montant: number; 
-  status: string 
+  status: string;
 }
 
 interface Depense { 
   description: string; 
-  montant: number 
+  montant: number;
 }
 
 interface Demande {
@@ -77,6 +77,12 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
     depenses: [{ description: "", montant: 0 }]
   });
 
+  const [availableAchats, setAvailableAchats] = useState<Achat[]>([]);
+  const [selectedAchats, setSelectedAchats] = useState<Achat[]>([]);
+
+  // -----------------
+  // Gestion des dépenses
+  // -----------------
   const addDepense = () => setNewDemande(prev => ({ ...prev, depenses: [...prev.depenses, { description: "", montant: 0 }] }));
   const removeDepense = (index: number) => setNewDemande(prev => ({ ...prev, depenses: prev.depenses.filter((_, i) => i !== index) }));
 
@@ -86,15 +92,20 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
     setNewDemande(prev => ({ ...prev, depenses }));
   };
 
+  // -----------------
+  // Création demande
+  // -----------------
   const handleCreateDemande = async () => {
     try {
       await financeApi.createDemande({
         ...newDemande,
-        created_by: userId
+        created_by: userId,
+        achats: selectedAchats
       });
       toast({ title: "Succès", description: "Demande créée", variant: "success" });
       setOpenNewDemande(false);
       setNewDemande({ source_service: "RH", depenses: [{ description: "", montant: 0 }] });
+      setSelectedAchats([]);
       fetchData();
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Impossible de créer la demande.", variant: "destructive" });
@@ -143,7 +154,38 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  // -----------------
+  // Fetch achats disponibles
+  // -----------------
+  const fetchAchats = async () => {
+    try {
+      const stockRes = await stockApi.getArticlesDisponibles();
+      const rhRes = await rhApi.getArticlesDisponibles();
+
+      const achats: Achat[] = [
+        ...stockRes.map((a: any) => ({
+          id: a.id,
+          article: a.nom,
+          montant: a.montant_estime || a.montant || 0,
+          nombre: 1,
+          statut: "en_attente"
+        })),
+        ...rhRes.map((a: any) => ({
+          id: a.id,
+          article: a.nom,
+          montant: a.montant || 0,
+          nombre: 1,
+          statut: "en_attente"
+        }))
+      ];
+
+      setAvailableAchats(achats);
+    } catch (err) {
+      toast({ title: "Erreur", description: "Impossible de charger les articles.", variant: "destructive" });
+    }
+  };
+
+  useEffect(() => { fetchData(); fetchAchats(); }, []);
 
   if (isLoading) return <p className="p-8 text-center">Chargement...</p>;
 
@@ -267,8 +309,43 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
               </select>
             </div>
 
+            {/* ----------------- */}
+            {/* Section Achats */}
+            {/* ----------------- */}
             <div>
-              <strong>Dépenses :</strong>
+              <strong>Objets à inclure :</strong>
+              {availableAchats.map(a => (
+                <div key={a.id} className="flex items-center gap-2 mb-1">
+                  <input
+                    type="checkbox"
+                    checked={selectedAchats.some(sa => sa.id === a.id)}
+                    onChange={e => {
+                      if (e.target.checked) setSelectedAchats(prev => [...prev, a]);
+                      else setSelectedAchats(prev => prev.filter(sa => sa.id !== a.id));
+                    }}
+                  />
+                  <span>{a.article} - {a.montant.toLocaleString()} Ar</span>
+                  {selectedAchats.some(sa => sa.id === a.id) && (
+                    <Input
+                      type="number"
+                      min={1}
+                      value={selectedAchats.find(sa => sa.id === a.id)?.nombre || 1}
+                      onChange={e => {
+                        const nombre = Number(e.target.value);
+                        setSelectedAchats(prev => prev.map(sa => sa.id === a.id ? { ...sa, nombre } : sa));
+                      }}
+                      className="w-20"
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* ----------------- */}
+            {/* Section Dépenses */}
+            {/* ----------------- */}
+            <div>
+              <strong>Dépenses libres :</strong>
               {newDemande.depenses.map((dep, idx) => (
                 <div key={idx} className="flex gap-2 mb-2">
                   <Input
