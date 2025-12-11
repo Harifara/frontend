@@ -69,6 +69,11 @@ const DemandesDecaissement: React.FC = () => {
   const [error, setError] = useState("");
 
   // -----------------------------
+  // Récupérer l'ID utilisateur depuis le token (localStorage)
+  // -----------------------------
+  const userId = localStorage.getItem("user_id") || ""; // à remplacer selon ton stockage
+
+  // -----------------------------
   // Charger toutes les données
   // -----------------------------
   const fetchAll = async () => {
@@ -105,7 +110,8 @@ const DemandesDecaissement: React.FC = () => {
       await financeApi.createDecaissement({ 
         source_service: source_type, 
         source_id, 
-        total_montant: montant 
+        total_montant: montant,
+        created_by: userId, // <-- ajouté pour corriger l'erreur 400
       });
       fetchAll();
     } catch (err: any) {
