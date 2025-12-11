@@ -1,6 +1,6 @@
 // src/pages/finance/DemandesDecaissement.tsx
 import React, { useEffect, useState } from "react";
-import { financeApi, rhApi, stockApi } from "@/lib/api";
+import { financeApi, rhApi, stockApi, authApi } from "@/lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -43,20 +43,15 @@ interface DemandeAchat {
 }
 
 // -----------------------------
-// Couleur badge selon statut
+// Badge couleur selon statut
 // -----------------------------
 const badgeColor = (statut: string) => {
   switch (statut.toLowerCase()) {
-    case "brouillon":
-      return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
-    case "en_attente_coordo":
-      return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
-    case "validé":
-      return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
-    case "payé":
-      return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
-    default:
-      return "bg-gray-50 text-gray-600 px-2 py-1 rounded text-xs font-semibold";
+    case "brouillon": return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
+    case "en_attente_coordo": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    case "validé": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
+    case "payé": return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
+    default: return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
   }
 };
 
@@ -64,152 +59,158 @@ const badgeColor = (statut: string) => {
 // Composant principal
 // -----------------------------
 export default function DemandesDecaissement() {
+  const [user, setUser] = useState<any>(null);
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
   const [demandesRH, setDemandesRH] = useState<DemandeRH[]>([]);
   const [demandesStock, setDemandesStock] = useState<DemandeAchat[]>([]);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [selectedDemande, setSelectedDemande] = useState<DemandeRH | DemandeAchat | null>(null);
-  const [sourceType, setSourceType] = useState<"RH" | "Stock">("RH");
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedDemandeId, setSelectedDemandeId] = useState<string | null>(null);
+  const [depenseDescription, setDepenseDescription] = useState("");
+  const [depenseMontant, setDepenseMontant] = useState(0);
 
   // -----------------------------
-  // Récupération des données
+  // Récupération utilisateur
   // -----------------------------
-  const fetchDecaissements = async () => {
+  const fetchUser = async () => {
     try {
-      const data = await financeApi.getDecaissements();
-      setDecaissements(data);
-    } catch (err) {
-      console.error(err);
+      const u = await stockApi.me();
+      setUser(u);
+    } catch (err: any) {
+      console.error("Impossible de récupérer l'utilisateur connecté :", err.message);
+      alert("Vous devez vous reconnecter.");
     }
   };
 
-  const fetchDemandes = async () => {
+  // -----------------------------
+  // Chargement des données
+  // -----------------------------
+  const fetchData = async () => {
     try {
-      const rh = await rhApi.getDemandes();
+      const [dec, rh, stock] = await Promise.all([
+        financeApi.getDecaissements(),
+        rhApi.getDemandes(),
+        stockApi.getDemandesAchat(),
+      ]);
+      setDecaissements(dec);
       setDemandesRH(rh);
-      const stock = await stockApi.getDemandesAchat();
       setDemandesStock(stock);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("Erreur lors du chargement des données :", err.message);
     }
   };
 
   useEffect(() => {
-    fetchDecaissements();
-    fetchDemandes();
+    fetchUser();
+    fetchData();
   }, []);
 
   // -----------------------------
   // Création d'un décaissement
   // -----------------------------
-  const handleCreateDecaissement = async () => {
-    if (!selectedDemande) return;
+  const createDecaissement = async (source_type: "RH" | "Stock", source_id: string, montant: number) => {
     try {
-      const payload =
-        sourceType === "RH"
-          ? {
-              source_service: "RH",
-              source_type: "RH",
-              source_id: selectedDemande.id,
-              total_montant: (selectedDemande as DemandeRH).montant,
-            }
-          : {
-              source_service: "Stock",
-              source_type: "Stock",
-              source_id: selectedDemande.id,
-              total_montant: (selectedDemande as DemandeAchat).montant_estime,
-            };
-      await financeApi.createDecaissement(payload);
-      setOpenDialog(false);
-      setSelectedDemande(null);
-      fetchDecaissements();
-    } catch (err) {
-      console.error(err);
+      await financeApi.createDecaissement({
+        source_type,
+        source_id,
+        total_montant: montant,
+        depenses: [{ description: depenseDescription, montant }],
+      });
+      setDialogOpen(false);
+      setDepenseDescription("");
+      setDepenseMontant(0);
+      fetchData(); // refresh
+    } catch (err: any) {
+      console.error("Erreur lors de la création du décaissement :", err.message);
+      alert("Impossible de créer le décaissement.");
     }
   };
 
+  // -----------------------------
+  // Rendu
+  // -----------------------------
   return (
     <div className="p-4">
       <h1 className="text-xl font-bold mb-4">Demandes de Décaissement</h1>
-      <Button onClick={() => setOpenDialog(true)}>Nouvelle Demande</Button>
 
-      {/* Table des décaissements */}
-      <Table className="mt-4">
+      {/* Liste des décaissements */}
+      <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>ID</TableHead>
-            <TableHead>Source</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead>Total Montant</TableHead>
+            <TableHead>Service source</TableHead>
+            <TableHead>Type</TableHead>
+            <TableHead>Date création</TableHead>
+            <TableHead>Total</TableHead>
             <TableHead>Statut</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {decaissements.map((d) => (
-            <TableRow key={d.id}>
-              <TableCell>{d.id}</TableCell>
-              <TableCell>{d.source_type}</TableCell>
-              <TableCell>{new Date(d.date_creation).toLocaleDateString()}</TableCell>
-              <TableCell>{d.total_montant.toLocaleString()}</TableCell>
+          {decaissements.map((dec) => (
+            <TableRow key={dec.id}>
+              <TableCell>{dec.source_service}</TableCell>
+              <TableCell>{dec.source_type}</TableCell>
+              <TableCell>{new Date(dec.date_creation).toLocaleDateString()}</TableCell>
+              <TableCell>{dec.total_montant.toLocaleString()}</TableCell>
+              <TableCell><span className={badgeColor(dec.statut)}>{dec.statut}</span></TableCell>
               <TableCell>
-                <span className={badgeColor(d.statut)}>{d.statut}</span>
+                <Button onClick={() => setDialogOpen(true) || setSelectedDemandeId(dec.id)}>Ajouter dépense</Button>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
 
-      {/* Dialog de création */}
-      <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+      {/* Dialog création dépense */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Créer un nouveau décaissement</DialogTitle>
+            <DialogTitle>Ajouter une dépense</DialogTitle>
           </DialogHeader>
-
-          <div className="flex space-x-2 mb-4">
-            <Button
-              variant={sourceType === "RH" ? "default" : "outline"}
-              onClick={() => setSourceType("RH")}
-            >
-              RH
-            </Button>
-            <Button
-              variant={sourceType === "Stock" ? "default" : "outline"}
-              onClick={() => setSourceType("Stock")}
-            >
-              Stock
-            </Button>
+          <div className="space-y-2">
+            <Input
+              placeholder="Description"
+              value={depenseDescription}
+              onChange={(e) => setDepenseDescription(e.target.value)}
+            />
+            <Input
+              type="number"
+              placeholder="Montant"
+              value={depenseMontant}
+              onChange={(e) => setDepenseMontant(Number(e.target.value))}
+            />
           </div>
-
-          <div className="mb-4">
-            <label className="block mb-1 font-semibold">Sélectionner la demande</label>
-            <select
-              className="w-full border rounded p-2"
-              value={selectedDemande?.id || ""}
-              onChange={(e) => {
-                const id = e.target.value;
-                if (sourceType === "RH") {
-                  setSelectedDemande(demandesRH.find((d) => d.id === id) || null);
-                } else {
-                  setSelectedDemande(demandesStock.find((d) => d.id === id) || null);
-                }
+          <DialogFooter className="flex justify-end gap-2 mt-4">
+            <Button onClick={() => setDialogOpen(false)}>Annuler</Button>
+            <Button
+              onClick={() => {
+                if (selectedDemandeId) createDecaissement("RH", selectedDemandeId, depenseMontant);
               }}
             >
-              <option value="">-- Choisir --</option>
-              {(sourceType === "RH" ? demandesRH : demandesStock).map((d) => (
-                <option key={d.id} value={d.id}>
-                  {sourceType === "RH" ? `${d.description} - ${d.montant}` : `${d.article_nom} - ${d.montant_estime}`}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <DialogFooter>
-            <Button onClick={handleCreateDecaissement}>Créer</Button>
-            <Button variant="outline" onClick={() => setOpenDialog(false)}>Annuler</Button>
+              Créer
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Liste des demandes RH et Stock pour info */}
+      <div className="mt-6 grid grid-cols-2 gap-4">
+        <div>
+          <h2 className="font-bold mb-2">Demandes RH</h2>
+          <ul className="list-disc pl-5">
+            {demandesRH.map((d) => (
+              <li key={d.id}>{d.description} - {d.montant.toLocaleString()} Ar</li>
+            ))}
+          </ul>
+        </div>
+        <div>
+          <h2 className="font-bold mb-2">Demandes Stock</h2>
+          <ul className="list-disc pl-5">
+            {demandesStock.map((d) => (
+              <li key={d.id}>{d.article_nom} x {d.quantite} - {d.montant_estime.toLocaleString()} Ar</li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 }
