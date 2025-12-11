@@ -306,9 +306,10 @@ const Payements = () => {
 
                  <TableCell className="text-center">
                     {p.contrat
-                      ? `${p.contrat.nom_employer ?? p.contrat.nom ?? "-"} - ${p.contrat.salaire?.toLocaleString() ?? "-"} Ar`
+                      ? `${p.contrat.nom_employer ?? "-"} - ${p.contrat.salaire != null ? Number(p.contrat.salaire).toLocaleString() : "-"} Ar`
                       : "-"}
                   </TableCell>
+
 
 
 
@@ -435,7 +436,12 @@ const Payements = () => {
                   <SelectItem value="null">Aucun</SelectItem>
                   {contrats.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.nom_employer ?? c.nom} — {c.salaire?.toLocaleString()} Ar
+                      <p>
+                        <strong>Salaire :</strong> {editingPayement?.contrat 
+                          ? `${editingPayement.contrat.nom_employer ?? "-"} - ${editingPayement.contrat.salaire != null ? Number(editingPayement.contrat.salaire).toLocaleString() : "-"} Ar` 
+                          : "-"}
+                      </p>
+
                     </SelectItem>
                   ))}
                 </SelectContent>
