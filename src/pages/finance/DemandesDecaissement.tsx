@@ -1,3 +1,4 @@
+// src/pages/finance/DecaissementsPage.tsx
 import React, { useEffect, useState } from "react";
 import { financeApi, rhApi, stockApi } from "@/lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,17 +27,26 @@ interface Decaissement {
   depenses: any[];
 }
 
+// -------------------------
 // Badge couleur
+// -------------------------
 const badgeColor = (statut: string) => {
   switch (statut.toLowerCase()) {
-    case "valide": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
-    case "rejete": return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
+    case "valide":
+      return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
+    case "rejete":
+      return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
     case "en attente":
-    case "en_attente": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
-    default: return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
+    case "en_attente":
+      return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    default:
+      return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
   }
 };
 
+// -------------------------
+// Composant principal
+// -------------------------
 const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
@@ -45,44 +55,55 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
   const [selectedDemandes, setSelectedDemandes] = useState<string[]>([]);
   const { toast } = useToast();
 
-  // ---------------- Fetch Décaissements & demandes ----------------
+  // -------------------------
+  // Fetch Décaissements & Demandes
+  // -------------------------
   const fetchData = async () => {
     setLoading(true);
     try {
       const [rhRes, stockRes, decRes] = await Promise.all([
         rhApi.getDemandes(),
-        stockApi.getDemandes(), // <-- correction ici
+        stockApi.getDemandes(),
         financeApi.getDecaissements()
       ]);
 
-      // Normaliser toutes les demandes
-      const rh = (rhRes.results || rhRes).map((d: any) => ({
+      // Normalisation des demandes RH
+      const rh: Demande[] = (rhRes.results || rhRes).map((d: any) => ({
         id: d.id,
-        source: "RH" as const,
+        source: "RH",
         description: d.description,
-        montant: d.montant,
-        status: d.status,
+        montant: d.montant || 0,
+        status: d.status || "en_attente",
       }));
 
-      const stock = (stockRes.results || stockRes).map((d: any) => ({
+      // Normalisation des demandes Stock
+      const stock: Demande[] = (stockRes.results || stockRes).map((d: any) => ({
         id: d.id,
-        source: "Stock" as const,
+        source: "Stock",
         description: d.article?.nom || d.description || "-",
         montant: d.montant_estime || d.montant || 0,
         status: d.statut || "en_attente",
       }));
 
       setDemandes([...rh, ...stock]);
-      setDecaissements(decRes); // si financeApi.getDecaissements() renvoie déjà JSON
+      setDecaissements(decRes || []);
 
     } catch (err: any) {
-      toast({ title: "Erreur", description: err?.message || "Impossible de charger les données.", variant: "destructive" });
-    } finally { setLoading(false); }
+      toast({
+        title: "Erreur",
+        description: err?.message || "Impossible de charger les données.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchData(); }, []);
-  
-  // ---------------- Créer décaissement ----------------
+
+  // -------------------------
+  // Créer décaissement
+  // -------------------------
   const handleCreateDecaissement = async () => {
     if (selectedDemandes.length === 0) {
       toast({ title: "Erreur", description: "Veuillez sélectionner au moins une demande.", variant: "destructive" });
@@ -96,7 +117,11 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
       setSelectedDemandes([]);
       fetchData();
     } catch (err: any) {
-      toast({ title: "Erreur", description: err?.message || "Impossible de créer le décaissement.", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: err?.message || "Impossible de créer le décaissement.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -113,6 +138,9 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
     return acc + (d?.montant || 0);
   }, 0);
 
+  // -------------------------
+  // Render
+  // -------------------------
   return (
     <div className="p-8 space-y-6">
       <h1 className="text-3xl font-bold mb-4">Décaissements</h1>
@@ -131,7 +159,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {demandes.map(d => (
+          {demandes.length ? demandes.map(d => (
             <TableRow key={d.id}>
               <TableCell>
                 <input
@@ -145,7 +173,11 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
               <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
               <TableCell><span className={badgeColor(d.status)}>{d.status}</span></TableCell>
             </TableRow>
-          ))}
+          )) : (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center py-4">Aucune demande disponible.</TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
 
@@ -156,10 +188,12 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
           <DialogHeader>
             <DialogTitle>Créer un décaissement</DialogTitle>
           </DialogHeader>
-          <p>Sélectionnez les demandes à inclure depuis le tableau ci-dessus.</p>
+          <p className="mb-4">Sélectionnez les demandes à inclure depuis le tableau ci-dessus.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsModalOpen(false)}>Annuler</Button>
-            <Button onClick={handleCreateDecaissement}>Créer ({totalSelected.toLocaleString()} Ar)</Button>
+            <Button onClick={handleCreateDecaissement}>
+              Créer ({totalSelected.toLocaleString()} Ar)
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
