@@ -45,24 +45,14 @@ interface Stock {
   date_peremption?: string | null;
 }
 
-interface User {
-  id: string;
-  username: string;
-  role: string;
-  magasin_id?: string;
-}
-
 const StockManagement: React.FC = () => {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
   const [magasins, setMagasins] = useState<Magasin[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-
   const [openModal, setOpenModal] = useState(false);
   const [editingStock, setEditingStock] = useState<Stock | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [stockToDelete, setStockToDelete] = useState<Stock | null>(null);
-
   const [form, setForm] = useState({
     article: "",
     magasin: "",
@@ -70,40 +60,46 @@ const StockManagement: React.FC = () => {
     seuil_alerte: 10,
     date_peremption: "",
   });
-
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
   // -----------------------
-  // Fetch User & Data
+  // Fetch Data
   // -----------------------
+  const getStocks = async () => {
+    try {
+      const data = await stockApi.getStocks();
+      setStocks(data);
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message || "Impossible de charger les stocks.", variant: "destructive" });
+    }
+  };
+
+  const getArticles = async () => {
+    try {
+      const data = await stockApi.getArticles();
+      setArticles(data);
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message || "Impossible de charger les articles.", variant: "destructive" });
+    }
+  };
+
+  const getMagasins = async () => {
+    try {
+      const data = await stockApi.getMagasins();
+      setMagasins(data);
+    } catch (error: any) {
+      toast({ title: "Erreur", description: error.message || "Impossible de charger les magasins.", variant: "destructive" });
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const user = await stockApi.getCurrentUser(); // Récupère l'utilisateur connecté
-        setCurrentUser(user);
-
-        const [stocksData, articlesData, magasinsData] = await Promise.all([
-          stockApi.getStocks(),
-          stockApi.getArticles(),
-          stockApi.getMagasins(),
-        ]);
-
-        setStocks(stocksData);
-        setArticles(articlesData);
-        setMagasins(magasinsData);
-      } catch (error: any) {
-        toast({
-          title: "Erreur",
-          description: error.message || "Impossible de charger les données.",
-          variant: "destructive",
-        });
-      }
-    };
-    fetchData();
+    getStocks();
+    getArticles();
+    getMagasins();
   }, []);
 
-  // Alertes stocks faibles
+  // ✅ Toast automatique si stocks faibles
   useEffect(() => {
     const lowStocks = stocks.filter(s => s.quantite <= s.seuil_alerte);
     if (lowStocks.length > 0) {
@@ -144,9 +140,8 @@ const StockManagement: React.FC = () => {
 
       setOpenModal(false);
       setEditingStock(null);
-      setForm({ article: "", magasin: currentUser?.role === "magasinier" ? currentUser.magasin_id || "" : "", quantite: 0, seuil_alerte: 10, date_peremption: "" });
-      const updatedStocks = await stockApi.getStocks();
-      setStocks(updatedStocks);
+      setForm({ article: "", magasin: "", quantite: 0, seuil_alerte: 10, date_peremption: "" });
+      getStocks();
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message || "Impossible d'enregistrer le stock.", variant: "destructive" });
     }
@@ -176,8 +171,7 @@ const StockManagement: React.FC = () => {
       toast({ title: "Succès", description: "Stock supprimé avec succès" });
       setDeleteModalOpen(false);
       setStockToDelete(null);
-      const updatedStocks = await stockApi.getStocks();
-      setStocks(updatedStocks);
+      getStocks();
     } catch (error: any) {
       toast({ title: "Erreur", description: error.message || "La suppression a échoué", variant: "destructive" });
     }
@@ -187,7 +181,7 @@ const StockManagement: React.FC = () => {
   // Export PDF & Excel
   // -----------------------
   const exportPDF = async () => {
-    const data = filteredStocks.map(s => [
+    const data = stocks.map(s => [
       s.article.nom,
       s.magasin.nom,
       `${s.quantite} ${s.article.unite_mesure || ""}`,
@@ -200,7 +194,7 @@ const StockManagement: React.FC = () => {
 
   const exportExcel = () => {
     const worksheet = XLSX.utils.json_to_sheet(
-      filteredStocks.map(s => ({
+      stocks.map(s => ({
         Article: s.article.nom,
         Magasin: s.magasin.nom,
         Quantité: s.quantite,
@@ -213,21 +207,11 @@ const StockManagement: React.FC = () => {
     XLSX.writeFile(workbook, "stocks.xlsx");
   };
 
-  // -----------------------
-  // Filtrage des stocks
-  // -----------------------
-  const filteredStocks = stocks
-    .filter(
-      s =>
-        s.article.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.magasin.nom.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .filter(s => {
-      if (currentUser?.role === "magasinier") {
-        return s.magasin.id === currentUser.magasin_id;
-      }
-      return true;
-    });
+  const filteredStocks = stocks.filter(
+    (s) =>
+      s.article.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.magasin.nom.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="p-6 space-y-4">
@@ -247,7 +231,8 @@ const StockManagement: React.FC = () => {
         className="mb-4"
       />
 
-      {filteredStocks.some(s => s.quantite <= s.seuil_alerte) && (
+      {/* 🔔 Message global d’alerte */}
+      {stocks.some(s => s.quantite <= s.seuil_alerte) && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           ⚠ Certains articles ont un stock faible !
         </div>
@@ -268,12 +253,17 @@ const StockManagement: React.FC = () => {
           <TableBody>
             {filteredStocks.length ? (
               filteredStocks.map((s) => (
-                <TableRow key={s.id} className={s.quantite <= s.seuil_alerte ? "bg-red-50" : ""}>
-                  <TableCell>{s.article.nom}</TableCell>
-                  <TableCell>{s.magasin.nom}</TableCell>
+                <TableRow
+                  key={s.id}
+                  className={s.quantite <= s.seuil_alerte ? "bg-red-50" : ""}
+                >
+                  <TableCell>{s.article?.nom || "—"}</TableCell>
+                  <TableCell>{s.magasin?.nom || "—"}</TableCell>
                   <TableCell>
                     {s.quantite} {s.article.unite_mesure || "—"}
-                    {s.quantite <= s.seuil_alerte && <span className="text-red-600 ml-2 font-semibold">⚠ Stock bas</span>}
+                    {s.quantite <= s.seuil_alerte && (
+                      <span className="text-red-600 ml-2 font-semibold">⚠ Stock bas</span>
+                    )}
                   </TableCell>
                   <TableCell>{s.seuil_alerte}</TableCell>
                   <TableCell>{s.date_peremption || "—"}</TableCell>
@@ -291,94 +281,99 @@ const StockManagement: React.FC = () => {
           </TableBody>
         </Table>
       </div>
+
+      {/* Modal Ajouter/Modifier */}
+      <Dialog open={openModal} onOpenChange={setOpenModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{editingStock ? "Modifier le Stock" : "Ajouter un Stock"}</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div>
+              <Label>Article</Label>
+              <Select
+                value={form.article}
+                onValueChange={(val) => setForm({ ...form, article: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez un article" />
+                </SelectTrigger>
+                <SelectContent>
+                  {articles.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.nom}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Magasin</Label>
+              <Select
+                value={form.magasin}
+                onValueChange={(val) => setForm({ ...form, magasin: val })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionnez un magasin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {magasins.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>{m.nom}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Quantité</Label>
+              <Input
+                type="number"
+                value={form.quantite}
+                onChange={(e) => setForm({ ...form, quantite: Number(e.target.value) })}
+              />
+            </div>
+
+            <div>
+              <Label>Seuil d’Alerte</Label>
+              <Input
+                type="number"
+                value={form.seuil_alerte}
+                onChange={(e) => setForm({ ...form, seuil_alerte: Number(e.target.value) })}
+              />
+            </div>
+
+            <div>
+              <Label>Date de Péremption</Label>
+              <Input
+                type="date"
+                value={form.date_peremption || ""}
+                onChange={(e) => setForm({ ...form, date_peremption: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpenModal(false)}>Annuler</Button>
+            <Button onClick={handleSave}>Enregistrer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Suppression */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmer la suppression</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p>Voulez-vous vraiment supprimer le stock de <strong>{stockToDelete?.article.nom}</strong> dans <strong>{stockToDelete?.magasin.nom}</strong> ?</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteModalOpen(false)}>Annuler</Button>
+            <Button variant="destructive" onClick={handleDelete}>Supprimer</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
 
 export default StockManagement;
-import React, { useEffect, useState } from "react";
-import { stockApi } from "@/lib/api"; // ton fichier d'API
-
-interface User {
-  id: string;
-  username: string;
-  full_name: string;
-  role: string;
-  magasin_id?: string; // si le backend renvoie l'ID du magasin
-}
-
-interface Stock {
-  id: string;
-  article: {
-    nom: string;
-  };
-  quantite: number;
-  seuil_alerte: number;
-  magasin: {
-    id: string;
-    nom: string;
-  };
-}
-
-const StocksPage: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [stocks, setStocks] = useState<Stock[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // 1️⃣ Récupérer l'utilisateur connecté
-        const user = await stockApi.me();
-        setCurrentUser(user);
-
-        // 2️⃣ Récupérer tous les stocks
-        const allStocks = await stockApi.getStocks();
-
-        // 3️⃣ Filtrer selon le rôle
-        const filteredStocks =
-          user.role === "magasinier" && user.magasin_id
-            ? allStocks.filter(
-                (s: Stock) => s.magasin.id === user.magasin_id
-              )
-            : allStocks;
-
-        setStocks(filteredStocks);
-      } catch (err) {
-        console.error("Erreur récupération stocks :", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  if (loading) return <p>Chargement...</p>;
-  if (stocks.length === 0) return <p>Aucun stock trouvé.</p>;
-
-  return (
-    <table>
-      <thead>
-        <tr>
-          <th>Article</th>
-          <th>Magasin</th>
-          <th>Quantité</th>
-          <th>Seuil Alerte</th>
-        </tr>
-      </thead>
-      <tbody>
-        {stocks.map((stock) => (
-          <tr key={stock.id}>
-            <td>{stock.article.nom}</td>
-            <td>{stock.magasin.nom}</td>
-            <td>{stock.quantite}</td>
-            <td>{stock.seuil_alerte}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-};
-
-export default StocksPage;
