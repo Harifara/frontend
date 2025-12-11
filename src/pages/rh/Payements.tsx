@@ -60,6 +60,7 @@ const Payements = () => {
   const [editingPayement, setEditingPayement] = useState<Payement | null>(null);
   const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
   const { toast } = useToast();
+  
 
   const [form, setForm] = useState<Payement>({
     paiement_type: "total",
@@ -73,7 +74,7 @@ const Payements = () => {
   });
 
   useEffect(() => { fetchData(); }, []);
-
+  
   const fetchData = async () => {
     setIsLoading(true);
     try {
@@ -303,11 +304,12 @@ const Payements = () => {
 
                   <TableCell className="text-center">{p.location?.nom ?? p.location?.name ?? "-"}</TableCell>
 
-                  <TableCell className="text-center">
+                 <TableCell className="text-center">
                     {p.contrat
-                      ? `${p.contrat.nom_employer ?? p.contrat.nom} - ${p.contrat.salaire?.toLocaleString()} Ar`
+                      ? `${p.contrat.nom_employer ?? p.contrat.nom ?? "-"} - ${p.contrat.salaire?.toLocaleString() ?? "-"} Ar`
                       : "-"}
                   </TableCell>
+
 
 
 
