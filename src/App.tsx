@@ -129,7 +129,7 @@ const App = () => (
               <Route path="/finance/depenses" element={<DepensePage />} />
               <Route path="/finance/demandes-decaissement" element={<DemandesDecaissement />} />
 
-              <Route path="/coordinator/validation-items" element={<ValidationItems />} />
+              {/* <Route path="/coordinator/validation-items" element={<ValidationItems />} /> */}
               </Route>
               
 
