@@ -24,15 +24,13 @@ interface Decaissement {
   depenses: Depense[];
 }
 
-// -------------------------
-// Composant principal
-// -------------------------
 export const DemandesDecaissement: React.FC = () => {
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Decaissement | null>(null);
-  const [newDepenseDesc, setNewDepenseDesc] = useState<string>("");
-  const [newDepenseMontant, setNewDepenseMontant] = useState<number>(0);
+  const [newDepenseDesc, setNewDepenseDesc] = useState("");
+  const [newDepenseMontant, setNewDepenseMontant] = useState<number | "">(0);
+  const [error, setError] = useState("");
 
   // Charger les demandes
   const fetchDecaissements = async () => {
@@ -40,8 +38,9 @@ export const DemandesDecaissement: React.FC = () => {
     try {
       const data = await financeApi.getDecaissements();
       setDecaissements(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      setError("Erreur lors du chargement des décaissements.");
     } finally {
       setLoading(false);
     }
@@ -51,27 +50,46 @@ export const DemandesDecaissement: React.FC = () => {
     fetchDecaissements();
   }, []);
 
-  // Actions
+  // Envoyer au coordonnateur
   const handleEnvoyer = async (id: string) => {
-    await financeApi.envoyerAuCoordo(id);
-    fetchDecaissements();
+    try {
+      await financeApi.envoyerAuCoordo(id);
+      fetchDecaissements();
+    } catch (err: any) {
+      console.error(err);
+      setError("Erreur lors de l'envoi au coordonnateur.");
+    }
   };
 
+  // Ajouter une dépense
   const handleAddDepense = async () => {
     if (!selected) return;
-    await financeApi.createDepense({
-      demande: selected.id,
-      description: newDepenseDesc,
-      montant: newDepenseMontant,
-    });
-    setNewDepenseDesc("");
-    setNewDepenseMontant(0);
-    fetchDecaissements();
+    if (!newDepenseDesc || !newDepenseMontant) {
+      setError("Veuillez saisir la description et le montant.");
+      return;
+    }
+
+    try {
+      await financeApi.createDepense({
+        demande: selected.id,
+        description: newDepenseDesc,
+        montant: newDepenseMontant,
+      });
+      setNewDepenseDesc("");
+      setNewDepenseMontant(0);
+      setError("");
+      fetchDecaissements();
+    } catch (err: any) {
+      console.error(err);
+      setError("Erreur lors de l'ajout de la dépense.");
+    }
   };
 
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Demandes de Décaissement</h1>
+
+      {error && <p className="text-red-600 mb-4">{error}</p>}
 
       {loading ? (
         <p>Chargement...</p>
@@ -87,22 +105,28 @@ export const DemandesDecaissement: React.FC = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {decaissements.map((d) => (
+            {decaissements.length ? decaissements.map((d) => (
               <TableRow key={d.id}>
                 <TableCell>{d.source_service}</TableCell>
                 <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
-                <TableCell>{d.total_montant.toFixed(2)}</TableCell>
+                <TableCell>{d.total_montant.toLocaleString()}</TableCell>
                 <TableCell>{d.statut}</TableCell>
-                <TableCell>
+                <TableCell className="space-x-2">
                   <Button onClick={() => setSelected(d)}>Voir / Modifier</Button>
                   {d.statut === "non_envoyee" && (
-                    <Button className="ml-2" onClick={() => handleEnvoyer(d.id)}>
+                    <Button variant="outline" onClick={() => handleEnvoyer(d.id)}>
                       Envoyer au coordo
                     </Button>
                   )}
                 </TableCell>
               </TableRow>
-            ))}
+            )) : (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-4">
+                  Aucune demande trouvée.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       )}
@@ -117,7 +141,7 @@ export const DemandesDecaissement: React.FC = () => {
           {selected && (
             <div>
               <p><strong>Source:</strong> {selected.source_service}</p>
-              <p><strong>Total:</strong> {selected.total_montant.toFixed(2)}</p>
+              <p><strong>Total:</strong> {selected.total_montant.toLocaleString()}</p>
               <p><strong>Statut:</strong> {selected.statut}</p>
 
               <h3 className="mt-4 font-semibold">Dépenses</h3>
@@ -133,7 +157,7 @@ export const DemandesDecaissement: React.FC = () => {
                   {selected.depenses.map((dep) => (
                     <TableRow key={dep.id}>
                       <TableCell>{dep.description}</TableCell>
-                      <TableCell>{dep.montant.toFixed(2)}</TableCell>
+                      <TableCell>{dep.montant.toLocaleString()}</TableCell>
                       <TableCell>{dep.statut}</TableCell>
                     </TableRow>
                   ))}
@@ -153,7 +177,12 @@ export const DemandesDecaissement: React.FC = () => {
                   value={newDepenseMontant}
                   onChange={(e) => setNewDepenseMontant(parseFloat(e.target.value))}
                 />
-                <Button onClick={handleAddDepense}>Ajouter</Button>
+                <Button
+                  disabled={!newDepenseDesc || !newDepenseMontant}
+                  onClick={handleAddDepense}
+                >
+                  Ajouter
+                </Button>
               </div>
             </div>
           )}
