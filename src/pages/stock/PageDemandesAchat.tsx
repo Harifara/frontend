@@ -222,16 +222,6 @@ export default function PageDemandesAchat() {
                 <TableCell>{d.commentaire_finance || "-"}</TableCell>
                 <TableCell>{d.statut_reception}</TableCell>
                 <TableCell>{d.date_reception || "-"}</TableCell>
-                <TableCell className="space-x-2">
-                  {d.statut === "en_attente" && (
-                    <>
-                      <Button onClick={() => handleValider(d)}>Valider</Button>
-                      <Button variant="destructive" onClick={() => handleRejeter(d)}>
-                        Rejeter
-                      </Button>
-                    </>
-                  )}
-                </TableCell>
               </TableRow>
             ))}
           </TableBody>
