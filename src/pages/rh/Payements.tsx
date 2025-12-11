@@ -436,12 +436,7 @@ const Payements = () => {
                   <SelectItem value="null">Aucun</SelectItem>
                   {contrats.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      <p>
-                        <strong>Salaire :</strong> {editingPayement?.contrat 
-                          ? `${editingPayement.contrat.nom_employer ?? "-"} - ${editingPayement.contrat.salaire != null ? Number(editingPayement.contrat.salaire).toLocaleString() : "-"} Ar` 
-                          : "-"}
-                      </p>
-
+                      {c.nom_employer ?? c.nom_employer} — {c.salaire?.toLocaleString()} Ar
                     </SelectItem>
                   ))}
                 </SelectContent>
