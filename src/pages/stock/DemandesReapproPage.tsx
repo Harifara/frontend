@@ -26,6 +26,7 @@ export default function DemandesReapproPage() {
   const [showModal, setShowModal] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
   const [showStockModal, setShowStockModal] = useState(false);
+  const [loadingStock, setLoadingStock] = useState(false);
 
   const [selectedDemande, setSelectedDemande] = useState<Demande | null>(null);
   const [commentaire, setCommentaire] = useState("");
@@ -39,7 +40,7 @@ export default function DemandesReapproPage() {
   const [motif, setMotif] = useState("");
 
   const [stocksAutresMagasins, setStocksAutresMagasins] = useState<
-    { magasin: string; quantite: number; magasin_id?: string }[]
+    { magasin: string; quantite: number; magasin_id?: string; quantiteToTransfer?: number }[]
   >([]);
 
   const priorites = ["faible", "normale", "haute", "urgente"];
@@ -152,19 +153,10 @@ export default function DemandesReapproPage() {
     if (!demande.article?.id) return;
 
     try {
+      setLoadingStock(true);
       const resRaw = await stockApi.getStocksAutresMagasinsRaw(demande.article.id);
-
-      // parser JSON de manière sécurisée
-      let res: { magasin: string; quantite: number; magasin_id?: string }[] = [];
-      try {
-        res = resRaw ? JSON.parse(resRaw) : [];
-        if (!Array.isArray(res)) res = [];
-      } catch (err) {
-        console.error("Réponse non JSON reçue :", resRaw, err);
-        alert("Erreur : la réponse de l'API n'est pas au format JSON. Vérifiez l'API.");
-        return;
-      }
-
+      const res =
+        typeof resRaw === "string" ? JSON.parse(resRaw) : resRaw || [];
       setStocksAutresMagasins(res);
       setShowStockModal(true);
     } catch (error) {
@@ -172,16 +164,18 @@ export default function DemandesReapproPage() {
       alert("Impossible de vérifier le stock.");
       setStocksAutresMagasins([]);
       setShowStockModal(true);
+    } finally {
+      setLoadingStock(false);
     }
   };
 
-  const handleCreerTransfert = async (magasinSourceId: string) => {
+  const handleCreerTransfert = async (magasinSourceId: string, quantiteToTransfer?: number) => {
     if (!selectedDemande) return;
     try {
       await stockApi.createTransfert({
         demande_id: selectedDemande.id,
         magasin_source_id: magasinSourceId,
-        quantite: selectedDemande.quantite_demandee,
+        quantite: quantiteToTransfer || selectedDemande.quantite_demandee,
       });
       setShowStockModal(false);
       setSelectedDemande(null);
@@ -366,14 +360,24 @@ export default function DemandesReapproPage() {
             <DialogTitle>Vérifier stock autres magasins</DialogTitle>
           </DialogHeader>
 
-          {stocksAutresMagasins && stocksAutresMagasins.length > 0 ? (
+          {loadingStock ? (
+            <p>Chargement du stock...</p>
+          ) : stocksAutresMagasins && stocksAutresMagasins.length > 0 ? (
             <div className="space-y-2">
               {stocksAutresMagasins.map((s) => (
-                <div key={s.magasin} className="flex justify-between items-center">
-                  <span>
-                    {s.magasin} : {s.quantite} unités disponibles
-                  </span>
-                  <Button onClick={() => handleCreerTransfert(s.magasin_id || s.magasin)}>
+                <div key={s.magasin} className="flex justify-between items-center gap-2">
+                  <span>{s.magasin} : {s.quantite} unités disponibles</span>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={s.quantite}
+                    defaultValue={Math.min(selectedDemande?.quantite_demandee || 1, s.quantite)}
+                    onChange={(e) => s.quantiteToTransfer = Number(e.target.value)}
+                    className="w-20"
+                  />
+                  <Button
+                    onClick={() => handleCreerTransfert(s.magasin_id!, s.quantiteToTransfer)}
+                  >
                     Créer Transfert
                   </Button>
                 </div>
