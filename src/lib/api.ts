@@ -1,12 +1,5 @@
-
 export const API_BASE_URL = "https://api.ecartmada.com/api";
 export const MEDIA_URL = "https://api.ecartmada.com/media/";
-
-
-
-// export const MEDIA_URL =
-//   window.__CONFIG__?.MEDIA_URL || import.meta.env.VITE_MEDIA_URL || "https://api.ecartmada.com/rh_service/media/";
-
 
 const DRF_TOKEN_KEY = "drf_token";
 const KONG_TOKEN_KEY = "kong_token";
@@ -61,7 +54,6 @@ export const fetchWithLog = async (url: string, options: RequestInit = {}) => {
 // AUTH API (DRF Token)
 // ------------------------
 export const authApi = {
-  
   login: async (username: string, password: string) => {
     const data = await fetchWithLog(`${API_BASE_URL}/auth/login/`, {
       method: "POST",
@@ -78,15 +70,22 @@ export const authApi = {
 
   logout: async () => {
     const token = getDrfToken();
-    await fetchWithLog(`${API_BASE_URL}/auth/logout/`, {
-      method: "POST",
-      headers: getHeaders(token),
-    });
+    if (token) {
+      await fetchWithLog(`${API_BASE_URL}/auth/logout/`, {
+        method: "POST",
+        headers: getHeaders(token),
+      });
+    }
     clearDrfToken();
     clearKongToken();
   },
 
-  getMe: async () => fetchWithLog(`${API_BASE_URL}/auth/me/`, { headers: getHeaders(getDrfToken()) }),
+  getMe: async () => {
+    const token = getDrfToken();
+    if (!token) throw new Error("Aucun token DRF trouvé pour récupérer l'utilisateur");
+    return fetchWithLog(`${API_BASE_URL}/auth/me/`, { headers: getHeaders(token) });
+  },
+
   getUsers: async () => fetchWithLog(`${API_BASE_URL}/auth/users/`, { headers: getHeaders(getDrfToken()) }),
   register: async (payload: any) =>
     fetchWithLog(`${API_BASE_URL}/auth/register/`, { method: "POST", headers: getHeaders(), body: JSON.stringify(payload) }),
@@ -595,13 +594,19 @@ export const stockApi = {
     return res.json();
   },
 
-  me: async () => {
-      const token = await ensureKongToken();
-      const res = await fetch(`${API_BASE_URL}/auth/me/`, {
-        headers: getHeaders(token),
-      });
-      return res.json();
-    },
+  // Stock API - récupérer l'utilisateur connecté
+me: async () => {
+  const token = getDrfToken(); // Utiliser DRF token, pas Kong token
+  if (!token) throw new Error("Aucun token DRF trouvé pour récupérer l'utilisateur");
+  const res = await fetch(`${API_BASE_URL}/auth/me/`, {
+    headers: getHeaders(token),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || "Erreur lors de la récupération de l'utilisateur connecté");
+  }
+  return res.json();
+},
 
 
   // ====================
