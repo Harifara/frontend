@@ -361,21 +361,7 @@ const Payements = () => {
               />
             </div>
 
-            <div>
-              <Label>Status</Label>
-              <Select
-                value={form.status}
-                onValueChange={(val) => setForm({ ...form, status: val })}
-              >
-                <SelectTrigger><SelectValue placeholder="Choisir le status" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="en_attente">En attente</SelectItem>
-                  <SelectItem value="complete">Complété</SelectItem>
-                  <SelectItem value="echoue">Échoué</SelectItem>
-                  <SelectItem value="annule">Annulé</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            
 
             {/* Mode de paiement */}
             <div>
@@ -430,35 +416,6 @@ const Payements = () => {
                 </SelectContent>
               </Select>
             </div>
-
-            {/* Électricité */}
-            {/* Électricité */}
-            <div>
-              <Label>Électricité</Label>
-              <Select
-                value={form.electricite?.id ?? "null"}
-                onValueChange={(val) =>
-                  setForm({
-                    ...form,
-                    electricite: val === "null" ? undefined : electricites.find((e) => e.id === val),
-                  })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Choisir un compteur" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="null">Aucune</SelectItem>
-                  {electricites.map((e) => (
-                    <SelectItem key={e.id} value={e.id!}>
-                      {e.numero_compteur} ({e.fournisseur})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-            </div>
-
 
             <div>
               <Label>Salaire</Label>
