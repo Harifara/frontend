@@ -1,12 +1,14 @@
 // src/pages/finance/DemandesDecaissement.tsx
 import React, { useEffect, useState } from "react";
-import { financeApi } from "@/lib/api";
+import { financeApi, rhApi, stockApi } from "@/lib/api";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
-// Types pour les données
+// -----------------------------
+// Types
+// -----------------------------
 interface Depense {
   id: string;
   description: string;
@@ -18,52 +20,89 @@ interface Depense {
 interface Decaissement {
   id: string;
   source_service: string;
+  source_type: "RH" | "Stock";
+  source_id: string; // id de la demande RH ou Stock
   date_creation: string;
   total_montant: number;
   statut: string;
   depenses: Depense[];
 }
 
-export const DemandesDecaissement: React.FC = () => {
+interface DemandeRH {
+  id: string;
+  description: string;
+  montant: number;
+  status: string;
+}
+
+interface DemandeAchat {
+  id: string;
+  article_nom: string;
+  quantite: number;
+  montant_estime: number;
+  statut: string;
+}
+
+// -----------------------------
+// Composant
+// -----------------------------
+const DemandesDecaissement: React.FC = () => {
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
+  const [demandesRH, setDemandesRH] = useState<DemandeRH[]>([]);
+  const [demandesAchat, setDemandesAchat] = useState<DemandeAchat[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selected, setSelected] = useState<Decaissement | null>(null);
+  const [selectedDecaissement, setSelectedDecaissement] = useState<Decaissement | null>(null);
   const [newDepenseDesc, setNewDepenseDesc] = useState("");
   const [newDepenseMontant, setNewDepenseMontant] = useState<number | "">(0);
   const [error, setError] = useState("");
 
-  // Charger les demandes
-  const fetchDecaissements = async () => {
+  // -----------------------------
+  // Charger les données
+  // -----------------------------
+  const fetchAll = async () => {
     setLoading(true);
     try {
-      const data = await financeApi.getDecaissements();
-      setDecaissements(data);
+      const [decaissementsRes, rhRes, stockRes] = await Promise.all([
+        financeApi.getDecaissements(),
+        rhApi.getDemandes(),
+        stockApi.getDemandesAchat(),
+      ]);
+
+      setDecaissements(decaissementsRes);
+      setDemandesRH(rhRes.results || rhRes);
+      setDemandesAchat(stockRes.results || stockRes);
     } catch (err: any) {
       console.error(err);
-      setError("Erreur lors du chargement des décaissements.");
+      setError("Erreur lors du chargement des données.");
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchDecaissements();
-  }, []);
+  useEffect(() => { fetchAll(); }, []);
 
-  // Envoyer au coordonnateur
-  const handleEnvoyer = async (id: string) => {
+  // -----------------------------
+  // Créer un décaissement
+  // -----------------------------
+  const handleCreateDecaissement = async (
+    source_type: "RH" | "Stock",
+    source_id: string,
+    montant: number
+  ) => {
     try {
-      await financeApi.envoyerAuCoordo(id);
-      fetchDecaissements();
+      await financeApi.createDecaissement({ source_service: source_type, source_id, total_montant: montant });
+      fetchAll();
     } catch (err: any) {
       console.error(err);
-      setError("Erreur lors de l'envoi au coordonnateur.");
+      setError("Erreur lors de la création du décaissement.");
     }
   };
 
+  // -----------------------------
   // Ajouter une dépense
+  // -----------------------------
   const handleAddDepense = async () => {
-    if (!selected) return;
+    if (!selectedDecaissement) return;
     if (!newDepenseDesc || !newDepenseMontant) {
       setError("Veuillez saisir la description et le montant.");
       return;
@@ -71,80 +110,87 @@ export const DemandesDecaissement: React.FC = () => {
 
     try {
       await financeApi.createDepense({
-        demande: selected.id,
+        demande: selectedDecaissement.id,
         description: newDepenseDesc,
         montant: newDepenseMontant,
       });
       setNewDepenseDesc("");
       setNewDepenseMontant(0);
-      setError("");
-      fetchDecaissements();
+      fetchAll();
     } catch (err: any) {
       console.error(err);
       setError("Erreur lors de l'ajout de la dépense.");
     }
   };
 
+  if (loading) return <p className="p-8 text-center">Chargement...</p>;
+
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Demandes de Décaissement</h1>
+    <div className="p-4 space-y-6">
+      <h1 className="text-2xl font-bold">Demandes de Décaissement</h1>
+      {error && <p className="text-red-600">{error}</p>}
 
-      {error && <p className="text-red-600 mb-4">{error}</p>}
-
-      {loading ? (
-        <p>Chargement...</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Source</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead>Actions</TableHead>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Type</TableHead>
+            <TableHead>Description / Article</TableHead>
+            <TableHead>Montant</TableHead>
+            <TableHead>Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {/* RH */}
+          {demandesRH.map((d) => (
+            <TableRow key={`rh-${d.id}`}>
+              <TableCell>RH</TableCell>
+              <TableCell>{d.description}</TableCell>
+              <TableCell>{d.montant.toLocaleString()}</TableCell>
+              <TableCell>
+                <Button onClick={() => handleCreateDecaissement("RH", d.id, d.montant)}>
+                  Créer Décaissement
+                </Button>
+              </TableCell>
             </TableRow>
-          </TableHeader>
-          <TableBody>
-            {decaissements.length ? decaissements.map((d) => (
-              <TableRow key={d.id}>
-                <TableCell>{d.source_service}</TableCell>
-                <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
-                <TableCell>{d.total_montant.toLocaleString()}</TableCell>
-                <TableCell>{d.statut}</TableCell>
-                <TableCell className="space-x-2">
-                  <Button onClick={() => setSelected(d)}>Voir / Modifier</Button>
-                  {d.statut === "non_envoyee" && (
-                    <Button variant="outline" onClick={() => handleEnvoyer(d.id)}>
-                      Envoyer au coordo
-                    </Button>
-                  )}
-                </TableCell>
-              </TableRow>
-            )) : (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-4">
-                  Aucune demande trouvée.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      )}
+          ))}
 
-      {/* Dialog pour détails d'une demande */}
-      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
+          {/* Stock */}
+          {demandesAchat.map((d) => (
+            <TableRow key={`stock-${d.id}`}>
+              <TableCell>Stock</TableCell>
+              <TableCell>{d.article_nom} x {d.quantite}</TableCell>
+              <TableCell>{d.montant_estime.toLocaleString()}</TableCell>
+              <TableCell>
+                <Button onClick={() => handleCreateDecaissement("Stock", d.id, d.montant_estime)}>
+                  Créer Décaissement
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+
+          {/* Décaissements existants */}
+          {decaissements.map((d) => (
+            <TableRow key={`dec-${d.id}`}>
+              <TableCell>{d.source_service}</TableCell>
+              <TableCell>ID Source: {d.source_id}</TableCell>
+              <TableCell>{d.total_montant.toLocaleString()}</TableCell>
+              <TableCell>
+                <Button onClick={() => setSelectedDecaissement(d)}>Voir / Ajouter Dépense</Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      {/* Dialog pour ajouter dépense */}
+      <Dialog open={!!selectedDecaissement} onOpenChange={() => setSelectedDecaissement(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Détails de la demande</DialogTitle>
+            <DialogTitle>Dépenses du décaissement</DialogTitle>
           </DialogHeader>
 
-          {selected && (
+          {selectedDecaissement && (
             <div>
-              <p><strong>Source:</strong> {selected.source_service}</p>
-              <p><strong>Total:</strong> {selected.total_montant.toLocaleString()}</p>
-              <p><strong>Statut:</strong> {selected.statut}</p>
-
-              <h3 className="mt-4 font-semibold">Dépenses</h3>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -154,7 +200,7 @@ export const DemandesDecaissement: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selected.depenses.map((dep) => (
+                  {selectedDecaissement.depenses.map((dep) => (
                     <TableRow key={dep.id}>
                       <TableCell>{dep.description}</TableCell>
                       <TableCell>{dep.montant.toLocaleString()}</TableCell>
@@ -164,8 +210,7 @@ export const DemandesDecaissement: React.FC = () => {
                 </TableBody>
               </Table>
 
-              <h3 className="mt-4 font-semibold">Ajouter une dépense</h3>
-              <div className="flex gap-2 mt-2">
+              <div className="flex gap-2 mt-4">
                 <Input
                   placeholder="Description"
                   value={newDepenseDesc}
@@ -188,7 +233,7 @@ export const DemandesDecaissement: React.FC = () => {
           )}
 
           <DialogFooter>
-            <Button onClick={() => setSelected(null)}>Fermer</Button>
+            <Button onClick={() => setSelectedDecaissement(null)}>Fermer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
