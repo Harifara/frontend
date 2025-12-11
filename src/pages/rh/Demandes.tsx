@@ -241,37 +241,6 @@ const Demandes = () => {
                   {/* ----------------- */}
                   <TableCell className="space-x-2">
 
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={async () => {
-                        try {
-                          await rhApi.approveDemande(d.id);
-                          toast({ title: "Succès", description: "Demande approuvée." });
-                          fetchData();
-                        } catch (err: any) {
-                          toast({ title: "Erreur", description: err.message, variant: "destructive" });
-                        }
-                      }}
-                    >
-                      Approuver
-                    </Button>
-
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={async () => {
-                        try {
-                          await rhApi.rejectDemande(d.id);
-                          toast({ title: "Succès", description: "Demande refusée." });
-                          fetchData();
-                        } catch (err: any) {
-                          toast({ title: "Erreur", description: err.message, variant: "destructive" });
-                        }
-                      }}
-                    >
-                      Refuser
-                    </Button>
 
                     <Button
                       size="sm"
@@ -361,7 +330,7 @@ const Demandes = () => {
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Annuler</Button>
-              <Button type="submit">{editingDemande ? "Mettre à jour" : "Créer"}</Button>
+              <Button type="submit">{editingDemande ? "Mettre à jour" : "Envoyé"}</Button>
             </DialogFooter>
 
           </form>
