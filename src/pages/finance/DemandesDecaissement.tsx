@@ -31,6 +31,7 @@ const badgeColor = (statut: string) => {
   switch (statut.toLowerCase()) {
     case "valide": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
     case "rejete": return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
+    case "en attente":
     case "en_attente": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
     default: return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
   }
@@ -50,7 +51,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
     try {
       const [rhRes, stockRes, decRes] = await Promise.all([
         rhApi.getDemandes(),
-        stockApi.getDemandesAchat(),
+        stockApi.getDemandes(), // <-- correction ici
         financeApi.getDecaissements()
       ]);
 
@@ -72,8 +73,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
       }));
 
       setDemandes([...rh, ...stock]);
-      const decaissementsData = await decRes.json();
-      setDecaissements(decaissementsData);
+      setDecaissements(decRes); // si financeApi.getDecaissements() renvoie déjà JSON
 
     } catch (err: any) {
       toast({ title: "Erreur", description: err?.message || "Impossible de charger les données.", variant: "destructive" });
@@ -108,7 +108,6 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
 
   if (loading) return <p className="p-8 text-center">Chargement...</p>;
 
-  // Total des demandes sélectionnées
   const totalSelected = selectedDemandes.reduce((acc, id) => {
     const d = demandes.find(x => x.id === id);
     return acc + (d?.montant || 0);
@@ -120,7 +119,6 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
 
       <Button onClick={() => setIsModalOpen(true)}>Créer un décaissement</Button>
 
-      {/* ---------------- Tableau des demandes ---------------- */}
       <h2 className="text-xl font-semibold mt-6">Toutes les demandes</h2>
       <Table>
         <TableHeader>
@@ -151,10 +149,8 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
         </TableBody>
       </Table>
 
-      {/* Total sélectionné */}
       <p className="mt-2 font-medium">Total sélectionné: {totalSelected.toLocaleString()} Ar</p>
 
-      {/* ---------------- Modal Création ---------------- */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
