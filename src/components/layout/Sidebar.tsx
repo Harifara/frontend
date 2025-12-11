@@ -47,7 +47,6 @@ const navigation = [
   },
   
   { name: "Locations", href: "/rh/locations", icon: MapPin, roles: ["admin", "responsable_rh"] },
-  { name: "Electricités", href: "/rh/electricites", icon: MapPin, roles: ["admin", "responsable_rh"] },
   { name: "Mode de payement", href: "/rh/mode-payement", icon: MapPin, roles: ["admin", "responsable_rh"] },
   { name: "Payements", href: "/rh/payements", icon: MapPin, roles: ["admin", "responsable_rh"] },
   { name: "TypeAchat", href: "/rh/TypeAchat", icon: ClipboardList, roles: ["admin", "responsable_rh"] },
