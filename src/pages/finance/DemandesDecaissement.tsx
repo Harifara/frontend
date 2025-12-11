@@ -35,7 +35,7 @@ interface Demande {
   source: "RH" | "Stock";
   description: string;
   montant: number;
-  status: string;
+  status: string; // 'non_envoyee', 'en_attente', 'partiellement_valide', 'valide', 'rejete'
   achats: Achat[];
   payements: Payement[];
   depenses?: Depense[];
@@ -46,14 +46,15 @@ interface Demande {
 // ------------------
 const badgeColor = (status: string) => {
   switch (status.toLowerCase()) {
-    case "approuve":
     case "valide":
+    case "partiellement_valide":
       return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
     case "rejete":
       return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
     case "en_attente":
-    case "en attente":
       return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    case "non_envoyee":
+      return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
     default:
       return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
   }
@@ -84,8 +85,11 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
   // -----------------
   // Gestion des dépenses
   // -----------------
-  const addDepense = () => setNewDemande(prev => ({ ...prev, depenses: [...prev.depenses, { description: "", montant: 0 }] }));
-  const removeDepense = (index: number) => setNewDemande(prev => ({ ...prev, depenses: prev.depenses.filter((_, i) => i !== index) }));
+  const addDepense = () =>
+    setNewDemande(prev => ({ ...prev, depenses: [...prev.depenses, { description: "", montant: 0 }] }));
+
+  const removeDepense = (index: number) =>
+    setNewDemande(prev => ({ ...prev, depenses: prev.depenses.filter((_, i) => i !== index) }));
 
   const handleDepenseChange = (index: number, field: "description" | "montant", value: string | number) => {
     const depenses = [...newDemande.depenses];
@@ -123,7 +127,8 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
     }
 
     try {
-      await financeApi.sendDemandesDecaissement({ demandeIds: selectedDemandes });
+      // Envoyer chaque demande individuellement au backend
+      await Promise.all(selectedDemandes.map(id => financeApi.sendDemandeDecaissement(id)));
       toast({ title: "Succès", description: "Demandes envoyées pour décaissement.", variant: "success" });
       setSelectedDemandes([]);
       fetchData();
@@ -144,10 +149,11 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
         id: d.id,
         source: "RH",
         description: d.description,
-        montant: d.montant || d.achats?.reduce((sum: number, a: Achat) => sum + (a.montant * a.nombre), 0) || 0,
-        status: d.status || "en_attente",
+        montant: d.montant || d.achats?.reduce((sum: number, a: Achat) => sum + a.montant * a.nombre, 0) || 0,
+        status: d.status || "non_envoyee",
         achats: d.achats || [],
         payements: d.payements || [],
+        depenses: d.depenses || []
       }));
 
       const stockDemandes: Demande[] = (stockRes.results || stockRes).map((d: any) => ({
@@ -155,15 +161,10 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
         source: "Stock",
         description: d.article?.nom || d.description || "-",
         montant: d.montant_estime || d.montant || 0,
-        status: d.statut || "en_attente",
-        achats: d.achats || [{
-          id: d.id,
-          article: d.article?.nom || "-",
-          montant: d.montant_estime || 0,
-          nombre: d.quantite || 1,
-          statut: d.statut || "en_attente"
-        }],
+        status: d.statut || "non_envoyee",
+        achats: d.achats || [{ id: d.id, article: d.article?.nom || "-", montant: d.montant_estime || 0, nombre: d.quantite || 1, statut: d.statut || "en_attente" }],
         payements: d.payements || [],
+        depenses: d.depenses || []
       }));
 
       setDemandes([...rhDemandes, ...stockDemandes]);
@@ -241,6 +242,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
                     <input
                       type="checkbox"
                       checked={selectedDemandes.includes(d.id)}
+                      disabled={d.status !== 'non_envoyee'}
                       onChange={e => {
                         if (e.target.checked) setSelectedDemandes(prev => [...prev, d.id]);
                         else setSelectedDemandes(prev => prev.filter(id => id !== d.id));
@@ -265,9 +267,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
         </CardContent>
       </Card>
 
-      {/* -------------------- */}
-      {/* Modal détails de la demande */}
-      {/* -------------------- */}
+      {/* Modal détails */}
       <Dialog open={!!detailsDemande} onOpenChange={() => setDetailsDemande(null)}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader><DialogTitle>Détails de la demande</DialogTitle></DialogHeader>
@@ -324,9 +324,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
         </DialogContent>
       </Dialog>
 
-      {/* -------------------- */}
       {/* Modal création nouvelle demande */}
-      {/* -------------------- */}
       <Dialog open={openNewDemande} onOpenChange={() => setOpenNewDemande(false)}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader><DialogTitle>Nouvelle demande de décaissement</DialogTitle></DialogHeader>
@@ -343,9 +341,6 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
               </select>
             </div>
 
-            {/* ----------------- */}
-            {/* Section Achats */}
-            {/* ----------------- */}
             <div>
               <strong>Objets à inclure :</strong>
               {availableAchats.map(a => (
@@ -375,9 +370,6 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
               ))}
             </div>
 
-            {/* ----------------- */}
-            {/* Section Dépenses */}
-            {/* ----------------- */}
             <div>
               <strong>Dépenses libres :</strong>
               {newDemande.depenses.map((dep, idx) => (
