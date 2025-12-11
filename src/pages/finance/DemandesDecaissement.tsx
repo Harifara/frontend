@@ -14,17 +14,16 @@ interface Depense {
   description: string;
   montant: number;
   statut: string;
-  date_creation: string;
 }
 
 interface Decaissement {
   id: string;
   source_service: string;
   source_type: "RH" | "Stock";
-  source_id: string; // id de la demande RH ou Stock
+  source_id: string;
   date_creation: string;
   total_montant: number;
-  statut: string;
+  statut: "brouillon" | "en_attente_coordo" | "validé" | "payé";
   depenses: Depense[];
 }
 
@@ -44,7 +43,20 @@ interface DemandeAchat {
 }
 
 // -----------------------------
-// Composant
+// Couleur badge selon statut
+// -----------------------------
+const badgeColor = (statut: string) => {
+  switch (statut.toLowerCase()) {
+    case "brouillon": return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
+    case "en_attente_coordo": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    case "validé": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
+    case "payé": return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
+    default: return "bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs font-semibold";
+  }
+};
+
+// -----------------------------
+// Composant principal
 // -----------------------------
 const DemandesDecaissement: React.FC = () => {
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
@@ -57,7 +69,7 @@ const DemandesDecaissement: React.FC = () => {
   const [error, setError] = useState("");
 
   // -----------------------------
-  // Charger les données
+  // Charger toutes les données
   // -----------------------------
   const fetchAll = async () => {
     setLoading(true);
@@ -82,7 +94,7 @@ const DemandesDecaissement: React.FC = () => {
   useEffect(() => { fetchAll(); }, []);
 
   // -----------------------------
-  // Créer un décaissement
+  // Créer un décaissement à partir d'une demande
   // -----------------------------
   const handleCreateDecaissement = async (
     source_type: "RH" | "Stock",
@@ -90,11 +102,29 @@ const DemandesDecaissement: React.FC = () => {
     montant: number
   ) => {
     try {
-      await financeApi.createDecaissement({ source_service: source_type, source_id, total_montant: montant });
+      await financeApi.createDecaissement({ 
+        source_service: source_type, 
+        source_id, 
+        total_montant: montant 
+      });
       fetchAll();
     } catch (err: any) {
       console.error(err);
       setError("Erreur lors de la création du décaissement.");
+    }
+  };
+
+  // -----------------------------
+  // Envoyer un décaissement au coordonnateur
+  // -----------------------------
+  const handleEnvoyerCoordo = async (decaissementId: string) => {
+    if (!confirm("Envoyer ce décaissement au coordonnateur ?")) return;
+    try {
+      await financeApi.envoyerAuCoordonnateur(decaissementId); // API à créer côté backend
+      fetchAll();
+    } catch (err: any) {
+      console.error(err);
+      setError("Erreur lors de l'envoi au coordonnateur.");
     }
   };
 
@@ -136,16 +166,18 @@ const DemandesDecaissement: React.FC = () => {
             <TableHead>Type</TableHead>
             <TableHead>Description / Article</TableHead>
             <TableHead>Montant</TableHead>
+            <TableHead>Statut</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {/* RH */}
-          {demandesRH.map((d) => (
+          {/* Demandes RH */}
+          {demandesRH.map(d => (
             <TableRow key={`rh-${d.id}`}>
               <TableCell>RH</TableCell>
               <TableCell>{d.description}</TableCell>
               <TableCell>{d.montant.toLocaleString()}</TableCell>
+              <TableCell>-</TableCell>
               <TableCell>
                 <Button onClick={() => handleCreateDecaissement("RH", d.id, d.montant)}>
                   Créer Décaissement
@@ -154,12 +186,13 @@ const DemandesDecaissement: React.FC = () => {
             </TableRow>
           ))}
 
-          {/* Stock */}
-          {demandesAchat.map((d) => (
+          {/* Demandes Stock */}
+          {demandesAchat.map(d => (
             <TableRow key={`stock-${d.id}`}>
               <TableCell>Stock</TableCell>
               <TableCell>{d.article_nom} x {d.quantite}</TableCell>
               <TableCell>{d.montant_estime.toLocaleString()}</TableCell>
+              <TableCell>-</TableCell>
               <TableCell>
                 <Button onClick={() => handleCreateDecaissement("Stock", d.id, d.montant_estime)}>
                   Créer Décaissement
@@ -169,20 +202,26 @@ const DemandesDecaissement: React.FC = () => {
           ))}
 
           {/* Décaissements existants */}
-          {decaissements.map((d) => (
+          {decaissements.map(d => (
             <TableRow key={`dec-${d.id}`}>
               <TableCell>{d.source_service}</TableCell>
               <TableCell>ID Source: {d.source_id}</TableCell>
               <TableCell>{d.total_montant.toLocaleString()}</TableCell>
-              <TableCell>
+              <TableCell><span className={badgeColor(d.statut)}>{d.statut}</span></TableCell>
+              <TableCell className="space-x-2">
                 <Button onClick={() => setSelectedDecaissement(d)}>Voir / Ajouter Dépense</Button>
+                {d.statut === "brouillon" && (
+                  <Button variant="outline" onClick={() => handleEnvoyerCoordo(d.id)}>
+                    Envoyer au Coordonnateur
+                  </Button>
+                )}
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
 
-      {/* Dialog pour ajouter dépense */}
+      {/* Dialog pour gérer les dépenses */}
       <Dialog open={!!selectedDecaissement} onOpenChange={() => setSelectedDecaissement(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -200,7 +239,7 @@ const DemandesDecaissement: React.FC = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {selectedDecaissement.depenses.map((dep) => (
+                  {selectedDecaissement.depenses.map(dep => (
                     <TableRow key={dep.id}>
                       <TableCell>{dep.description}</TableCell>
                       <TableCell>{dep.montant.toLocaleString()}</TableCell>
