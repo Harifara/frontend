@@ -89,12 +89,7 @@ const EmployeProfile = () => {
                   : DEFAULT_USER_ICON
               }
               alt="Profil"
-              className="w-32 h-32 rounded-full object-cover border-4 border-gray-100 shadow"
-              onError={(e) => {
-                const target = e.currentTarget as HTMLImageElement;
-                target.onerror = null; // éviter boucle infinie
-                target.src = DEFAULT_USER_ICON; // fallback
-              }}
+              onError={(e) => { e.currentTarget.src = DEFAULT_USER_ICON; }}
             />
           </div>
 
