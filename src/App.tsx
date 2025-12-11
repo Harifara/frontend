@@ -46,7 +46,7 @@ import PageDemandesAchat from "./pages/stock/PageDemandesAchat";
 
 import DepensePage from "./pages/finance/DepensePage";
 import DemandesDecaissement from "./pages/finance/DemandesDecaissement";
-import ValidationItems from "./pages/coordinator/ValidationItems";
+// import ValidationItems from "./pages/coordinator/ValidationItems";
 
 
 
