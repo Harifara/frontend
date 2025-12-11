@@ -52,6 +52,9 @@ const badgeColor = (status: string) => {
   }
 };
 
+// ------------------
+// Composant
+// ------------------
 const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
   const [demandes, setDemandes] = useState<Demande[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,31 +67,44 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [rhRes, stockRes] = await Promise.all([rhApi.getDemandes(), stockApi.getDemandes()]);
+      const [rhRes, stockRes] = await Promise.all([rhApi.getDemandes(), stockApi.getDemandesAchat()]);
 
+      // RH
       const rhDemandes: Demande[] = (rhRes.results || rhRes).map((d: any) => ({
         id: d.id,
         source: "RH",
         description: d.description,
-        montant: d.montant || 0,
+        montant: d.montant || d.achats?.reduce((sum: number, a: Achat) => sum + (a.montant * a.nombre), 0) || 0,
         status: d.status || "en_attente",
         achats: d.achats || [],
         payements: d.payements || [],
       }));
 
+      // Stock
       const stockDemandes: Demande[] = (stockRes.results || stockRes).map((d: any) => ({
         id: d.id,
         source: "Stock",
         description: d.article?.nom || d.description || "-",
         montant: d.montant_estime || d.montant || 0,
         status: d.statut || "en_attente",
-        achats: d.achats || [],
+        achats: d.achats || [{
+          id: d.id,
+          article: d.article?.nom || "-",
+          montant: d.montant_estime || 0,
+          nombre: d.quantite || 1,
+          statut: d.statut || "en_attente"
+        }],
         payements: d.payements || [],
       }));
 
       setDemandes([...rhDemandes, ...stockDemandes]);
+
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de charger les demandes.", variant: "destructive" });
+      toast({ 
+        title: "Erreur", 
+        description: err.message || "Impossible de charger les demandes.", 
+        variant: "destructive" 
+      });
     } finally {
       setIsLoading(false);
     }
@@ -162,7 +178,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
                   <ul className="ml-4 list-disc">
                     {detailsDemande.achats.map(a => (
                       <li key={a.id}>
-                        {a.article} - {a.nombre} x {a.montant.toLocaleString()} Ar 
+                        {a.article} - {a.nombre} x {a.montant.toLocaleString()} Ar
                         {" "} <span className={badgeColor(a.statut)}>{a.statut}</span>
                       </li>
                     ))}
@@ -176,7 +192,7 @@ const DecaissementsPage: React.FC<{ userId: string }> = ({ userId }) => {
                   <ul className="ml-4 list-disc">
                     {detailsDemande.payements.map(p => (
                       <li key={p.id}>
-                        {p.montant.toLocaleString()} Ar 
+                        {p.montant.toLocaleString()} Ar
                         {" "} <span className={badgeColor(p.status)}>{p.status}</span>
                       </li>
                     ))}
