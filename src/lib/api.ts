@@ -1068,7 +1068,7 @@ export const financeApi = {
   },
 
   // ==========================================
-  // 🔵 DÉPENSE FINALE
+  // 🔵 DÉPENSE FINALE (optionnel)
   // ==========================================
   payerDepenseFinale: async (finalId: string): Promise<any> => {
     const token = await ensureKongToken();
