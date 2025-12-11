@@ -29,7 +29,7 @@ interface Electricite {
 
 interface Contrat {
   id: string;
-  employer_nom?: string;
+  nom_employer?: string;
   salaire?: number;                    // ← ajouté selon ton backend
 }
 
@@ -287,7 +287,6 @@ const Payements = () => {
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-center">Mode</TableHead>
                 <TableHead className="text-center">Location</TableHead>
-                <TableHead className="text-center">Électricité</TableHead>
                 <TableHead className="text-center">Salaire</TableHead>
                 <TableHead className="text-center">Actions</TableHead>
               </TableRow>
@@ -303,14 +302,10 @@ const Payements = () => {
                   </TableCell>
 
                   <TableCell className="text-center">{p.location?.nom ?? p.location?.name ?? "-"}</TableCell>
-                  <TableCell className="text-center">
-                    {p.electricite?.numero_compteur ?? "-"} ({p.electricite?.fournisseur ?? ""})
-                  </TableCell>
-
 
                   <TableCell className="text-center">
                     {p.contrat
-                      ? `${p.contrat.employer_nom ?? p.contrat.nom} - ${p.contrat.salaire?.toLocaleString()} Ar`
+                      ? `${p.contrat.nom_employer ?? p.contrat.nom} - ${p.contrat.salaire?.toLocaleString()} Ar`
                       : "-"}
                   </TableCell>
 
@@ -438,7 +433,7 @@ const Payements = () => {
                   <SelectItem value="null">Aucun</SelectItem>
                   {contrats.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.employer_nom ?? c.nom} — {c.salaire?.toLocaleString()} Ar
+                      {c.nom_employer ?? c.nom} — {c.salaire?.toLocaleString()} Ar
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -486,8 +481,7 @@ const Payements = () => {
       <p><strong>Status :</strong> {editingPayement?.status}</p>
       <p><strong>Mode de paiement :</strong> {editingPayement?.mode_payement?.mode_payement ?? "-"}</p>
       <p><strong>Location :</strong> {editingPayement?.location?.nom ?? editingPayement?.location?.name ?? "-"}</p>
-      <p><strong>Électricité :</strong> {editingPayement?.electricite?.numero_compteur ?? "-"} ({editingPayement?.electricite?.fournisseur ?? ""})</p>
-      <p><strong>Salaire :</strong> {editingPayement?.contrat ? `${editingPayement.contrat.employer_nom} - ${editingPayement.contrat.salaire?.toLocaleString()} Ar` : "-"}</p>
+      <p><strong>Salaire :</strong> {editingPayement?.contrat ? `${editingPayement.contrat.nom_employer} - ${editingPayement.contrat.salaire?.toLocaleString()} Ar` : "-"}</p>
     </div>
 
     <DialogFooter>
