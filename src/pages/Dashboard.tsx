@@ -367,20 +367,22 @@ export default function Dashboard() {
         {/* Pie: congés by status */}
         {(isAdmin || isRH) && (
           <Card className="p-4 bg-white shadow rounded-2xl border">
-            <h3 className="font-semibold mb-3">Répartition congés (par status)</h3>
+            <h3 className="font-semibold mb-3">Répartition des employés (par sexe)</h3>
             <div style={{ width: "100%", height: 220 }} className="flex items-center justify-center">
               <ResponsiveContainer>
                 <PieChart>
                   <Pie
                     data={[
-                      { name: "En attente", value: pendingCongesCount },
-                      { name: "Autres", value: Math.max(congesCount - pendingCongesCount, 0) },
+                      { name: "Masculin", value: employes.filter(e => e.sexe === "M").length },
+                      { name: "Féminin", value: employes.filter(e => e.sexe === "F").length },
+                      { name: "Non renseigné", value: employes.filter(e => !e.sexe).length },
                     ]}
                     dataKey="value"
                     outerRadius={80}
                     label
                   >
                     <Cell fill={CHART_COLORS[0]} />
+                    <Cell fill={CHART_COLORS[1]} />
                     <Cell fill={CHART_COLORS[2]} />
                   </Pie>
                   <Tooltip />
@@ -388,6 +390,7 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </div>
           </Card>
+
         )}
       </div>
 
