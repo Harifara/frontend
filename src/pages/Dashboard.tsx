@@ -18,7 +18,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-// UI (adapte si nécessaire)
+// UI
 import { Card } from "@/components/ui/card";
 
 // charts
@@ -39,7 +39,7 @@ import {
 /* ----- palette ----- */
 const CHART_COLORS = ["#0ea5a4", "#06b6d4", "#f59e0b", "#ef4444", "#6366f1"];
 
-/* ----- helper KPI card ----- */
+/* ----- KPI Card helper ----- */
 const KPICard = ({ Icon, label, value, sub }: any) => (
   <Card className="p-4 bg-white shadow rounded-2xl border hover:shadow-lg transition">
     <div className="flex items-center gap-4">
@@ -56,7 +56,6 @@ const KPICard = ({ Icon, label, value, sub }: any) => (
 const formatDate = (iso?: string) => {
   if (!iso) return "-";
   try {
-    // accepte "2025-12-12T10:00:00Z" ou "2025-12-12"
     return iso.slice(0, 10);
   } catch {
     return iso;
@@ -67,7 +66,6 @@ const formatDate = (iso?: string) => {
 export default function Dashboard() {
   const { user } = useAuth();
 
-  // roles fournis
   const role = user?.role;
   const isAdmin = role === "admin";
   const isRH = role === "responsable_rh";
@@ -75,8 +73,8 @@ export default function Dashboard() {
   const isMagasinier = role === "magasinier";
 
   /* ====== STATES ====== */
-  // RH counts
   const [employeesCount, setEmployeesCount] = useState<number>(0);
+  const [employes, setEmployes] = useState<any[]>([]); // <-- state ajouté pour les filtres sexe
   const [districtsCount, setDistrictsCount] = useState<number>(0);
   const [communesCount, setCommunesCount] = useState<number>(0);
   const [fokontanyCount, setFokontanyCount] = useState<number>(0);
@@ -89,32 +87,17 @@ export default function Dashboard() {
   const [achatsCount, setAchatsCount] = useState<number>(0);
   const [demandesCount, setDemandesCount] = useState<number>(0);
 
-  // lists + charts
   const [recentAffectations, setRecentAffectations] = useState<any[]>([]);
   const [recentConges, setRecentConges] = useState<any[]>([]);
   const [employeeEvolution, setEmployeeEvolution] = useState<any[]>([]);
 
-  // STOCK & FINANCE & COORDO (fictif par défaut)
-  const [stockStats, setStockStats] = useState({
-    articles: 0,
-    demandesAchat: 0,
-    ruptures: 0,
-  });
-  const [financeStats, setFinanceStats] = useState({
-    decaissements: 0,
-    valides: 0,
-    enAttente: 0,
-    rejetes: 0,
-  });
-  const [coordoStats, setCordoStats] = useState({
-    validations: 0,
-    aTraiter: 0,
-  });
+  const [stockStats, setStockStats] = useState({ articles: 0, demandesAchat: 0, ruptures: 0 });
+  const [financeStats, setFinanceStats] = useState({ decaissements: 0, valides: 0, enAttente: 0, rejetes: 0 });
+  const [coordoStats, setCordoStats] = useState({ validations: 0, aTraiter: 0 });
 
-  // small loading flag
   const [loading, setLoading] = useState(true);
 
-  /* ====== normalize helper (page response or raw) ====== */
+  /* ====== helper ====== */
   const normalize = (r: any) => {
     if (!r) return [];
     if (Array.isArray(r)) return r;
@@ -123,7 +106,6 @@ export default function Dashboard() {
     return [];
   };
 
-  /* ====== load all data with sensible fallbacks ====== */
   useEffect(() => {
     loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -144,13 +126,11 @@ export default function Dashboard() {
         payementsRes,
         achatsRes,
         demandesRes,
-        // stock & finance & cordo
         stockArticlesRes,
         stockDemandesAchatRes,
         financeDecaissementsRes,
         cordoValidationsRes,
       ] = await Promise.all([
-        // RH endpoints (may return paginated objects)
         rhApi.getEmployes().catch(() => ({ results: [] })),
         rhApi.getDistricts().catch(() => ({ results: [] })),
         rhApi.getCommunes().catch(() => ({ results: [] })),
@@ -159,56 +139,35 @@ export default function Dashboard() {
         rhApi.getConges().catch(() => ({ results: [] })),
         rhApi.getContrats().catch(() => ({ results: [] })),
         rhApi.getLocations().catch(() => ({ results: [] })),
-        rhApi.getPayements?.().catch(() => ({ results: [] })), // note: getPayements
+        rhApi.getPayements?.().catch(() => ({ results: [] })),
         rhApi.getAchats().catch(() => ({ results: [] })),
         rhApi.getDemandes().catch(() => ({ results: [] })),
-
-        // stockApi
         stockApi.getArticles?.().catch(() => ({ results: [] })),
-
-        // stock demandes d'achat (stock API)
         stockApi.getDemandesAchat?.().catch(() => ({ results: [] })),
-
-        // financeApi
         financeApi.getDecaissements?.().catch(() => ({ results: [] })),
-
-        // cordoApi
         cordoApi.getValidations?.().catch(() => ({ results: [] })),
       ]);
 
-      // normalize
-      const employes = normalize(employesRes);
-      const districts = normalize(districtsRes);
-      const communes = normalize(communesRes);
-      const fokos = normalize(fokosRes);
-      const affects = normalize(affectRes);
+      const emp = normalize(employesRes);
+      setEmployes(emp); // <-- set dans state
+      setEmployeesCount(emp.length);
+      setDistrictsCount(normalize(districtsRes).length);
+      setCommunesCount(normalize(communesRes).length);
+      setFokontanyCount(normalize(fokosRes).length);
+      setAffectationsCount(normalize(affectRes).length);
       const conges = normalize(congesRes);
-      const contrats = normalize(contratsRes);
-      const locations = normalize(locationsRes);
-      const payements = normalize(payementsRes);
-      const achats = normalize(achatsRes);
-      const demandes = normalize(demandesRes);
-
-      // set counts
-      setEmployeesCount(employes.length);
-      setDistrictsCount(districts.length);
-      setCommunesCount(communes.length);
-      setFokontanyCount(fokos.length);
-      setAffectationsCount(affects.length);
       setCongesCount(conges.length);
       setPendingCongesCount(conges.filter((c: any) => (c.status_conge || c.status || "").toString().toLowerCase().includes("attente")).length);
-      setContratsCount(contrats.length);
-      setLocationsCount(locations.length);
-      setPaymentsCount(payements.length);
-      setAchatsCount(achats.length);
-      setDemandesCount(demandes.length);
+      setContratsCount(normalize(contratsRes).length);
+      setLocationsCount(normalize(locationsRes).length);
+      setPaymentsCount(normalize(payementsRes).length);
+      setAchatsCount(normalize(achatsRes).length);
+      setDemandesCount(normalize(demandesRes).length);
 
-      // lists
-      setRecentAffectations(affects.slice(0, 6));
+      setRecentAffectations(normalize(affectRes).slice(0, 6));
       setRecentConges(conges.slice(0, 6));
 
-      // employeeEvolution: make a simple monthly series from total length (fictive but proportional)
-      const total = Math.max(employes.length, 1);
+      const total = Math.max(emp.length, 1);
       setEmployeeEvolution([
         { name: "Jan", employees: Math.round(total * 0.8) },
         { name: "Feb", employees: Math.round(total * 0.85) },
@@ -217,73 +176,52 @@ export default function Dashboard() {
         { name: "May", employees: total },
       ]);
 
-      // Stock & finance & cordo: normalize/fallback
-      const stockArticles = normalize(stockArticlesRes);
-      const stockDemandes = normalize(stockDemandesAchatRes);
-      setStockStats({
-        articles: stockArticles.length || 48,
-        demandesAchat: stockDemandes.length || 12,
-        ruptures: 5,
-      });
+      setStockStats({ articles: normalize(stockArticlesRes).length || 48, demandesAchat: normalize(stockDemandesAchatRes).length || 12, ruptures: 5 });
 
       const decaissements = normalize(financeDecaissementsRes);
       setFinanceStats({
         decaissements: decaissements.length || 14,
-        valides: decaissements.filter((d: any) => (d.status || "").toString().toLowerCase() === "valide").length || 8,
-        enAttente: decaissements.filter((d: any) => ((d.status || "").toString().toLowerCase().includes("attente") || (d.status || "").toString().toLowerCase().includes("non_envoy"))).length || 4,
-        rejetes: decaissements.filter((d: any) => (d.status || "").toString().toLowerCase() === "rejete").length || 2,
+        valides: decaissements.filter((d: any) => (d.status || "").toLowerCase() === "valide").length || 8,
+        enAttente: decaissements.filter((d: any) => ((d.status || "").toLowerCase().includes("attente") || (d.status || "").toLowerCase().includes("non_envoy"))).length || 4,
+        rejetes: decaissements.filter((d: any) => (d.status || "").toLowerCase() === "rejete").length || 2,
       });
 
       const validations = normalize(cordoValidationsRes);
       setCordoStats({
         validations: validations.length || 7,
-        aTraiter: validations.filter((v: any) => (v.decision || "").toString().toLowerCase() === "non_traite").length || 2,
+        aTraiter: validations.filter((v: any) => (v.decision || "").toLowerCase() === "non_traite").length || 2,
       });
     } catch (err) {
       console.error("Erreur loadAll :", err);
-      // fallback to sensible defaults when any unexpected error
-      setEmployeesCount(102);
-      setDistrictsCount(12);
-      setCommunesCount(34);
-      setFokontanyCount(120);
-      setAffectationsCount(32);
-      setCongesCount(45);
-      setPendingCongesCount(8);
-      setContratsCount(95);
-      setLocationsCount(8);
-      setPaymentsCount(12);
-      setAchatsCount(18);
-      setDemandesCount(11);
-
+      setEmployes([]);
+      setEmployeesCount(0);
+      setDistrictsCount(0);
+      setCommunesCount(0);
+      setFokontanyCount(0);
+      setAffectationsCount(0);
+      setCongesCount(0);
+      setPendingCongesCount(0);
+      setContratsCount(0);
+      setLocationsCount(0);
+      setPaymentsCount(0);
+      setAchatsCount(0);
+      setDemandesCount(0);
+      setRecentAffectations([]);
+      setRecentConges([]);
+      setEmployeeEvolution([]);
       setStockStats({ articles: 48, demandesAchat: 12, ruptures: 5 });
       setFinanceStats({ decaissements: 14, valides: 8, enAttente: 4, rejetes: 2 });
       setCordoStats({ validations: 7, aTraiter: 2 });
-
-      setEmployeeEvolution([
-        { name: "Jan", employees: 85 },
-        { name: "Feb", employees: 88 },
-        { name: "Mar", employees: 92 },
-        { name: "Apr", employees: 95 },
-        { name: "May", employees: 98 },
-      ]);
-      setRecentAffectations([
-        { employer: { full_name: "Rakoto Jean" }, magasin: { nom: "Magasin A" }, created_at: "2025-12-12T10:00:00Z" },
-        { employer: { full_name: "Rasoa Marie" }, magasin: { nom: "Magasin B" }, created_at: "2025-12-10T10:00:00Z" },
-      ]);
-      setRecentConges([
-        { employer: { full_name: "Nirina Soa" }, nb_jours: 4, status: "en_attente", created_at: "2025-12-11T12:00:00Z" },
-      ]);
     } finally {
       setLoading(false);
     }
   };
 
-  /* ====== UI ====== */
   return (
     <div className="p-6 flex-1 bg-gray-50 min-h-screen">
       <h1 className="text-2xl font-bold text-gray-800 mb-4">Bonjour, {user?.full_name || user?.username || "Utilisateur"}</h1>
 
-      {/* role badges */}
+      {/* Role badges */}
       <div className="flex items-center gap-3 mb-6">
         <div className="px-3 py-1 rounded bg-slate-200 text-sm">{role || "rôle inconnu"}</div>
         {isAdmin && <div className="px-3 py-1 rounded bg-amber-100 text-sm">Admin</div>}
@@ -292,9 +230,8 @@ export default function Dashboard() {
         {isMagasinier && <div className="px-3 py-1 rounded bg-indigo-100 text-sm">Magasinier</div>}
       </div>
 
-      {/* KPI grid (show relevant KPIs) */}
+      {/* KPI grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {/* RH-visible */}
         {(isAdmin || isRH) && (
           <>
             <KPICard Icon={Users} label="Employés" value={employeesCount} sub={`${employeesCount} total`} />
@@ -303,24 +240,18 @@ export default function Dashboard() {
             <KPICard Icon={FileText} label="Contrats" value={contratsCount} sub="Contrats enregistrés" />
           </>
         )}
-
-        {/* Stock-visible */}
         {(isAdmin || isStock || isMagasinier) && (
           <>
             <KPICard Icon={ShoppingCart} label="Articles en stock" value={stockStats.articles} sub={`${stockStats.ruptures} en rupture`} />
             <KPICard Icon={Map} label="Demandes d'achat" value={stockStats.demandesAchat} sub="En cours / à valider" />
           </>
         )}
-
-        {/* Finance-visible */}
         {(isAdmin || role === "responsable_finance" || role === "finance") && (
           <>
             <KPICard Icon={CreditCard} label="Décaissements" value={financeStats.decaissements} sub={`${financeStats.valides} validés`} />
             <KPICard Icon={Building} label="Paiements" value={paymentsCount} sub="Transactions" />
           </>
         )}
-
-        {/* Cordo-visible */}
         {(isAdmin || role === "coordinateur" || role === "coordo") && (
           <>
             <KPICard Icon={AlertCircle} label="Validations Coordo" value={coordoStats.validations} sub={`${coordoStats.aTraiter} à traiter`} />
@@ -328,9 +259,8 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Charts and lists */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Employees evolution (RH) */}
         {(isAdmin || isRH) && (
           <Card className="p-4 bg-white shadow rounded-2xl border">
             <h3 className="font-semibold mb-3">Évolution des employés (fictif)</h3>
@@ -347,7 +277,6 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Stock chart */}
         {(isAdmin || isStock || isMagasinier) && (
           <Card className="p-4 bg-white shadow rounded-2xl border">
             <h3 className="font-semibold mb-3">Achats mensuels (fictif)</h3>
@@ -364,7 +293,6 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Pie: congés by status */}
         {(isAdmin || isRH) && (
           <Card className="p-4 bg-white shadow rounded-2xl border">
             <h3 className="font-semibold mb-3">Répartition des employés (par sexe)</h3>
@@ -390,13 +318,11 @@ export default function Dashboard() {
               </ResponsiveContainer>
             </div>
           </Card>
-
         )}
       </div>
 
       {/* Recent tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        {/* Recent affectations */}
         <Card className="p-4 bg-white shadow rounded-2xl border">
           <h3 className="font-semibold mb-3">Dernières affectations</h3>
           <table className="w-full text-sm">
@@ -423,7 +349,6 @@ export default function Dashboard() {
           </table>
         </Card>
 
-        {/* Recent congés */}
         <Card className="p-4 bg-white shadow rounded-2xl border">
           <h3 className="font-semibold mb-3">Congés récents</h3>
           <table className="w-full text-sm">
@@ -451,7 +376,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* footer quick stats */}
+      {/* footer stats */}
       <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="rounded-xl border border-border bg-white p-4 text-center">
           <div className="text-sm text-gray-500">Districts</div>
