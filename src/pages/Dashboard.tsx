@@ -2,18 +2,16 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { rhApi } from "@/lib/api";
 
-// Icons
+// Icons (mis à jour pour correspondre aux KPIs de l'image RH)
 import {
-  Users,
-  ClipboardList,
-  Map,
-  MapPin,
-  Home,
-  Building,
-  FileText,
-  ShoppingCart,
-  CreditCard,
-  ListChecks,
+  Users, // Effectif
+  ArrowRightCircle, // Démissions (ou départs)
+  User, // Hommes/Femmes
+  Clock, // Âge Moyen
+  Briefcase, // Contrats
+  MapPin, // Affectations
+  ClipboardList, // Congés
+  ListChecks, // Demandes
 } from "lucide-react";
 
 // UI Components
@@ -38,7 +36,31 @@ import {
 } from "recharts";
 
 // ======================================================
-//   DASHBOARD RH (OPTIMISÉ + GRAPHIQUES SUPPLÉMENTAIRES)
+//   COULEURS INSPIRÉES DU DASHBOARD EXCEL (Orange/Gris)
+// ======================================================
+const PRIMARY_COLOR = "#f48c06"; // Orange terreux pour les barres/lignes
+const SECONDARY_COLOR = "#333333"; // Gris foncé pour le texte/fond
+
+// ======================================================
+//   NOUVEAU COMPOSANT KPI STYLE EXCEL
+// ======================================================
+// Note : Le style des KPI dans l'image est très spécifique (fond gris, icône/valeur orange).
+const KPICardExcel = ({ icon: Icon, label, value, color = PRIMARY_COLOR }: any) => (
+  <Card className="flex flex-col items-center justify-center p-4 bg-gray-200 border-2 border-gray-300 rounded-lg shadow-md hover:shadow-lg transition duration-200">
+    {/* Étiquette / Titre du KPI (en haut, en gras comme dans l'image) */}
+    <p className="text-sm font-bold uppercase text-gray-700 mb-2">{label}</p>
+    <div className="flex flex-col items-center">
+      {/* Icône et Valeur (Couleur Orange) */}
+      <Icon className="w-8 h-8" style={{ color: color }} />
+      <p className="text-3xl font-extrabold mt-2" style={{ color: color }}>
+        {value}
+      </p>
+    </div>
+  </Card>
+);
+
+// ======================================================
+//   DASHBOARD RH (ADAPTÉ AU STYLE DE L'IMAGE)
 // ======================================================
 export default function Dashboard() {
   const { user } = useAuth();
@@ -46,7 +68,7 @@ export default function Dashboard() {
   const isAdmin = role === "admin";
   const isRH = role === "responsable_rh";
 
-  // KPI STATES
+  // ... (Logique de chargement des données et états inchangés) ...
   const [stats, setStats] = useState({
     employees: 0,
     affectations: 0,
@@ -62,7 +84,6 @@ export default function Dashboard() {
     demandes: 0,
   });
 
-  // Lists
   const [recentAffectations, setRecentAffectations] = useState([]);
   const [recentConges, setRecentConges] = useState([]);
   const [employeeEvolution, setEmployeeEvolution] = useState([]);
@@ -70,9 +91,6 @@ export default function Dashboard() {
   const [affectationsStats, setAffectationsStats] = useState([]);
   const [achatsStats, setAchatsStats] = useState([]);
 
-  // ======================================================
-  //   LOADING DASHBOARD DATA
-  // ======================================================
   useEffect(() => {
     loadDashboard();
   }, []);
@@ -85,6 +103,7 @@ export default function Dashboard() {
         conges,
         contrats,
         districts,
+        // ... (autres API calls)
         communes,
         fokos,
         locations,
@@ -109,6 +128,30 @@ export default function Dashboard() {
       const aff = affectations.results || affectations;
       const co = conges.results || conges;
 
+      // Logique pour déterminer la proportion Hommes/Femmes pour l'affichage de l'image
+      const femmesCount = emp.filter((e: any) => e.gender === "F").length;
+      const hommesCount = emp.filter((e: any) => e.gender === "M").length;
+      const totalEmp = emp.length || 1; // Évite la division par zéro
+
+      // Calculez l'âge moyen (nécessite l'implémentation de la date de naissance dans l'API/modèle)
+      const calculateAverageAge = (data: any) => {
+        if (data.length === 0) return 0;
+        let totalAge = 0;
+        const now = new Date();
+        data.forEach((e: any) => {
+          if (e.date_naissance) {
+            const birthDate = new Date(e.date_naissance);
+            let age = now.getFullYear() - birthDate.getFullYear();
+            const m = now.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && now.getDate() < birthDate.getDate())) {
+              age--;
+            }
+            totalAge += age;
+          }
+        });
+        return Math.round(totalAge / data.length);
+      };
+
       setStats({
         employees: emp.length,
         affectations: aff.length,
@@ -122,9 +165,14 @@ export default function Dashboard() {
         payments: (payments.results || payments).length,
         achats: (achats.results || achats).length,
         demandes: (demandes.results || demandes).length,
+        // Nouveaux stats pour les KPI principaux de l'image
+        femalePercentage: Math.round((femmesCount / totalEmp) * 100),
+        malePercentage: Math.round((hommesCount / totalEmp) * 100),
+        resignations: Math.floor(emp.length * 0.1), // Exemple, à remplacer par la vraie logique
+        avgAge: calculateAverageAge(emp),
       });
 
-      // Evolution fictive
+      // ... (Logique des graphiques inchangée) ...
       setEmployeeEvolution([
         { name: "Jan", employees: Math.round(emp.length * 0.8) },
         { name: "Feb", employees: Math.round(emp.length * 0.88) },
@@ -136,7 +184,6 @@ export default function Dashboard() {
       setRecentAffectations(aff.slice(0, 5));
       setRecentConges(co.slice(0, 5));
 
-      // =================== Congés stats PieChart ===================
       const congesByStatus: any = {};
       co.forEach((c: any) => {
         congesByStatus[c.status] = (congesByStatus[c.status] || 0) + 1;
@@ -145,7 +192,6 @@ export default function Dashboard() {
         Object.keys(congesByStatus).map((key) => ({ name: key, value: congesByStatus[key] }))
       );
 
-      // =================== Affectations stats BarChart ===================
       const affByMagasin: any = {};
       aff.forEach((a: any) => {
         const name = a.magasin?.nom || "Inconnu";
@@ -155,10 +201,9 @@ export default function Dashboard() {
         Object.keys(affByMagasin).map((key) => ({ magasin: key, affectations: affByMagasin[key] }))
       );
 
-      // =================== Achats stats AreaChart ===================
       const achatsByMonth: any = {};
       (achats.results || achats).forEach((a: any) => {
-        const month = a.created_at?.slice(0, 7) || "Inconnu"; // yyyy-mm
+        const month = a.created_at?.slice(0, 7) || "Inconnu";
         achatsByMonth[month] = (achatsByMonth[month] || 0) + a.total;
       });
       setAchatsStats(
@@ -171,66 +216,112 @@ export default function Dashboard() {
     }
   };
 
-  // ======================================================
-  //   COMPONENT KPI
-  // ======================================================
-  const KPICard = ({ icon: Icon, label, value, color }: any) => (
-    <Card className="p-4 bg-white shadow hover:shadow-xl rounded-2xl transition">
-      <div className="flex items-center gap-3">
-        <Icon className={`w-8 h-8 ${color}`} />
-        <div>
-          <p className="text-lg font-semibold">{value}</p>
-          <p className="text-sm text-gray-600">{label}</p>
-        </div>
-      </div>
+  const ChartCard = ({ title, children }: any) => (
+    <Card className="p-4 bg-white shadow rounded-lg border">
+      <h2 className="text-md font-semibold mb-4 text-center uppercase" style={{ color: SECONDARY_COLOR }}>
+        {title}
+      </h2>
+      {children}
     </Card>
   );
-
-  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
   return (
     <div className="p-6 flex-1 bg-gray-100 min-h-screen">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">
-        Bonjour, {user?.full_name || user?.username}
+        {/* Titre Principal comme dans l'image */}
+        Tableau de Bord Ressources Humaines
       </h1>
 
-      {/* ======================= KPI GRID ======================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        <KPICard icon={Users} label="Employés" value={stats.employees} color="text-green-700" />
-        <KPICard icon={Map} label="Districts" value={stats.districts} color="text-blue-600" />
-        <KPICard icon={MapPin} label="Communes" value={stats.communes} color="text-purple-600" />
-        <KPICard icon={Home} label="Fokontany" value={stats.fokontany} color="text-orange-600" />
-
-        <KPICard icon={ListChecks} label="Affectations" value={stats.affectations} color="text-indigo-600" />
-        <KPICard icon={ClipboardList} label="Congés en attente" value={stats.pendingConges} color="text-red-600" />
-        <KPICard icon={FileText} label="Contrats" value={stats.contrats} color="text-cyan-600" />
-
-        <KPICard icon={Building} label="Locations" value={stats.locations} color="text-yellow-600" />
-        <KPICard icon={CreditCard} label="Paiements" value={stats.payments} color="text-lime-600" />
-        <KPICard icon={ShoppingCart} label="Achats" value={stats.achats} color="text-sky-600" />
-        <KPICard icon={ClipboardList} label="Demandes RH" value={stats.demandes} color="text-rose-600" />
+      {/* ======================= KPI GRID - RANGÉE SUPÉRIEURE ======================= */}
+      {/* 5 KPIs principaux de l'image */}
+      <div className="grid grid-cols-5 gap-4 mb-8">
+        <KPICardExcel icon={Users} label="Effectif" value={stats.employees} />
+        {/* L'icône des démissions peut être ArrowRightCircle ou une autre icône de départ si disponible */}
+        <KPICardExcel icon={ArrowRightCircle} label="Démissions" value={stats.resignations} />
+        {/* Note: Dans un vrai projet, il faudrait calculer ces pourcentages */}
+        <KPICardExcel icon={User} label="Femmes" value={`${stats.femalePercentage}%`} />
+        <KPICardExcel icon={User} label="Hommes" value={`${stats.malePercentage}%`} />
+        {/* L'icône de l'âge moyen peut être Clock ou Users pour l'effectif */}
+        <KPICardExcel icon={Clock} label="Âge Moyen" value={stats.avgAge} />
       </div>
 
-      {/* ======================= GRAPHIQUES ======================= */}
+      {/* ======================= GRAPHIQUES - RANGÉE CENTRALE ======================= */}
+      {/* 3 Graphiques principaux de l'image: Effectif (Ligne), Tranches d'âge (Barres), Ancienneté (Barres) */}
       {(isAdmin || isRH) && (
-        <>
-          {/* Employee Evolution */}
-          <Card className="p-6 bg-white shadow rounded-2xl border mb-8">
-            <h2 className="text-lg font-semibold mb-4">Évolution des employés</h2>
-            <ResponsiveContainer width="100%" height={260}>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-8">
+
+          {/* 1. Évolution des employés (Effectif - Ligne) */}
+          <ChartCard title="Effectif">
+            <ResponsiveContainer width="100%" height={200}>
               <LineChart data={employeeEvolution}>
-                <XAxis dataKey="name" stroke="#666" />
-                <YAxis stroke="#666" />
+                <XAxis dataKey="name" stroke={SECONDARY_COLOR} />
+                <YAxis stroke={SECONDARY_COLOR} />
                 <Tooltip />
-                <Line type="monotone" dataKey="employees" stroke="#007b83" strokeWidth={2} />
+                {/* Ligne de la couleur principale */}
+                <Line type="monotone" dataKey="employees" stroke={PRIMARY_COLOR} strokeWidth={2} />
               </LineChart>
             </ResponsiveContainer>
-          </Card>
+          </ChartCard>
 
-          {/* Congés PieChart */}
-          <Card className="p-6 bg-white shadow rounded-2xl border mb-8">
-            <h2 className="text-lg font-semibold mb-4">Répartition des congés</h2>
-            <ResponsiveContainer width="100%" height={260}>
+          {/* 2. Tranches d'Âges (BarChart fictif) */}
+          <ChartCard title="Tranche d'Âges">
+            <ResponsiveContainer width="100%" height={200}>
+              {/* Utilisation de BarChart pour la Tranche d'âges */}
+              <BarChart data={[
+                { age: "18-25", count: 15 },
+                { age: "26-35", count: 35 },
+                { age: "36-45", count: 42 },
+                { age: "46-55", count: 20 },
+                { age: "55+", count: 8 },
+              ]}>
+                <XAxis dataKey="age" stroke={SECONDARY_COLOR} />
+                <YAxis stroke={SECONDARY_COLOR} />
+                <Tooltip />
+                {/* Barres de la couleur principale */}
+                <Bar dataKey="count" fill={PRIMARY_COLOR} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+
+          {/* 3. Ancienneté (BarChart fictif) */}
+          <ChartCard title="Ancienneté">
+            <ResponsiveContainer width="100%" height={200}>
+              {/* Utilisation de BarChart pour l'Ancienneté */}
+              <BarChart data={[
+                { anciennete: "< 1 an", count: 30 },
+                { anciennete: "1-3 ans", count: 50 },
+                { anciennete: "4-7 ans", count: 25 },
+                { anciennete: "8+ ans", count: 10 },
+              ]}>
+                <XAxis dataKey="anciennete" stroke={SECONDARY_COLOR} />
+                <YAxis stroke={SECONDARY_COLOR} />
+                <Tooltip />
+                <Bar dataKey="count" fill={PRIMARY_COLOR} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </div>
+      )}
+
+      {/* ======================= ÉLÉMENTS SECONDAIRES ET LISTES ======================= */}
+      {/* Les éléments de l'image (Top Salaires, Postes, Filtres) nécessitent une structure de grille plus complexe */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        
+        {/* Colonne 1: Graphiques supplémentaires (Achats, Congés, Affectations) */}
+        <div className="space-y-4">
+          <ChartCard title="Achats Mensuels">
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={achatsStats}>
+                <XAxis dataKey="month" stroke={SECONDARY_COLOR} />
+                <YAxis stroke={SECONDARY_COLOR} />
+                <Tooltip />
+                <Area type="monotone" dataKey="total" stroke={PRIMARY_COLOR} fill={PRIMARY_COLOR} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartCard>
+          
+          <ChartCard title="Répartition des congés">
+            <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie data={congesStats} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
                   {congesStats.map((entry, index) => (
@@ -240,73 +331,77 @@ export default function Dashboard() {
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
+          </ChartCard>
+        </div>
+
+        {/* Colonne 2: TOP 5 SALAIRES + POSTES (Liste statique pour l'exemple) */}
+        <div className="space-y-4">
+          <Card className="p-4 bg-white shadow rounded-lg border">
+            <h3 className="text-md font-semibold mb-3 uppercase text-center" style={{ color: PRIMARY_COLOR }}>TOP 5 PLUS HAUT SALAIRE</h3>
+            <ul className="text-sm space-y-1">
+              <li className="flex justify-between border-b py-1"><span>AGENT 1</span><span className="font-bold">90 000,00</span></li>
+              <li className="flex justify-between border-b py-1"><span>AGENT 2</span><span className="font-bold">75 000,00</span></li>
+              <li className="flex justify-between border-b py-1"><span>AGENT 3</span><span className="font-bold">60 000,00</span></li>
+            </ul>
+          </Card>
+          <Card className="p-4 bg-white shadow rounded-lg border">
+            <h3 className="text-md font-semibold mb-3 uppercase text-center" style={{ color: PRIMARY_COLOR }}>TOP 5 PLUS BAS SALAIRE</h3>
+            <ul className="text-sm space-y-1">
+              <li className="flex justify-between border-b py-1"><span>AGENT X</span><span className="font-bold">10 500,00</span></li>
+              <li className="flex justify-between border-b py-1"><span>AGENT Y</span><span className="font-bold">11 500,00</span></li>
+              <li className="flex justify-between border-b py-1"><span>AGENT Z</span><span className="font-bold">12 500,00</span></li>
+            </ul>
+          </Card>
+          <Card className="p-4 bg-white shadow rounded-lg border">
+            <h3 className="text-md font-semibold mb-3 uppercase text-center" style={{ color: SECONDARY_COLOR }}>Poste</h3>
+            <ul className="text-sm space-y-1">
+              <li>Commercial (25)</li>
+              <li>Comptable (10)</li>
+              <li>Agent de Terrain (50)</li>
+            </ul>
+          </Card>
+        </div>
+        
+        {/* Colonne 3: Panneau de Filtres (Slicers) + Affectations/Congés */}
+        <div className="space-y-4">
+          {/* Simulation des Filtres/Slicers (peut être remplacé par un composant Slicer réel) */}
+          <Card className="p-4 bg-gray-300 shadow rounded-lg border">
+            <h3 className="text-md font-bold mb-3 uppercase">Filtres</h3>
+            <p className="text-sm font-semibold mb-1">Date d'embauche:</p>
+            <div className="grid grid-cols-2 text-xs gap-1">
+              <span className="bg-white p-1 rounded border border-gray-400">2023</span>
+              <span className="bg-white p-1 rounded border border-gray-400">2024</span>
+              <span className="bg-white p-1 rounded border border-gray-400">2025</span>
+              {/* ... autres années/filtres ... */}
+            </div>
+            <p className="text-sm font-semibold mt-3 mb-1">Direction/Sexe/Poste:</p>
+            {/* ... autres filtres ... */}
           </Card>
 
-          {/* Affectations BarChart */}
-          <Card className="p-6 bg-white shadow rounded-2xl border mb-8">
-            <h2 className="text-lg font-semibold mb-4">Affectations par magasin</h2>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={affectationsStats}>
-                <XAxis dataKey="magasin" stroke="#666" />
-                <YAxis stroke="#666" />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="affectations" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-
-          {/* Achats AreaChart */}
-          <Card className="p-6 bg-white shadow rounded-2xl border mb-8">
-            <h2 className="text-lg font-semibold mb-4">Achats mensuels</h2>
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={achatsStats}>
-                <XAxis dataKey="month" stroke="#666" />
-                <YAxis stroke="#666" />
-                <Tooltip />
-                <Area type="monotone" dataKey="total" stroke="#82ca9d" fill="#82ca9d" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </Card>
-        </>
-      )}
-
-      {/* ======================= TABLEAU AFFECTATIONS + CONGÉS ======================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* AFFECTATIONS */}
-        <Card className="p-4 bg-white shadow rounded-2xl border">
-          <h3 className="text-md font-semibold mb-3">Dernières affectations</h3>
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="py-2 text-left">Employé</th>
-                <th className="text-left">Magasin</th>
-                <th className="text-left">Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentAffectations.map((item: any, idx) => (
-                <tr key={idx} className="border-b">
-                  <td className="py-2">{item?.employer?.full_name}</td>
-                  <td>{item?.magasin?.nom}</td>
-                  <td>{item?.created_at?.slice(0, 10)}</td>
+          {/* Tableau des Affectations récentes */}
+          <Card className="p-4 bg-white shadow rounded-lg border">
+            <h3 className="text-md font-semibold mb-3">Dernières affectations</h3>
+            <table className="w-full text-sm">
+              {/* ... (tableau d'affectations existant) ... */}
+              <thead>
+                <tr className="border-b">
+                  <th className="py-2 text-left">Employé</th>
+                  <th className="text-left">Magasin</th>
+                  <th className="text-left">Date</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-
-        {/* CONGÉS */}
-        <Card className="p-4 bg-white shadow rounded-2xl border">
-          <h3 className="text-md font-semibold mb-3">Congés récents</h3>
-          <ul className="text-sm space-y-1">
-            {recentConges.map((c: any, idx) => (
-              <li key={idx}>
-                {c?.employer?.full_name} — {c?.nb_jours} jours
-              </li>
-            ))}
-          </ul>
-        </Card>
+              </thead>
+              <tbody>
+                {recentAffectations.map((item: any, idx) => (
+                  <tr key={idx} className="border-b">
+                    <td className="py-2">{item?.employer?.full_name}</td>
+                    <td>{item?.magasin?.nom}</td>
+                    <td>{item?.created_at?.slice(0, 10)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        </div>
       </div>
     </div>
   );
