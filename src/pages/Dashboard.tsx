@@ -166,7 +166,7 @@ export default function Dashboard() {
             value={stats.fokontany}
             icon={<MapPin className="h-6 w-6" />}
             variant="warning"
-            delay={550}yyyy
+            delay={550}
           />
         </div>
 
