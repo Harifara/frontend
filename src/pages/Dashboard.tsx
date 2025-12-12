@@ -1,3 +1,4 @@
+// src/pages/Dashboard.tsx
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { rhApi, stockApi, financeApi, cordoApi } from "@/lib/api";
@@ -19,7 +20,6 @@ import {
 
 // UI (adapte si nécessaire)
 import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 
 // charts
 import {
@@ -36,13 +36,6 @@ import {
   Cell,
 } from "recharts";
 
-/**
- * Dashboard RH / STOCK / FINANCE / COORDO
- * - Affiche différentes sections selon le rôle de l'utilisateur
- * - Charge les données (rhApi/stockApi/financeApi/cordoApi)
- * - Tolérance : si l'API échoue, on affiche des données fictives
- */
-
 /* ----- palette ----- */
 const CHART_COLORS = ["#0ea5a4", "#06b6d4", "#f59e0b", "#ef4444", "#6366f1"];
 
@@ -53,12 +46,22 @@ const KPICard = ({ Icon, label, value, sub }: any) => (
       <Icon className="w-8 h-8 text-slate-700" />
       <div>
         <div className="text-xl font-semibold">{value}</div>
-        {sub && <div className="text-sm text-gray-500">{sub}</div>}
-        {!sub && <div className="text-sm text-gray-500">{label}</div>}
+        {sub ? <div className="text-sm text-gray-500">{sub}</div> : <div className="text-sm text-gray-500">{label}</div>}
       </div>
     </div>
   </Card>
 );
+
+/* ----- format helper ----- */
+const formatDate = (iso?: string) => {
+  if (!iso) return "-";
+  try {
+    // accepte "2025-12-12T10:00:00Z" ou "2025-12-12"
+    return iso.slice(0, 10);
+  } catch {
+    return iso;
+  }
+};
 
 /* ----- main component ----- */
 export default function Dashboard() {
@@ -72,7 +75,7 @@ export default function Dashboard() {
   const isMagasinier = role === "magasinier";
 
   /* ====== STATES ====== */
-  // RH
+  // RH counts
   const [employeesCount, setEmployeesCount] = useState<number>(0);
   const [districtsCount, setDistrictsCount] = useState<number>(0);
   const [communesCount, setCommunesCount] = useState<number>(0);
@@ -111,6 +114,15 @@ export default function Dashboard() {
   // small loading flag
   const [loading, setLoading] = useState(true);
 
+  /* ====== normalize helper (page response or raw) ====== */
+  const normalize = (r: any) => {
+    if (!r) return [];
+    if (Array.isArray(r)) return r;
+    if (r.results && Array.isArray(r.results)) return r.results;
+    if (r.data && Array.isArray(r.data)) return r.data;
+    return [];
+  };
+
   /* ====== load all data with sensible fallbacks ====== */
   useEffect(() => {
     loadAll();
@@ -119,9 +131,6 @@ export default function Dashboard() {
 
   const loadAll = async () => {
     setLoading(true);
-
-    // We'll try to load RH + Stock + Finance + Cordonator data in parallel.
-    // If an API call fail, fallback to simple fictive data.
     try {
       const [
         employesRes,
@@ -145,17 +154,19 @@ export default function Dashboard() {
         rhApi.getEmployes().catch(() => ({ results: [] })),
         rhApi.getDistricts().catch(() => ({ results: [] })),
         rhApi.getCommunes().catch(() => ({ results: [] })),
-        rhApi.getFokontanys().catch(() => ({ results: [] })),
+        rhApi.getFokontanys?.().catch(() => ({ results: [] })),
         rhApi.getAffectations().catch(() => ({ results: [] })),
         rhApi.getConges().catch(() => ({ results: [] })),
         rhApi.getContrats().catch(() => ({ results: [] })),
         rhApi.getLocations().catch(() => ({ results: [] })),
-        rhApi.getPayements().catch(() => ({ results: [] })),
+        rhApi.getPayements?.().catch(() => ({ results: [] })), // note: getPayements
         rhApi.getAchats().catch(() => ({ results: [] })),
         rhApi.getDemandes().catch(() => ({ results: [] })),
 
         // stockApi
         stockApi.getArticles?.().catch(() => ({ results: [] })),
+
+        // stock demandes d'achat (stock API)
         stockApi.getDemandesAchat?.().catch(() => ({ results: [] })),
 
         // financeApi
@@ -165,17 +176,7 @@ export default function Dashboard() {
         cordoApi.getValidations?.().catch(() => ({ results: [] })),
       ]);
 
-      // helpers to normalize paginated or array responses
-      const normalize = (r: any) => {
-        if (!r) return [];
-        if (Array.isArray(r)) return r;
-        if (r.results && Array.isArray(r.results)) return r.results;
-        // in case API returns {data: [...]}
-        if (r.data && Array.isArray(r.data)) return r.data;
-        return [];
-      };
-
-      // RH normalizations
+      // normalize
       const employes = normalize(employesRes);
       const districts = normalize(districtsRes);
       const communes = normalize(communesRes);
@@ -195,7 +196,7 @@ export default function Dashboard() {
       setFokontanyCount(fokos.length);
       setAffectationsCount(affects.length);
       setCongesCount(conges.length);
-      setPendingCongesCount(conges.filter((c: any) => c.status === "en_attente").length);
+      setPendingCongesCount(conges.filter((c: any) => (c.status_conge || c.status || "").toString().toLowerCase().includes("attente")).length);
       setContratsCount(contrats.length);
       setLocationsCount(locations.length);
       setPaymentsCount(payements.length);
@@ -228,15 +229,15 @@ export default function Dashboard() {
       const decaissements = normalize(financeDecaissementsRes);
       setFinanceStats({
         decaissements: decaissements.length || 14,
-        valides: decaissements.filter((d: any) => d.status === "valide").length || 8,
-        enAttente: decaissements.filter((d: any) => d.status === "non_envoyee" || d.status === "en_attente").length || 4,
-        rejetes: decaissements.filter((d: any) => d.status === "rejete").length || 2,
+        valides: decaissements.filter((d: any) => (d.status || "").toString().toLowerCase() === "valide").length || 8,
+        enAttente: decaissements.filter((d: any) => ((d.status || "").toString().toLowerCase().includes("attente") || (d.status || "").toString().toLowerCase().includes("non_envoy"))).length || 4,
+        rejetes: decaissements.filter((d: any) => (d.status || "").toString().toLowerCase() === "rejete").length || 2,
       });
 
       const validations = normalize(cordoValidationsRes);
       setCordoStats({
         validations: validations.length || 7,
-        aTraiter: validations.filter((v: any) => v.decision === "non_traite").length || 2,
+        aTraiter: validations.filter((v: any) => (v.decision || "").toString().toLowerCase() === "non_traite").length || 2,
       });
     } catch (err) {
       console.error("Erreur loadAll :", err);
@@ -274,16 +275,6 @@ export default function Dashboard() {
       ]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  /* ====== small formatters ====== */
-  const formatDate = (iso?: string) => {
-    if (!iso) return "-";
-    try {
-      return iso.slice(0, 10);
-    } catch {
-      return iso;
     }
   };
 
@@ -362,9 +353,7 @@ export default function Dashboard() {
             <h3 className="font-semibold mb-3">Achats mensuels (fictif)</h3>
             <div style={{ width: "100%", height: 220 }}>
               <ResponsiveContainer>
-                <BarChart data={[
-                  { name: "Jan", value: 22 }, { name: "Feb", value: 44 }, { name: "Mar", value: 33 },
-                ]}>
+                <BarChart data={[{ name: "Jan", value: 22 }, { name: "Feb", value: 44 }, { name: "Mar", value: 33 }]}>
                   <XAxis dataKey="name" stroke="#4b5563" />
                   <YAxis stroke="#4b5563" />
                   <Tooltip />
@@ -389,7 +378,6 @@ export default function Dashboard() {
                     ]}
                     dataKey="value"
                     outerRadius={80}
-                    fill="#8884d8"
                     label
                   >
                     <Cell fill={CHART_COLORS[0]} />
