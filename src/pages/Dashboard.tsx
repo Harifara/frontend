@@ -30,7 +30,7 @@ import {
 } from "recharts";
 
 // ======================================================
-//   DASHBOARD RH
+//   DASHBOARD RH (OPTIMISÉ)
 // ======================================================
 export default function Dashboard() {
   const { user } = useAuth();
@@ -55,12 +55,12 @@ export default function Dashboard() {
   });
 
   // Lists
-  const [recentAffectations, setRecentAffectations] = useState<any[]>([]);
-  const [recentConges, setRecentConges] = useState<any[]>([]);
-  const [employeeEvolution, setEmployeeEvolution] = useState<any[]>([]);
+  const [recentAffectations, setRecentAffectations] = useState([]);
+  const [recentConges, setRecentConges] = useState([]);
+  const [employeeEvolution, setEmployeeEvolution] = useState([]);
 
   // ======================================================
-  //   LOAD DASHBOARD DATA
+  //   LOADING DASHBOARD DATA (ULTRA OPTIMISÉ)
   // ======================================================
   useEffect(() => {
     loadDashboard();
@@ -89,7 +89,7 @@ export default function Dashboard() {
         rhApi.getCommunes(),
         rhApi.getFokontanys(),
         rhApi.getLocations(),
-        rhApi.getPayments(), // corrigé
+        rhApi.getPayements(),
         rhApi.getAchats(),
         rhApi.getDemandes(),
       ]);
@@ -152,6 +152,7 @@ export default function Dashboard() {
 
       {/* ======================= KPI GRID ======================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+
         <KPICard icon={Users} label="Employés" value={stats.employees} color="text-green-700" />
         <KPICard icon={Map} label="Districts" value={stats.districts} color="text-blue-600" />
         <KPICard icon={MapPin} label="Communes" value={stats.communes} color="text-purple-600" />
@@ -165,6 +166,7 @@ export default function Dashboard() {
         <KPICard icon={CreditCard} label="Paiements" value={stats.payments} color="text-lime-600" />
         <KPICard icon={ShoppingCart} label="Achats" value={stats.achats} color="text-sky-600" />
         <KPICard icon={ClipboardList} label="Demandes RH" value={stats.demandes} color="text-rose-600" />
+
       </div>
 
       {/* ======================= GRAPH ======================= */}
@@ -184,6 +186,7 @@ export default function Dashboard() {
 
       {/* ======================= TABLEAU AFFECTATIONS + CONGÉS ======================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
         {/* AFFECTATIONS */}
         <Card className="p-4 bg-white shadow rounded-2xl border">
           <h3 className="text-md font-semibold mb-3">Dernières affectations</h3>
@@ -196,7 +199,7 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {recentAffectations.map((item, idx) => (
+              {recentAffectations.map((item: any, idx) => (
                 <tr key={idx} className="border-b">
                   <td className="py-2">{item?.employer?.full_name}</td>
                   <td>{item?.magasin?.nom}</td>
@@ -211,13 +214,14 @@ export default function Dashboard() {
         <Card className="p-4 bg-white shadow rounded-2xl border">
           <h3 className="text-md font-semibold mb-3">Congés récents</h3>
           <ul className="text-sm space-y-1">
-            {recentConges.map((c, idx) => (
+            {recentConges.map((c: any, idx) => (
               <li key={idx}>
                 {c?.employer?.full_name} — {c?.nb_jours} jours
               </li>
             ))}
           </ul>
         </Card>
+
       </div>
     </div>
   );
