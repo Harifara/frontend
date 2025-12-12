@@ -27,10 +27,18 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  Legend,
+  AreaChart,
+  Area,
 } from "recharts";
 
 // ======================================================
-//   DASHBOARD RH (OPTIMISÉ)
+//   DASHBOARD RH (OPTIMISÉ + GRAPHIQUES SUPPLÉMENTAIRES)
 // ======================================================
 export default function Dashboard() {
   const { user } = useAuth();
@@ -58,9 +66,12 @@ export default function Dashboard() {
   const [recentAffectations, setRecentAffectations] = useState([]);
   const [recentConges, setRecentConges] = useState([]);
   const [employeeEvolution, setEmployeeEvolution] = useState([]);
+  const [congesStats, setCongesStats] = useState([]);
+  const [affectationsStats, setAffectationsStats] = useState([]);
+  const [achatsStats, setAchatsStats] = useState([]);
 
   // ======================================================
-  //   LOADING DASHBOARD DATA (ULTRA OPTIMISÉ)
+  //   LOADING DASHBOARD DATA
   // ======================================================
   useEffect(() => {
     loadDashboard();
@@ -124,6 +135,37 @@ export default function Dashboard() {
 
       setRecentAffectations(aff.slice(0, 5));
       setRecentConges(co.slice(0, 5));
+
+      // =================== Congés stats PieChart ===================
+      const congesByStatus: any = {};
+      co.forEach((c: any) => {
+        congesByStatus[c.status] = (congesByStatus[c.status] || 0) + 1;
+      });
+      setCongesStats(
+        Object.keys(congesByStatus).map((key) => ({ name: key, value: congesByStatus[key] }))
+      );
+
+      // =================== Affectations stats BarChart ===================
+      const affByMagasin: any = {};
+      aff.forEach((a: any) => {
+        const name = a.magasin?.nom || "Inconnu";
+        affByMagasin[name] = (affByMagasin[name] || 0) + 1;
+      });
+      setAffectationsStats(
+        Object.keys(affByMagasin).map((key) => ({ magasin: key, affectations: affByMagasin[key] }))
+      );
+
+      // =================== Achats stats AreaChart ===================
+      const achatsByMonth: any = {};
+      (achats.results || achats).forEach((a: any) => {
+        const month = a.created_at?.slice(0, 7) || "Inconnu"; // yyyy-mm
+        achatsByMonth[month] = (achatsByMonth[month] || 0) + a.total;
+      });
+      setAchatsStats(
+        Object.keys(achatsByMonth)
+          .sort()
+          .map((key) => ({ month: key, total: achatsByMonth[key] }))
+      );
     } catch (error) {
       console.error("Erreur Dashboard :", error);
     }
@@ -144,6 +186,8 @@ export default function Dashboard() {
     </Card>
   );
 
+  const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
+
   return (
     <div className="p-6 flex-1 bg-gray-100 min-h-screen">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">
@@ -152,7 +196,6 @@ export default function Dashboard() {
 
       {/* ======================= KPI GRID ======================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-
         <KPICard icon={Users} label="Employés" value={stats.employees} color="text-green-700" />
         <KPICard icon={Map} label="Districts" value={stats.districts} color="text-blue-600" />
         <KPICard icon={MapPin} label="Communes" value={stats.communes} color="text-purple-600" />
@@ -166,27 +209,70 @@ export default function Dashboard() {
         <KPICard icon={CreditCard} label="Paiements" value={stats.payments} color="text-lime-600" />
         <KPICard icon={ShoppingCart} label="Achats" value={stats.achats} color="text-sky-600" />
         <KPICard icon={ClipboardList} label="Demandes RH" value={stats.demandes} color="text-rose-600" />
-
       </div>
 
-      {/* ======================= GRAPH ======================= */}
+      {/* ======================= GRAPHIQUES ======================= */}
       {(isAdmin || isRH) && (
-        <Card className="p-6 bg-white shadow rounded-2xl border mb-8">
-          <h2 className="text-lg font-semibold mb-4">Évolution des employés</h2>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={employeeEvolution}>
-              <XAxis dataKey="name" stroke="#666" />
-              <YAxis stroke="#666" />
-              <Tooltip />
-              <Line type="monotone" dataKey="employees" stroke="#007b83" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </Card>
+        <>
+          {/* Employee Evolution */}
+          <Card className="p-6 bg-white shadow rounded-2xl border mb-8">
+            <h2 className="text-lg font-semibold mb-4">Évolution des employés</h2>
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={employeeEvolution}>
+                <XAxis dataKey="name" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip />
+                <Line type="monotone" dataKey="employees" stroke="#007b83" strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Congés PieChart */}
+          <Card className="p-6 bg-white shadow rounded-2xl border mb-8">
+            <h2 className="text-lg font-semibold mb-4">Répartition des congés</h2>
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie data={congesStats} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                  {congesStats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Affectations BarChart */}
+          <Card className="p-6 bg-white shadow rounded-2xl border mb-8">
+            <h2 className="text-lg font-semibold mb-4">Affectations par magasin</h2>
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={affectationsStats}>
+                <XAxis dataKey="magasin" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="affectations" fill="#8884d8" />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+
+          {/* Achats AreaChart */}
+          <Card className="p-6 bg-white shadow rounded-2xl border mb-8">
+            <h2 className="text-lg font-semibold mb-4">Achats mensuels</h2>
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={achatsStats}>
+                <XAxis dataKey="month" stroke="#666" />
+                <YAxis stroke="#666" />
+                <Tooltip />
+                <Area type="monotone" dataKey="total" stroke="#82ca9d" fill="#82ca9d" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </Card>
+        </>
       )}
 
       {/* ======================= TABLEAU AFFECTATIONS + CONGÉS ======================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
         {/* AFFECTATIONS */}
         <Card className="p-4 bg-white shadow rounded-2xl border">
           <h3 className="text-md font-semibold mb-3">Dernières affectations</h3>
@@ -221,7 +307,6 @@ export default function Dashboard() {
             ))}
           </ul>
         </Card>
-
       </div>
     </div>
   );
