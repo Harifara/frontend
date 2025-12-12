@@ -27,6 +27,7 @@ interface Employer {
   date_naissance?: string;
   date_entree: string;
   adresse?: string;
+  sexe?: "M" | "F"; // <-- ajouté
   fonction?: Fonction | null;
   district?: District | null;
   photo_profil?: string;
@@ -111,6 +112,7 @@ const Employes: React.FC = () => {
     if (form.telephone) payload.append("telephone", form.telephone);
     if (form.date_naissance) payload.append("date_naissance", form.date_naissance);
     if (form.domaine_etude) payload.append("domaine_etude", form.domaine_etude);
+    if (form.sexe) payload.append("sexe", form.sexe); // <-- ajouté
     if (form.fonction?.id) payload.append("fonction_id", form.fonction.id);
     if (form.district?.id) payload.append("district_id", form.district.id);
     if (photo) payload.append("photo_profil", photo);
@@ -157,6 +159,7 @@ const Employes: React.FC = () => {
       Nom: e.nom_employer,
       Prénom: e.prenom_employer,
       Email: e.email,
+      Sexe: e.sexe === "M" ? "Masculin" : e.sexe === "F" ? "Féminin" : "",
       Fonction: e.fonction?.nom_fonction || "",
       District: e.district?.name || "",
       Statut: e.status_employer
@@ -169,9 +172,10 @@ const Employes: React.FC = () => {
   const exportPDF = async () => {
     const data = employes.map(e => [
       e.nom_employer, e.prenom_employer, e.email,
+      e.sexe === "M" ? "Masculin" : e.sexe === "F" ? "Féminin" : "",
       e.fonction?.nom_fonction || "", e.district?.name || "", e.status_employer
     ]);
-    const columns = ["Nom", "Prénom", "Email", "Fonction", "District", "Statut"];
+    const columns = ["Nom", "Prénom", "Email", "Sexe", "Fonction", "District", "Statut"];
     await createPDFDoc("Liste des employés", data, columns, "employes.pdf");
   };
 
@@ -207,6 +211,7 @@ const Employes: React.FC = () => {
                 <TableHead>Photo</TableHead>
                 <TableHead>Nom</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Sexe</TableHead>
                 <TableHead>Fonction</TableHead>
                 <TableHead>District</TableHead>
                 <TableHead>Statut</TableHead>
@@ -236,6 +241,7 @@ const Employes: React.FC = () => {
                   </TableCell>
                   <TableCell>{e.nom_employer} {e.prenom_employer}</TableCell>
                   <TableCell>{e.email}</TableCell>
+                  <TableCell>{e.sexe === "M" ? "Masculin" : e.sexe === "F" ? "Féminin" : "-"}</TableCell>
                   <TableCell>{e.fonction?.nom_fonction || "-"}</TableCell>
                   <TableCell>{e.district?.name || "-"}</TableCell>
                   <TableCell>{e.status_employer}</TableCell>
@@ -246,7 +252,7 @@ const Employes: React.FC = () => {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-6">Aucun employé trouvé.</TableCell>
+                  <TableCell colSpan={8} className="text-center py-6">Aucun employé trouvé.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -268,8 +274,23 @@ const Employes: React.FC = () => {
             {/* Email / Téléphone */}
             <div><Label>Email</Label><Input value={form.email || ""} onChange={e => setForm({ ...form, email: e.target.value })} /></div>
             <div><Label>Téléphone</Label><Input value={form.telephone || ""} onChange={e => setForm({ ...form, telephone: e.target.value })} /></div>
-            {/* Dates */}
+            {/* Dates / Sexe */}
             <div><Label>Date de naissance</Label><Input type="date" value={form.date_naissance || ""} onChange={e => setForm({ ...form, date_naissance: e.target.value })} /></div>
+            <div>
+              <Label>Sexe</Label>
+              <Select
+                value={form.sexe || ""}
+                onValueChange={val => setForm({ ...form, sexe: val as Employer["sexe"] })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sélectionner sexe" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="M">Masculin</SelectItem>
+                  <SelectItem value="F">Féminin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <div><Label>Date d'entrée</Label><Input type="date" value={form.date_entree || ""} onChange={e => setForm({ ...form, date_entree: e.target.value })} /></div>
             {/* Adresse / Diplôme */}
             <div><Label>Adresse</Label><Input value={form.adresse || ""} onChange={e => setForm({ ...form, adresse: e.target.value })} /></div>
@@ -316,7 +337,6 @@ const Employes: React.FC = () => {
               <Label>Photo de profil</Label>
               <Input type="file" accept="image/*" onChange={e => setPhoto(e.target.files?.[0] || null)} />
             </div>
-
             <div className="col-span-2 flex items-center gap-2">
               {cv ? (
                 <a href={URL.createObjectURL(cv)} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline text-sm">Voir le CV</a>
@@ -326,9 +346,6 @@ const Employes: React.FC = () => {
               <Label>CV (PDF)</Label>
               <Input type="file" accept=".pdf" onChange={e => setCV(e.target.files?.[0] || null)} />
             </div>
-
-            {/* Statut */}
-           
           </div>
 
           <DialogFooter className="mt-4">
