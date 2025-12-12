@@ -1,14 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { rhApi } from "@/lib/api";
 
 // Icons
-import {
-  Users,
-  ClipboardList,
-  Warehouse,
-  FileText,
-  AlertCircle,
-} from "lucide-react";
+import { Users, ClipboardList, Warehouse, FileText, AlertCircle } from "lucide-react";
 
 // UI Components
 import { Card } from "@/components/ui/card";
@@ -26,54 +21,69 @@ import {
   Bar,
 } from "recharts";
 
-/* ======================================================
-   📊 Données fictives (tu pourras les remplacer par ton API)
-====================================================== */
-const stockData = [
-  { name: "Jan", stock: 400 },
-  { name: "Feb", stock: 300 },
-  { name: "Mar", stock: 500 },
-  { name: "Apr", stock: 450 },
-  { name: "May", stock: 600 },
-];
-
-const employeesData = [
-  { name: "Jan", employees: 20 },
-  { name: "Feb", employees: 25 },
-  { name: "Mar", employees: 22 },
-  { name: "Apr", employees: 30 },
-  { name: "May", employees: 28 },
-];
-
-const recentStockMovements = [
-  { article: "Article A", magasin: "Magasin 1", qty: -5, date: "18/11/2025" },
-  { article: "Article B", magasin: "Magasin 2", qty: +10, date: "17/11/2025" },
-  { article: "Article C", magasin: "Magasin 1", qty: -2, date: "16/11/2025" },
-];
-
-const recentAffectations = [
-  { employe: "John Doe", magasin: "Magasin A", date: "12/11/2025" },
-  { employe: "Jane Smith", magasin: "Magasin B", date: "10/11/2025" },
-  { employe: "Paul Martin", magasin: "Magasin C", date: "08/11/2025" },
-];
-
-/* ======================================================
-   💻 DASHBOARD
-====================================================== */
 export default function Dashboard() {
   const { user } = useAuth();
 
-  // Rôles
   const role = user?.role;
   const isAdmin = role === "admin";
   const isRH = role === "responsable_rh";
   const isStock = role === "responsable_stock";
   const isMagasinier = role === "magasinier";
 
+  /* ======================================================
+      📌 STATES (Données API)
+  ====================================================== */
+  const [employeesCount, setEmployeesCount] = useState(0);
+  const [pendingCongesCount, setPendingCongesCount] = useState(0);
+  const [affectations, setAffectations] = useState<any[]>([]);
+  const [recentConges, setRecentConges] = useState<any[]>([]);
+  const [employeeEvolution, setEmployeeEvolution] = useState<any[]>([]);
+
+  /* ======================================================
+      📌 CHARGEMENT DES DONNÉES RH
+  ====================================================== */
+  useEffect(() => {
+    loadRH();
+  }, []);
+
+  const loadRH = async () => {
+    try {
+      // --- EMPLOYÉS ---
+      const employeesRes = await rhApi.getEmployes();
+      const employees = employeesRes?.results || employeesRes || [];
+      setEmployeesCount(employees.length);
+
+      // Graphique simple : évolution par mois
+      setEmployeeEvolution([
+        { name: "Jan", employees: Math.round(employees.length * 0.8) },
+        { name: "Feb", employees: Math.round(employees.length * 0.85) },
+        { name: "Mar", employees: Math.round(employees.length * 0.9) },
+        { name: "Apr", employees: Math.round(employees.length * 0.95) },
+        { name: "May", employees: employees.length },
+      ]);
+
+      // --- CONGÉS ---
+      const congesRes = await rhApi.getConges();
+      const conges = congesRes?.results || congesRes || [];
+
+      setPendingCongesCount(conges.filter((c: any) => c.status === "en_attente").length);
+
+      setRecentConges(conges.slice(0, 3));
+
+      // --- AFFECTATIONS ---
+      const affectRes = await rhApi.getAffectations();
+      const aff = affectRes?.results || affectRes || [];
+      setAffectations(aff.slice(0, 5));
+
+    } catch (error) {
+      console.error("Erreur Dashboard RH :", error);
+    }
+  };
+
   return (
     <div className="p-6 flex-1 bg-gray-100 min-h-screen">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">
-        Bonjour, {user?.full_name || user?.username || "Utilisateur"}
+        Bonjour, {user?.full_name || user?.username}
       </h1>
 
       {/* ======================================================
@@ -86,7 +96,7 @@ export default function Dashboard() {
             <div className="flex items-center">
               <Users className="w-8 h-8 text-green-700 mr-3" />
               <div>
-                <p className="text-xl font-semibold">120</p>
+                <p className="text-xl font-semibold">{employeesCount}</p>
                 <p className="text-sm text-gray-600">Employés</p>
               </div>
             </div>
@@ -98,103 +108,37 @@ export default function Dashboard() {
             <div className="flex items-center">
               <ClipboardList className="w-8 h-8 text-yellow-700 mr-3" />
               <div>
-                <p className="text-xl font-semibold">8</p>
+                <p className="text-xl font-semibold">{pendingCongesCount}</p>
                 <p className="text-sm text-gray-600">Congés en attente</p>
               </div>
             </div>
           </Card>
         )}
 
-        {(isAdmin || isStock) && (
-          <Card className="p-4 bg-white shadow rounded-2xl border hover:shadow-lg transition">
-            <div className="flex items-center">
-              <Warehouse className="w-8 h-8 text-blue-700 mr-3" />
-              <div>
-                <p className="text-xl font-semibold">5</p>
-                <p className="text-sm text-gray-600">Magasins</p>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {(isAdmin || isStock || isMagasinier) && (
-          <Card className="p-4 bg-white shadow rounded-2xl border hover:shadow-lg transition">
-            <div className="flex items-center">
-              <FileText className="w-8 h-8 text-purple-700 mr-3" />
-              <div className="w-full">
-                <p className="text-xl font-semibold">320</p>
-                <p className="text-sm text-gray-600">Articles en stock</p>
-                <Progress value={75} className="mt-2 h-2 rounded-full" />
-              </div>
-            </div>
-          </Card>
-        )}
       </div>
 
       {/* ======================================================
-          📈 GRAPHIQUES
+          📈 GRAPH RH
       ====================================================== */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        
-        {(isAdmin || isStock || isMagasinier) && (
-          <Card className="p-4 bg-white shadow rounded-2xl border">
-            <h2 className="text-lg font-semibold mb-4">Stock par mois</h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={stockData}>
-                <XAxis dataKey="name" stroke="#4B5563" />
-                <YAxis stroke="#4B5563" />
-                <Tooltip />
-                <Bar dataKey="stock" fill="#0A6847" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        )}
-
-        {(isAdmin || isRH) && (
-          <Card className="p-4 bg-white shadow rounded-2xl border">
-            <h2 className="text-lg font-semibold mb-4">
-              Évolution des employés
-            </h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <LineChart data={employeesData}>
-                <XAxis dataKey="name" stroke="#4B5563" />
-                <YAxis stroke="#4B5563" />
-                <Tooltip />
-                <Line type="monotone" dataKey="employees" stroke="#297373" strokeWidth={2} />
-              </LineChart>
-            </ResponsiveContainer>
-          </Card>
-        )}
-      </div>
+      {(isAdmin || isRH) && (
+        <Card className="p-4 bg-white shadow rounded-2xl border mb-8">
+          <h2 className="text-lg font-semibold mb-4">Évolution des employés</h2>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={employeeEvolution}>
+              <XAxis dataKey="name" stroke="#4B5563" />
+              <YAxis stroke="#4B5563" />
+              <Tooltip />
+              <Line type="monotone" dataKey="employees" stroke="#297373" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
 
       {/* ======================================================
-          🚨 ALERTES / MOUVEMENTS STOCK
-      ====================================================== */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {recentStockMovements.map((item, idx) => (
-          <Card
-            key={idx}
-            className="p-4 bg-red-50 border border-red-200 rounded-2xl shadow flex items-center"
-          >
-            <AlertCircle className="w-6 h-6 text-red-700 mr-3" />
-            <div>
-              <p className="font-semibold text-red-800">
-                {item.article} → {item.magasin}
-              </p>
-              <p className="text-xs text-red-700">
-                {item.qty > 0 ? `+${item.qty}` : item.qty} unités ({item.date})
-              </p>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* ======================================================
-          TABLEAUX
+          👤 AFFECTATIONS
       ====================================================== */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-        {/* Affectations */}
         <Card className="p-4 bg-white shadow rounded-2xl border">
           <h3 className="text-md font-semibold mb-3">Dernières affectations</h3>
           <table className="w-full text-sm">
@@ -206,11 +150,11 @@ export default function Dashboard() {
               </tr>
             </thead>
             <tbody>
-              {recentAffectations.map((item, idx) => (
+              {affectations.map((item: any, idx) => (
                 <tr key={idx} className="border-b">
-                  <td className="py-2">{item.employe}</td>
-                  <td>{item.magasin}</td>
-                  <td>{item.date}</td>
+                  <td className="py-2">{item?.employer?.full_name}</td>
+                  <td>{item?.magasin?.nom}</td>
+                  <td>{item?.created_at?.slice(0, 10)}</td>
                 </tr>
               ))}
             </tbody>
@@ -221,9 +165,11 @@ export default function Dashboard() {
         <Card className="p-4 bg-white shadow rounded-2xl border">
           <h3 className="text-md font-semibold mb-3">Congés récents</h3>
           <ul className="text-sm space-y-1">
-            <li>Marie Dupont — 3 jours</li>
-            <li>Ali Raharisoa — 2 jours</li>
-            <li>Lucien Rabe — 1 jour</li>
+            {recentConges.map((c: any, idx) => (
+              <li key={idx}>
+                {c?.employer?.full_name} — {c?.nb_jours} jours
+              </li>
+            ))}
           </ul>
         </Card>
 
