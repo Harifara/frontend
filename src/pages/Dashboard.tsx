@@ -1,237 +1,191 @@
-// src/pages/dashboard/Dashboard.tsx
-import React, { useEffect, useState } from "react";
-import { rhApi } from "@/lib/api"; // Adapter selon ton API
-import { Card } from "@/components/ui/card";
-import { Decimal } from "decimal.js";
+import { useEffect, useState } from "react";
+import { 
+  Users, 
+  FileText, 
+  Calendar, 
+  Building2, 
+  ShoppingCart, 
+  CreditCard,
+  MapPin,
+  TrendingUp 
+} from "lucide-react";
+import { StatCard } from "@/components/dashboard/StatCard";
+import { DemographicsCard } from "@/components/dashboard/DemographicsCard";
+import { SalaryChart } from "@/components/dashboard/SalaryChart";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
+import { LoadingSkeleton } from "@/components/dashboard/LoadingSkeleton";
 
-// -------------------- Typage des données --------------------
-interface Employee {
-  id: string;
-  nom_employer: string;
-  prenom_employer: string;
-  gender?: string; // si tu veux utiliser le genre pour stats
-  date_naissance?: string;
-}
-
-interface Contrat {
-  id: string;
-  employer: Employee;
-  salaire?: number;
-  date_debut_contrat: string;
-  date_fin_contrat?: string;
-}
-
-interface Conge {
-  id: string;
-  employer: Employee;
-  status_conge: string;
-}
-
-interface Location {
-  id: string;
-  montant?: number;
-}
-
-interface Electricite {
-  id: string;
-  montant?: number;
-}
-
-interface Payement {
-  id: string;
-  montant?: number;
-  status: string;
-}
-
-interface Achat {
-  id: string;
-  montant_total: number;
-  statut: string;
-}
-
-interface Demande {
-  id: string;
-  achats: Achat[];
-  payements: Payement[];
-}
-
-// -------------------- Calcul âge --------------------
-const calculateAverageAge = (employees: Employee[]) => {
-  const today = new Date();
-  const ages = employees
-    .map((e) => {
-      if (!e.date_naissance) return null;
-      const birth = new Date(e.date_naissance);
-      let age = today.getFullYear() - birth.getFullYear();
-      const m = today.getMonth() - birth.getMonth();
-      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-      return age;
-    })
-    .filter((age) => age !== null) as number[];
-
-  if (ages.length === 0) return 0;
-  return Math.round(ages.reduce((a, b) => a + b, 0) / ages.length);
+// Mock data pour la démonstration
+const mockStats = {
+  employees: 156,
+  femalePercentage: 42,
+  malePercentage: 58,
+  avgAge: 34,
+  affectations: 89,
+  conges: 45,
+  pendingConges: 12,
+  contrats: 156,
+  locations: 23,
+  payments: 1247,
+  achats: 89,
+  demandes: 34,
+  districts: 8,
+  communes: 42,
+  fokontany: 156,
+  topSalaries: [
+    { id: "1", name: "Rakoto J.", salary: 4500000 },
+    { id: "2", name: "Andria M.", salary: 4200000 },
+    { id: "3", name: "Rabe S.", salary: 3800000 },
+    { id: "4", name: "Rasoa L.", salary: 3500000 },
+    { id: "5", name: "Ravelo P.", salary: 3200000 },
+  ],
+  bottomSalaries: [
+    { id: "6", name: "Koto H.", salary: 800000 },
+    { id: "7", name: "Niry T.", salary: 850000 },
+    { id: "8", name: "Fara B.", salary: 900000 },
+    { id: "9", name: "Soa V.", salary: 950000 },
+    { id: "10", name: "Lova R.", salary: 1000000 },
+  ],
 };
 
-// -------------------- Dashboard Component --------------------
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<any>({
-    employees: 0,
-    femalePercentage: 0,
-    malePercentage: 0,
-    avgAge: 0,
-    affectations: 0,
-    conges: 0,
-    pendingConges: 0,
-    contrats: 0,
-    locations: 0,
-    payments: 0,
-    achats: 0,
-    demandes: 0,
-    districts: 0,
-    communes: 0,
-    fokontany: 0,
-    topSalaries: [],
-    bottomSalaries: [],
-  });
-
-  // -------------------- Charger les données --------------------
-  const loadDashboard = async () => {
-    try {
-      const [
-        employeesRes,
-        affectationsRes,
-        congesRes,
-        contratsRes,
-        locationsRes,
-        paymentsRes,
-        achatsRes,
-        demandesRes,
-        districtsRes,
-        communesRes,
-        fokosRes,
-      ] = await Promise.all([
-        rhApi.getEmployes(),
-        rhApi.getAffectations(),
-        rhApi.getConges(),
-        rhApi.getContrats(),
-        rhApi.getLocations(),
-        rhApi.getPayements(),
-        rhApi.getAchats(),
-        rhApi.getDemandes(),
-        rhApi.getDistricts(),
-        rhApi.getCommunes(),
-        rhApi.getFokontanys(),
-      ]);
-
-      const employees = employeesRes.results || employeesRes;
-      const affectations = affectationsRes.results || affectationsRes;
-      const conges = congesRes.results || congesRes;
-      const contrats = contratsRes.results || contratsRes;
-      const locations = locationsRes.results || locationsRes;
-      const payments = paymentsRes.results || paymentsRes;
-      const achats = achatsRes.results || achatsRes;
-      const demandes = demandesRes.results || demandesRes;
-      const districts = districtsRes.results || districtsRes;
-      const communes = communesRes.results || communesRes;
-      const fokos = fokosRes.results || fokosRes;
-
-      const femmesCount = employees.filter((e: Employee) => e.gender === 'F').length;
-      const hommesCount = employees.filter((e: Employee) => e.gender === 'M').length;
-      const totalEmp = employees.length || 1;
-
-      // Top / Bottom salaires
-      const sortedBySalary = [...contrats].sort((a: Contrat, b: Contrat) => (b.salaire || 0) - (a.salaire || 0));
-      const topSalaries = sortedBySalary.slice(0, 5);
-      const bottomSalaries = sortedBySalary.slice(-5).reverse();
-
-      setStats({
-        employees: employees.length,
-        femalePercentage: Math.round((femmesCount / totalEmp) * 100),
-        malePercentage: Math.round((hommesCount / totalEmp) * 100),
-        avgAge: calculateAverageAge(employees),
-        affectations: affectations.length,
-        conges: conges.length,
-        pendingConges: conges.filter((c: Conge) => c.status_conge === 'en_attente').length,
-        contrats: contrats.length,
-        locations: locations.length,
-        payments: payments.length,
-        achats: achats.length,
-        demandes: demandes.length,
-        districts: districts.length,
-        communes: communes.length,
-        fokontany: fokos.length,
-        topSalaries,
-        bottomSalaries,
-      });
-    } catch (err) {
-      console.error("Erreur chargement dashboard", err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [stats, setStats] = useState(mockStats);
 
   useEffect(() => {
-    loadDashboard();
+    // Simuler un chargement API
+    const timer = setTimeout(() => {
+      setStats(mockStats);
+      setLoading(false);
+    }, 1000);
+
+    return () => clearTimeout(timer);
   }, []);
 
-  if (loading) return <p>Chargement du tableau de bord...</p>;
+  if (loading) return <LoadingSkeleton />;
 
-  // -------------------- Affichage --------------------
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <Card className="p-4">
-        <h3>Employés</h3>
-        <p>Total: {stats.employees}</p>
-        <p>Femmes: {stats.femalePercentage}%</p>
-        <p>Hommes: {stats.malePercentage}%</p>
-        <p>Âge moyen: {stats.avgAge} ans</p>
-      </Card>
+    <div className="min-h-screen bg-background p-4 lg:p-8">
+      <div className="max-w-7xl mx-auto">
+        <DashboardHeader />
 
-      <Card className="p-4">
-        <h3>Contrats</h3>
-        <p>Total: {stats.contrats}</p>
-      </Card>
+        {/* Stats principales */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <StatCard
+            title="Employés"
+            value={stats.employees}
+            subtitle="Actifs ce mois"
+            icon={<Users className="h-6 w-6" />}
+            variant="primary"
+            trend={{ value: 12, isPositive: true }}
+            delay={0}
+          />
+          <StatCard
+            title="Contrats"
+            value={stats.contrats}
+            subtitle="En cours"
+            icon={<FileText className="h-6 w-6" />}
+            variant="success"
+            delay={50}
+          />
+          <StatCard
+            title="Congés en attente"
+            value={stats.pendingConges}
+            subtitle={`Sur ${stats.conges} demandes`}
+            icon={<Calendar className="h-6 w-6" />}
+            variant="warning"
+            delay={100}
+          />
+          <StatCard
+            title="Affectations"
+            value={stats.affectations}
+            subtitle="Cette année"
+            icon={<Building2 className="h-6 w-6" />}
+            variant="info"
+            delay={150}
+          />
+        </div>
 
-      <Card className="p-4">
-        <h3>Congés</h3>
-        <p>Total: {stats.conges}</p>
-        <p>En attente: {stats.pendingConges}</p>
-      </Card>
+        {/* Démographie */}
+        <div className="mb-6">
+          <DemographicsCard
+            totalEmployees={stats.employees}
+            femalePercentage={stats.femalePercentage}
+            malePercentage={stats.malePercentage}
+            averageAge={stats.avgAge}
+            delay={200}
+          />
+        </div>
 
-      <Card className="p-4">
-        <h3>Locations</h3>
-        <p>Total: {stats.locations}</p>
-      </Card>
+        {/* Stats secondaires */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <StatCard
+            title="Achats"
+            value={stats.achats}
+            icon={<ShoppingCart className="h-6 w-6" />}
+            delay={250}
+          />
+          <StatCard
+            title="Paiements"
+            value={stats.payments}
+            icon={<CreditCard className="h-6 w-6" />}
+            delay={300}
+          />
+          <StatCard
+            title="Locations"
+            value={stats.locations}
+            icon={<Building2 className="h-6 w-6" />}
+            delay={350}
+          />
+          <StatCard
+            title="Demandes"
+            value={stats.demandes}
+            icon={<TrendingUp className="h-6 w-6" />}
+            delay={400}
+          />
+        </div>
 
-      <Card className="p-4">
-        <h3>Achats</h3>
-        <p>Total: {stats.achats}</p>
-      </Card>
+        {/* Géographie */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+          <StatCard
+            title="Districts"
+            value={stats.districts}
+            icon={<MapPin className="h-6 w-6" />}
+            variant="info"
+            delay={450}
+          />
+          <StatCard
+            title="Communes"
+            value={stats.communes}
+            icon={<MapPin className="h-6 w-6" />}
+            variant="success"
+            delay={500}
+          />
+          <StatCard
+            title="Fokontany"
+            value={stats.fokontany}
+            icon={<MapPin className="h-6 w-6" />}
+            variant="warning"
+            delay={550}
+          />
+        </div>
 
-      <Card className="p-4">
-        <h3>Demandes</h3>
-        <p>Total: {stats.demandes}</p>
-      </Card>
-
-      <Card className="p-4">
-        <h3>Top 5 Salaires</h3>
-        <ul>
-          {stats.topSalaries.map((c: Contrat) => (
-            <li key={c.id}>{c.employer.nom_employer} {c.employer.prenom_employer}: {c.salaire}</li>
-          ))}
-        </ul>
-      </Card>
-
-      <Card className="p-4">
-        <h3>Bottom 5 Salaires</h3>
-        <ul>
-          {stats.bottomSalaries.map((c: Contrat) => (
-            <li key={c.id}>{c.employer.nom_employer} {c.employer.prenom_employer}: {c.salaire}</li>
-          ))}
-        </ul>
-      </Card>
+        {/* Graphiques des salaires */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <SalaryChart
+            title="Top 5 Salaires"
+            data={stats.topSalaries}
+            type="top"
+            delay={600}
+          />
+          <SalaryChart
+            title="5 Plus Bas Salaires"
+            data={stats.bottomSalaries}
+            type="bottom"
+            delay={650}
+          />
+        </div>
+      </div>
     </div>
   );
 }
