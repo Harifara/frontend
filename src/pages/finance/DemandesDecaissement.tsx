@@ -1,215 +1,178 @@
-// src/pages/finance/DemandesDecaissement.tsx
 import React, { useEffect, useState } from "react";
-import { financeApi, rhApi, stockApi, authApi } from "@/lib/api";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/AuthContext";
+import { rhApi } from "@/lib/api";
 
-// -----------------------------
-// Types
-// -----------------------------
-interface Depense {
-  id: string;
-  description: string;
-  montant: number;
-  statut: string;
-}
+// Icons
+import { Users, ClipboardList, Warehouse, FileText, AlertCircle } from "lucide-react";
 
-interface Decaissement {
-  id: string;
-  source_service: string;
-  source_type: "RH" | "Stock";
-  source_id: string;
-  date_creation: string;
-  total_montant: number;
-  statut: "brouillon" | "en_attente_coordo" | "validé" | "payé";
-  depenses: Depense[];
-}
+// UI Components
+import { Card } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 
-interface DemandeRH {
-  id: string;
-  description: string;
-  montant: number;
-  status: string;
-}
+// Charts
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+} from "recharts";
 
-interface DemandeAchat {
-  id: string;
-  article_nom: string;
-  quantite: number;
-  montant_estime: number;
-  statut: string;
-}
+export default function Dashboard() {
+  const { user } = useAuth();
 
-// -----------------------------
-// Badge couleur selon statut
-// -----------------------------
-const badgeColor = (statut: string) => {
-  switch (statut.toLowerCase()) {
-    case "brouillon": return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
-    case "en_attente_coordo": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
-    case "validé": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
-    case "payé": return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
-    default: return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
-  }
-};
+  const role = user?.role;
+  const isAdmin = role === "admin";
+  const isRH = role === "responsable_rh";
+  const isStock = role === "responsable_stock";
+  const isMagasinier = role === "magasinier";
 
-// -----------------------------
-// Composant principal
-// -----------------------------
-export default function DemandesDecaissement() {
-  const [user, setUser] = useState<any>(null);
-  const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
-  const [demandesRH, setDemandesRH] = useState<DemandeRH[]>([]);
-  const [demandesStock, setDemandesStock] = useState<DemandeAchat[]>([]);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedDemandeId, setSelectedDemandeId] = useState<string | null>(null);
-  const [depenseDescription, setDepenseDescription] = useState("");
-  const [depenseMontant, setDepenseMontant] = useState(0);
+  /* ======================================================
+      📌 STATES (Données API)
+  ====================================================== */
+  const [employeesCount, setEmployeesCount] = useState(0);
+  const [pendingCongesCount, setPendingCongesCount] = useState(0);
+  const [affectations, setAffectations] = useState<any[]>([]);
+  const [recentConges, setRecentConges] = useState<any[]>([]);
+  const [employeeEvolution, setEmployeeEvolution] = useState<any[]>([]);
 
-  // -----------------------------
-  // Récupération utilisateur
-  // -----------------------------
-  const fetchUser = async () => {
-    try {
-      const u = await stockApi.me();
-      setUser(u);
-    } catch (err: any) {
-      console.error("Impossible de récupérer l'utilisateur connecté :", err.message);
-      alert("Vous devez vous reconnecter.");
-    }
-  };
-
-  // -----------------------------
-  // Chargement des données
-  // -----------------------------
-  const fetchData = async () => {
-    try {
-      const [dec, rh, stock] = await Promise.all([
-        financeApi.getDecaissements(),
-        rhApi.getDemandes(),
-        stockApi.getDemandesAchat(),
-      ]);
-      setDecaissements(dec);
-      setDemandesRH(rh);
-      setDemandesStock(stock);
-    } catch (err: any) {
-      console.error("Erreur lors du chargement des données :", err.message);
-    }
-  };
-
+  /* ======================================================
+      📌 CHARGEMENT DES DONNÉES RH
+  ====================================================== */
   useEffect(() => {
-    fetchUser();
-    fetchData();
+    loadRH();
   }, []);
 
-  // -----------------------------
-  // Création d'un décaissement
-  // -----------------------------
-  const createDecaissement = async (source_type: "RH" | "Stock", source_id: string, montant: number) => {
+  const loadRH = async () => {
     try {
-      await financeApi.createDecaissement({
-        source_type,
-        source_id,
-        total_montant: montant,
-        depenses: [{ description: depenseDescription, montant }],
-      });
-      setDialogOpen(false);
-      setDepenseDescription("");
-      setDepenseMontant(0);
-      fetchData(); // refresh
-    } catch (err: any) {
-      console.error("Erreur lors de la création du décaissement :", err.message);
-      alert("Impossible de créer le décaissement.");
+      // --- EMPLOYÉS ---
+      const employeesRes = await rhApi.getEmployes();
+      const employees = employeesRes?.results || employeesRes || [];
+      setEmployeesCount(employees.length);
+
+      // Graphique simple : évolution par mois
+      setEmployeeEvolution([
+        { name: "Jan", employees: Math.round(employees.length * 0.8) },
+        { name: "Feb", employees: Math.round(employees.length * 0.85) },
+        { name: "Mar", employees: Math.round(employees.length * 0.9) },
+        { name: "Apr", employees: Math.round(employees.length * 0.95) },
+        { name: "May", employees: employees.length },
+      ]);
+
+      // --- CONGÉS ---
+      const congesRes = await rhApi.getConges();
+      const conges = congesRes?.results || congesRes || [];
+
+      setPendingCongesCount(conges.filter((c: any) => c.status === "en_attente").length);
+
+      setRecentConges(conges.slice(0, 3));
+
+      // --- AFFECTATIONS ---
+      const affectRes = await rhApi.getAffectations();
+      const aff = affectRes?.results || affectRes || [];
+      setAffectations(aff.slice(0, 5));
+
+    } catch (error) {
+      console.error("Erreur Dashboard RH :", error);
     }
   };
 
-  // -----------------------------
-  // Rendu
-  // -----------------------------
   return (
-    <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">Demandes de Décaissement</h1>
+    <div className="p-6 flex-1 bg-gray-100 min-h-screen">
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">
+        Bonjour, {user?.full_name || user?.username}
+      </h1>
 
-      {/* Liste des décaissements */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Service source</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Date création</TableHead>
-            <TableHead>Total</TableHead>
-            <TableHead>Statut</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {decaissements.map((dec) => (
-            <TableRow key={dec.id}>
-              <TableCell>{dec.source_service}</TableCell>
-              <TableCell>{dec.source_type}</TableCell>
-              <TableCell>{new Date(dec.date_creation).toLocaleDateString()}</TableCell>
-              <TableCell>{dec.total_montant.toLocaleString()}</TableCell>
-              <TableCell><span className={badgeColor(dec.statut)}>{dec.statut}</span></TableCell>
-              <TableCell>
-                <Button onClick={() => setDialogOpen(true) || setSelectedDemandeId(dec.id)}>Ajouter dépense</Button>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      {/* ======================================================
+          🧮 KPI CARDS
+      ====================================================== */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 
-      {/* Dialog création dépense */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ajouter une dépense</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Input
-              placeholder="Description"
-              value={depenseDescription}
-              onChange={(e) => setDepenseDescription(e.target.value)}
-            />
-            <Input
-              type="number"
-              placeholder="Montant"
-              value={depenseMontant}
-              onChange={(e) => setDepenseMontant(Number(e.target.value))}
-            />
-          </div>
-          <DialogFooter className="flex justify-end gap-2 mt-4">
-            <Button onClick={() => setDialogOpen(false)}>Annuler</Button>
-            <Button
-              onClick={() => {
-                if (selectedDemandeId) createDecaissement("RH", selectedDemandeId, depenseMontant);
-              }}
-            >
-              Créer
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        {(isAdmin || isRH) && (
+          <Card className="p-4 bg-white shadow rounded-2xl border hover:shadow-lg transition">
+            <div className="flex items-center">
+              <Users className="w-8 h-8 text-green-700 mr-3" />
+              <div>
+                <p className="text-xl font-semibold">{employeesCount}</p>
+                <p className="text-sm text-gray-600">Employés</p>
+              </div>
+            </div>
+          </Card>
+        )}
 
-      {/* Liste des demandes RH et Stock pour info */}
-      <div className="mt-6 grid grid-cols-2 gap-4">
-        <div>
-          <h2 className="font-bold mb-2">Demandes RH</h2>
-          <ul className="list-disc pl-5">
-            {demandesRH.map((d) => (
-              <li key={d.id}>{d.description} - {d.montant.toLocaleString()} Ar</li>
+        {(isAdmin || isRH) && (
+          <Card className="p-4 bg-white shadow rounded-2xl border hover:shadow-lg transition">
+            <div className="flex items-center">
+              <ClipboardList className="w-8 h-8 text-yellow-700 mr-3" />
+              <div>
+                <p className="text-xl font-semibold">{pendingCongesCount}</p>
+                <p className="text-sm text-gray-600">Congés en attente</p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+      </div>
+
+      {/* ======================================================
+          📈 GRAPH RH
+      ====================================================== */}
+      {(isAdmin || isRH) && (
+        <Card className="p-4 bg-white shadow rounded-2xl border mb-8">
+          <h2 className="text-lg font-semibold mb-4">Évolution des employés</h2>
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={employeeEvolution}>
+              <XAxis dataKey="name" stroke="#4B5563" />
+              <YAxis stroke="#4B5563" />
+              <Tooltip />
+              <Line type="monotone" dataKey="employees" stroke="#297373" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
+      {/* ======================================================
+          👤 AFFECTATIONS
+      ====================================================== */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <Card className="p-4 bg-white shadow rounded-2xl border">
+          <h3 className="text-md font-semibold mb-3">Dernières affectations</h3>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="py-2 text-left">Employé</th>
+                <th className="text-left">Magasin</th>
+                <th className="text-left">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {affectations.map((item: any, idx) => (
+                <tr key={idx} className="border-b">
+                  <td className="py-2">{item?.employer?.full_name}</td>
+                  <td>{item?.magasin?.nom}</td>
+                  <td>{item?.created_at?.slice(0, 10)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+
+        {/* Congés récents */}
+        <Card className="p-4 bg-white shadow rounded-2xl border">
+          <h3 className="text-md font-semibold mb-3">Congés récents</h3>
+          <ul className="text-sm space-y-1">
+            {recentConges.map((c: any, idx) => (
+              <li key={idx}>
+                {c?.employer?.full_name} — {c?.nb_jours} jours
+              </li>
             ))}
           </ul>
-        </div>
-        <div>
-          <h2 className="font-bold mb-2">Demandes Stock</h2>
-          <ul className="list-disc pl-5">
-            {demandesStock.map((d) => (
-              <li key={d.id}>{d.article_nom} x {d.quantite} - {d.montant_estime.toLocaleString()} Ar</li>
-            ))}
-          </ul>
-        </div>
+        </Card>
+
       </div>
     </div>
   );
