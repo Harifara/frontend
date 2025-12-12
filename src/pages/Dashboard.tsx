@@ -30,37 +30,37 @@ import {
 } from "recharts";
 
 // ======================================================
-//   DASHBOARD PROFESSIONNEL
+//   DASHBOARD RH (OPTIMISÉ)
 // ======================================================
 export default function Dashboard() {
   const { user } = useAuth();
-
   const role = user?.role;
   const isAdmin = role === "admin";
   const isRH = role === "responsable_rh";
 
-  // KPI
-  const [employeesCount, setEmployeesCount] = useState(0);
-  const [affectationsCount, setAffectationsCount] = useState(0);
-  const [congesCount, setCongesCount] = useState(0);
-  const [pendingCongesCount, setPendingCongesCount] = useState(0);
-  const [contratsCount, setContratsCount] = useState(0);
+  // KPI STATES
+  const [stats, setStats] = useState({
+    employees: 0,
+    affectations: 0,
+    conges: 0,
+    pendingConges: 0,
+    contrats: 0,
+    districts: 0,
+    communes: 0,
+    fokontany: 0,
+    locations: 0,
+    payments: 0,
+    achats: 0,
+    demandes: 0,
+  });
 
-  const [districtsCount, setDistrictsCount] = useState(0);
-  const [communesCount, setCommunesCount] = useState(0);
-  const [fokontanyCount, setFokontanyCount] = useState(0);
-
-  const [locationsCount, setLocationsCount] = useState(0);
-  const [paymentsCount, setPaymentsCount] = useState(0);
-  const [achatsCount, setAchatsCount] = useState(0);
-  const [demandesCount, setDemandesCount] = useState(0);
-
-  const [employeeEvolution, setEmployeeEvolution] = useState<any[]>([]);
-  const [recentAffectations, setRecentAffectations] = useState<any[]>([]);
-  const [recentConges, setRecentConges] = useState<any[]>([]);
+  // Lists
+  const [recentAffectations, setRecentAffectations] = useState([]);
+  const [recentConges, setRecentConges] = useState([]);
+  const [employeeEvolution, setEmployeeEvolution] = useState([]);
 
   // ======================================================
-  //   CHARGEMENT DES DONNÉES
+  //   LOADING DASHBOARD DATA (ULTRA OPTIMISÉ)
   // ======================================================
   useEffect(() => {
     loadDashboard();
@@ -68,79 +68,76 @@ export default function Dashboard() {
 
   const loadDashboard = async () => {
     try {
-      // EMPLOYÉS
-      const employees = await rhApi.getEmployes();
-      const emp = employees.results || employees;
-      setEmployeesCount(emp.length);
+      const [
+        employees,
+        affectations,
+        conges,
+        contrats,
+        districts,
+        communes,
+        fokos,
+        locations,
+        payments,
+        achats,
+        demandes,
+      ] = await Promise.all([
+        rhApi.getEmployes(),
+        rhApi.getAffectations(),
+        rhApi.getConges(),
+        rhApi.getContrats(),
+        rhApi.getDistricts(),
+        rhApi.getCommunes(),
+        rhApi.getFokontanys(),
+        rhApi.getLocations(),
+        rhApi.getPayements(),
+        rhApi.getAchats(),
+        rhApi.getDemandes(),
+      ]);
 
+      const emp = employees.results || employees;
+      const aff = affectations.results || affectations;
+      const co = conges.results || conges;
+
+      setStats({
+        employees: emp.length,
+        affectations: aff.length,
+        conges: co.length,
+        pendingConges: co.filter((c: any) => c.status === "en_attente").length,
+        contrats: (contrats.results || contrats).length,
+        districts: (districts.results || districts).length,
+        communes: (communes.results || communes).length,
+        fokontany: (fokos.results || fokos).length,
+        locations: (locations.results || locations).length,
+        payments: (payments.results || payments).length,
+        achats: (achats.results || achats).length,
+        demandes: (demandes.results || demandes).length,
+      });
+
+      // Evolution fictive
       setEmployeeEvolution([
-        { name: "Jan", employees: Math.round(emp.length * 0.80) },
-        { name: "Feb", employees: Math.round(emp.length * 0.85) },
-        { name: "Mar", employees: Math.round(emp.length * 0.90) },
-        { name: "Apr", employees: Math.round(emp.length * 0.95) },
+        { name: "Jan", employees: Math.round(emp.length * 0.8) },
+        { name: "Feb", employees: Math.round(emp.length * 0.88) },
+        { name: "Mar", employees: Math.round(emp.length * 0.93) },
+        { name: "Apr", employees: Math.round(emp.length * 0.97) },
         { name: "May", employees: emp.length },
       ]);
 
-      // AFFECTATIONS
-      const affect = await rhApi.getAffectations();
-      const aff = affect.results || affect;
-      setAffectationsCount(aff.length);
       setRecentAffectations(aff.slice(0, 5));
-
-      // CONGÉS
-      const cong = await rhApi.getConges();
-      const co = cong.results || cong;
-      setCongesCount(co.length);
-      setPendingCongesCount(co.filter((c: any) => c.status === "en_attente").length);
       setRecentConges(co.slice(0, 5));
-
-      // CONTRATS
-      const contrats = await rhApi.getContrats();
-      const cn = contrats.results || contrats;
-      setContratsCount(cn.length);
-
-      // DISTRICTS
-      const districts = await rhApi.getDistricts();
-      setDistrictsCount((districts.results || districts).length);
-
-      // COMMUNES
-      const communes = await rhApi.getCommunes();
-      setCommunesCount((communes.results || communes).length);
-
-      // FOKONTANY
-      const foko = await rhApi.getFokontany();
-      setFokontanyCount((foko.results || foko).length);
-
-      // LOCATIONS
-      const loc = await rhApi.getLocations();
-      setLocationsCount((loc.results || loc).length);
-
-      // PAYEMENTS
-      const pay = await rhApi.getPaiements();
-      setPaymentsCount((pay.results || pay).length);
-
-      // ACHATS
-      const achats = await rhApi.getAchats();
-      setAchatsCount((achats.results || achats).length);
-
-      // DEMANDES
-      const demandes = await rhApi.getDemandes();
-      setDemandesCount((demandes.results || demandes).length);
-
     } catch (error) {
       console.error("Erreur Dashboard :", error);
     }
   };
 
   // ======================================================
-  //   UI
+  //   COMPONENT KPI
   // ======================================================
   const KPICard = ({ icon: Icon, label, value, color }: any) => (
-    <Card className="p-4 bg-white shadow rounded-2xl border hover:shadow-lg transition">
-      <div className="flex items-center">
-        <Icon className={`w-8 h-8 mr-3 ${color}`} />
+    <Card className="p-4 bg-white shadow hover:shadow-xl rounded-2xl transition">
+      <div className="flex items-center gap-3">
+        <Icon className={`w-8 h-8 ${color}`} />
         <div>
-          <p className="text-xl font-semibold">{value}</p>
+          <p className="text-lg font-semibold">{value}</p>
           <p className="text-sm text-gray-600">{label}</p>
         </div>
       </div>
@@ -153,47 +150,41 @@ export default function Dashboard() {
         Bonjour, {user?.full_name || user?.username}
       </h1>
 
-      {/* ======================================================
-          KPI
-      ====================================================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* ======================= KPI GRID ======================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
 
-        <KPICard icon={Users} label="Employés" value={employeesCount} color="text-green-700" />
-        <KPICard icon={Map} label="Districts" value={districtsCount} color="text-blue-600" />
-        <KPICard icon={MapPin} label="Communes" value={communesCount} color="text-purple-600" />
-        <KPICard icon={Home} label="Fokontany" value={fokontanyCount} color="text-orange-600" />
+        <KPICard icon={Users} label="Employés" value={stats.employees} color="text-green-700" />
+        <KPICard icon={Map} label="Districts" value={stats.districts} color="text-blue-600" />
+        <KPICard icon={MapPin} label="Communes" value={stats.communes} color="text-purple-600" />
+        <KPICard icon={Home} label="Fokontany" value={stats.fokontany} color="text-orange-600" />
 
-        <KPICard icon={ListChecks} label="Affectations" value={affectationsCount} color="text-indigo-600" />
-        <KPICard icon={ClipboardList} label="Congés en attente" value={pendingCongesCount} color="text-red-600" />
-        <KPICard icon={FileText} label="Contrats" value={contratsCount} color="text-cyan-600" />
+        <KPICard icon={ListChecks} label="Affectations" value={stats.affectations} color="text-indigo-600" />
+        <KPICard icon={ClipboardList} label="Congés en attente" value={stats.pendingConges} color="text-red-600" />
+        <KPICard icon={FileText} label="Contrats" value={stats.contrats} color="text-cyan-600" />
 
-        <KPICard icon={Building} label="Locations" value={locationsCount} color="text-yellow-600" />
-        <KPICard icon={CreditCard} label="Paiements" value={paymentsCount} color="text-lime-600" />
-        <KPICard icon={ShoppingCart} label="Achats" value={achatsCount} color="text-sky-600" />
-        <KPICard icon={ClipboardList} label="Demandes" value={demandesCount} color="text-rose-600" />
+        <KPICard icon={Building} label="Locations" value={stats.locations} color="text-yellow-600" />
+        <KPICard icon={CreditCard} label="Paiements" value={stats.payments} color="text-lime-600" />
+        <KPICard icon={ShoppingCart} label="Achats" value={stats.achats} color="text-sky-600" />
+        <KPICard icon={ClipboardList} label="Demandes RH" value={stats.demandes} color="text-rose-600" />
 
       </div>
 
-      {/* ======================================================
-          GRAPHIQUE
-      ====================================================== */}
+      {/* ======================= GRAPH ======================= */}
       {(isAdmin || isRH) && (
-        <Card className="p-4 bg-white shadow rounded-2xl border mb-8">
+        <Card className="p-6 bg-white shadow rounded-2xl border mb-8">
           <h2 className="text-lg font-semibold mb-4">Évolution des employés</h2>
-          <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={260}>
             <LineChart data={employeeEvolution}>
-              <XAxis dataKey="name" stroke="#4B5563" />
-              <YAxis stroke="#4B5563" />
+              <XAxis dataKey="name" stroke="#666" />
+              <YAxis stroke="#666" />
               <Tooltip />
-              <Line type="monotone" dataKey="employees" stroke="#297373" strokeWidth={2} />
+              <Line type="monotone" dataKey="employees" stroke="#007b83" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </Card>
       )}
 
-      {/* ======================================================
-          TABLEAUX
-      ====================================================== */}
+      {/* ======================= TABLEAU AFFECTATIONS + CONGÉS ======================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
         {/* AFFECTATIONS */}
@@ -232,7 +223,6 @@ export default function Dashboard() {
         </Card>
 
       </div>
-
     </div>
   );
 }
