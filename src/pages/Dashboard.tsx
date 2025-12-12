@@ -1,27 +1,23 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-
-// APIs
 import { rhApi } from "@/lib/api";
-import { geoApi, stockApi, financeApi } from "@/lib/api-all";
-
-// UI
-import { Card } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 
 // Icons
 import {
   Users,
+  ClipboardList,
   Map,
   MapPin,
-  Layers,
-  ClipboardList,
-  Briefcase,
   Home,
-  CreditCard,
+  Building,
+  FileText,
   ShoppingCart,
-  FileCheck,
+  CreditCard,
+  ListChecks,
 } from "lucide-react";
+
+// UI Components
+import { Card } from "@/components/ui/card";
 
 // Charts
 import {
@@ -31,176 +27,198 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
 } from "recharts";
 
+// ======================================================
+//   DASHBOARD RH
+// ======================================================
 export default function Dashboard() {
   const { user } = useAuth();
+  const role = user?.role;
+  const isAdmin = role === "admin";
+  const isRH = role === "responsable_rh";
 
-  /* ======================================================
-      STATES
-  ====================================================== */
-  const [employeesCount, setEmployeesCount] = useState(0);
-  const [congesCount, setCongesCount] = useState(0);
-  const [affectationsCount, setAffectationsCount] = useState(0);
-  const [contratsCount, setContratsCount] = useState(0);
+  // KPI STATES
+  const [stats, setStats] = useState({
+    employees: 0,
+    affectations: 0,
+    conges: 0,
+    pendingConges: 0,
+    contrats: 0,
+    districts: 0,
+    communes: 0,
+    fokontany: 0,
+    locations: 0,
+    payments: 0,
+    achats: 0,
+    demandes: 0,
+  });
 
-  const [districtsCount, setDistrictsCount] = useState(0);
-  const [communesCount, setCommunesCount] = useState(0);
-  const [fokontanyCount, setFokontanyCount] = useState(0);
-
-  const [locationsCount, setLocationsCount] = useState(0);
-  const [paiementsCount, setPaiementsCount] = useState(0);
-  const [achatsCount, setAchatsCount] = useState(0);
-  const [demandesCount, setDemandesCount] = useState(0);
-
+  // Lists
+  const [recentAffectations, setRecentAffectations] = useState<any[]>([]);
+  const [recentConges, setRecentConges] = useState<any[]>([]);
   const [employeeEvolution, setEmployeeEvolution] = useState<any[]>([]);
 
-  /* ======================================================
-      LOAD DATA
-  ====================================================== */
+  // ======================================================
+  //   LOAD DASHBOARD DATA
+  // ======================================================
   useEffect(() => {
     loadDashboard();
   }, []);
 
   const loadDashboard = async () => {
     try {
-      /* ----------------------------
-          RH DATA
-      -----------------------------*/
-      const employeesRes = await rhApi.getEmployes();
-      const employees = employeesRes?.results || employeesRes || [];
-      setEmployeesCount(employees.length);
-
-      const congesRes = await rhApi.getConges();
-      const conges = congesRes?.results || congesRes || [];
-      setCongesCount(conges.length);
-
-      const affectRes = await rhApi.getAffectations();
-      setAffectationsCount(affectRes?.count || affectRes.length);
-
-      const contratRes = await rhApi.getContrats();
-      setContratsCount(contratRes?.count || contratRes.length);
-
-      /* Graph employé */
-      setEmployeeEvolution([
-        { name: "Jan", employees: Math.round(employees.length * 0.8) },
-        { name: "Feb", employees: Math.round(employees.length * 0.85) },
-        { name: "Mar", employees: Math.round(employees.length * 0.9) },
-        { name: "Apr", employees: Math.round(employees.length * 0.95) },
-        { name: "May", employees: employees.length },
+      const [
+        employees,
+        affectations,
+        conges,
+        contrats,
+        districts,
+        communes,
+        fokos,
+        locations,
+        payments,
+        achats,
+        demandes,
+      ] = await Promise.all([
+        rhApi.getEmployes(),
+        rhApi.getAffectations(),
+        rhApi.getConges(),
+        rhApi.getContrats(),
+        rhApi.getDistricts(),
+        rhApi.getCommunes(),
+        rhApi.getFokontanys(),
+        rhApi.getLocations(),
+        rhApi.getPayments(), // corrigé
+        rhApi.getAchats(),
+        rhApi.getDemandes(),
       ]);
 
-      /* ----------------------------
-          GEO DATA
-      -----------------------------*/
-      setDistrictsCount((await geoApi.getDistricts())?.count || 0);
-      setCommunesCount((await geoApi.getCommunes())?.count || 0);
-      setFokontanyCount((await geoApi.getFokontany())?.count || 0);
+      const emp = employees.results || employees;
+      const aff = affectations.results || affectations;
+      const co = conges.results || conges;
 
-      /* ----------------------------
-          STOCK + FINANCE DATA
-      -----------------------------*/
-      setAchatsCount((await stockApi.getDemandesAchat())?.count || 0);
-      setDemandesCount((await financeApi.getDemandesDecaissement())?.count || 0);
-      setLocationsCount((await financeApi.getLocations())?.count || 0);
-      setPaiementsCount((await financeApi.getPaiements())?.count || 0);
+      setStats({
+        employees: emp.length,
+        affectations: aff.length,
+        conges: co.length,
+        pendingConges: co.filter((c: any) => c.status === "en_attente").length,
+        contrats: (contrats.results || contrats).length,
+        districts: (districts.results || districts).length,
+        communes: (communes.results || communes).length,
+        fokontany: (fokos.results || fokos).length,
+        locations: (locations.results || locations).length,
+        payments: (payments.results || payments).length,
+        achats: (achats.results || achats).length,
+        demandes: (demandes.results || demandes).length,
+      });
 
-    } catch (err) {
-      console.error("Erreur dashboard :", err);
+      // Evolution fictive
+      setEmployeeEvolution([
+        { name: "Jan", employees: Math.round(emp.length * 0.8) },
+        { name: "Feb", employees: Math.round(emp.length * 0.88) },
+        { name: "Mar", employees: Math.round(emp.length * 0.93) },
+        { name: "Apr", employees: Math.round(emp.length * 0.97) },
+        { name: "May", employees: emp.length },
+      ]);
+
+      setRecentAffectations(aff.slice(0, 5));
+      setRecentConges(co.slice(0, 5));
+    } catch (error) {
+      console.error("Erreur Dashboard :", error);
     }
   };
 
-  /* ======================================================
-      UI TEMPLATE
-  ====================================================== */
-  return (
-    <div className="p-6 flex-1 bg-gray-100 min-h-screen">
-
-      <h1 className="text-3xl font-bold text-gray-800 mb-8">
-        Tableau de bord — {user?.full_name}
-      </h1>
-
-      {/* ======================================================
-          SECTION KPI TOP
-      ====================================================== */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-
-        <KpiCard icon={<Users />} label="Employés" value={employeesCount} color="green" />
-        <KpiCard icon={<ClipboardList />} label="Congés" value={congesCount} color="yellow" />
-        <KpiCard icon={<Briefcase />} label="Contrats" value={contratsCount} color="blue" />
-        <KpiCard icon={<Layers />} label="Affectations" value={affectationsCount} color="purple" />
-
-      </div>
-
-      {/* ======================================================
-          SECTION GEO
-      ====================================================== */}
-      <h2 className="text-xl font-semibold mb-3">Zone Géographique</h2>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <KpiCard icon={<Map />} label="Districts" value={districtsCount} color="orange" />
-        <KpiCard icon={<MapPin />} label="Communes" value={communesCount} color="red" />
-        <KpiCard icon={<Home />} label="Fokontany" value={fokontanyCount} color="teal" />
-      </div>
-
-      {/* ======================================================
-          SECTION FINANCE + STOCK
-      ====================================================== */}
-      <h2 className="text-xl font-semibold mb-3">Finance & Achats</h2>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <KpiCard icon={<ShoppingCart />} label="Achats" value={achatsCount} color="indigo" />
-        <KpiCard icon={<FileCheck />} label="Demandes Décaissement" value={demandesCount} color="pink" />
-        <KpiCard icon={<Home />} label="Locations" value={locationsCount} color="cyan" />
-        <KpiCard icon={<CreditCard />} label="Paiements" value={paiementsCount} color="green" />
-      </div>
-
-      {/* ======================================================
-          GRAPH
-      ====================================================== */}
-      <Card className="p-4 bg-white shadow rounded-2xl border mb-10">
-        <h2 className="text-lg font-semibold mb-4">Évolution des employés</h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={employeeEvolution}>
-            <XAxis dataKey="name" stroke="#4B5563" />
-            <YAxis stroke="#4B5563" />
-            <Tooltip />
-            <Line type="monotone" dataKey="employees" stroke="#2563EB" strokeWidth={3} />
-          </LineChart>
-        </ResponsiveContainer>
-      </Card>
-
-    </div>
-  );
-}
-
-/* ======================================================
-    COMPONENT KPI CARD
-====================================================== */
-function KpiCard({
-  icon,
-  label,
-  value,
-  color,
-}: {
-  icon: any;
-  label: string;
-  value: number;
-  color: string;
-}) {
-  return (
-    <Card className="p-5 bg-white shadow-md border rounded-2xl hover:shadow-xl transition">
-      <div className="flex items-center">
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center bg-${color}-100 text-${color}-700`}>
-          {icon}
-        </div>
-        <div className="ml-4">
-          <p className="text-2xl font-bold">{value}</p>
+  // ======================================================
+  //   COMPONENT KPI
+  // ======================================================
+  const KPICard = ({ icon: Icon, label, value, color }: any) => (
+    <Card className="p-4 bg-white shadow hover:shadow-xl rounded-2xl transition">
+      <div className="flex items-center gap-3">
+        <Icon className={`w-8 h-8 ${color}`} />
+        <div>
+          <p className="text-lg font-semibold">{value}</p>
           <p className="text-sm text-gray-600">{label}</p>
         </div>
       </div>
     </Card>
+  );
+
+  return (
+    <div className="p-6 flex-1 bg-gray-100 min-h-screen">
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">
+        Bonjour, {user?.full_name || user?.username}
+      </h1>
+
+      {/* ======================= KPI GRID ======================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <KPICard icon={Users} label="Employés" value={stats.employees} color="text-green-700" />
+        <KPICard icon={Map} label="Districts" value={stats.districts} color="text-blue-600" />
+        <KPICard icon={MapPin} label="Communes" value={stats.communes} color="text-purple-600" />
+        <KPICard icon={Home} label="Fokontany" value={stats.fokontany} color="text-orange-600" />
+
+        <KPICard icon={ListChecks} label="Affectations" value={stats.affectations} color="text-indigo-600" />
+        <KPICard icon={ClipboardList} label="Congés en attente" value={stats.pendingConges} color="text-red-600" />
+        <KPICard icon={FileText} label="Contrats" value={stats.contrats} color="text-cyan-600" />
+
+        <KPICard icon={Building} label="Locations" value={stats.locations} color="text-yellow-600" />
+        <KPICard icon={CreditCard} label="Paiements" value={stats.payments} color="text-lime-600" />
+        <KPICard icon={ShoppingCart} label="Achats" value={stats.achats} color="text-sky-600" />
+        <KPICard icon={ClipboardList} label="Demandes RH" value={stats.demandes} color="text-rose-600" />
+      </div>
+
+      {/* ======================= GRAPH ======================= */}
+      {(isAdmin || isRH) && (
+        <Card className="p-6 bg-white shadow rounded-2xl border mb-8">
+          <h2 className="text-lg font-semibold mb-4">Évolution des employés</h2>
+          <ResponsiveContainer width="100%" height={260}>
+            <LineChart data={employeeEvolution}>
+              <XAxis dataKey="name" stroke="#666" />
+              <YAxis stroke="#666" />
+              <Tooltip />
+              <Line type="monotone" dataKey="employees" stroke="#007b83" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
+
+      {/* ======================= TABLEAU AFFECTATIONS + CONGÉS ======================= */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* AFFECTATIONS */}
+        <Card className="p-4 bg-white shadow rounded-2xl border">
+          <h3 className="text-md font-semibold mb-3">Dernières affectations</h3>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b">
+                <th className="py-2 text-left">Employé</th>
+                <th className="text-left">Magasin</th>
+                <th className="text-left">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentAffectations.map((item, idx) => (
+                <tr key={idx} className="border-b">
+                  <td className="py-2">{item?.employer?.full_name}</td>
+                  <td>{item?.magasin?.nom}</td>
+                  <td>{item?.created_at?.slice(0, 10)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+
+        {/* CONGÉS */}
+        <Card className="p-4 bg-white shadow rounded-2xl border">
+          <h3 className="text-md font-semibold mb-3">Congés récents</h3>
+          <ul className="text-sm space-y-1">
+            {recentConges.map((c, idx) => (
+              <li key={idx}>
+                {c?.employer?.full_name} — {c?.nb_jours} jours
+              </li>
+            ))}
+          </ul>
+        </Card>
+      </div>
+    </div>
   );
 }
