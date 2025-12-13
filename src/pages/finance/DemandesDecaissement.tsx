@@ -167,17 +167,6 @@ export default function DemandesDecaissement() {
   };
 
   // -----------------
-  // Filtrer les demandes déjà utilisées
-  // -----------------
-  const availableRH = demandesRH.filter(d => 
-    !decaissements.some(dec => dec.demandes_rh_ids?.includes(d.id))
-  );
-
-  const availableStock = demandesStock.filter(d => 
-    !decaissements.some(dec => dec.demandes_stock_ids?.includes(d.id))
-  );
-
-  // -----------------
   // Render
   // -----------------
   return (
@@ -264,7 +253,7 @@ export default function DemandesDecaissement() {
             <div>
               <label className="font-medium">Demandes RH</label>
               <MultiSelect
-                items={availableRH.map(d => ({ value: d.id, label: `${d.description} (${d.montant} Ar)` }))}
+                items={demandesRH.map(d => ({ value: d.id, label: `${d.description} (${d.montant} Ar)` }))}
                 selected={selectedRHIds}
                 onChange={setSelectedRHIds}
               />
@@ -272,15 +261,15 @@ export default function DemandesDecaissement() {
             <div>
               <label className="font-medium">Demandes Stock</label>
               <MultiSelect
-                items={availableStock.map(d => ({ value: d.id, label: `${d.numero} (${d.montant_estime} Ar)` }))}
+                items={demandesStock.map(d => ({ value: d.id, label: `${d.numero} (${d.montant_estime} Ar)` }))}
                 selected={selectedStockIds}
                 onChange={setSelectedStockIds}
               />
             </div>
             <div className="text-right font-semibold">
               Montant total : {(
-                availableRH.filter(d => selectedRHIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant || 0), 0) +
-                availableStock.filter(d => selectedStockIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant_estime || 0), 0)
+                demandesRH.filter(d => selectedRHIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant || 0), 0) +
+                demandesStock.filter(d => selectedStockIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant_estime || 0), 0)
               ).toFixed(2)} Ar
             </div>
           </div>
