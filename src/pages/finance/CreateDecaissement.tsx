@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { financeApi, rhApi, stockApi } from "@/lib/api";
+import { financeApi } from "@/lib/api";
 import {
   Table, TableHeader, TableRow, TableHead, TableBody, TableCell
 } from "@/components/ui/table";
@@ -74,7 +74,6 @@ export default function DemandesDecaissement() {
   const { toast } = useToast();
 
   const [view, setView] = useState<"creation" | "soumission">("creation");
-
   const [loading, setLoading] = useState(true);
   const [rhDemandes, setRhDemandes] = useState<DemandeRH[]>([]);
   const [stockDemandes, setStockDemandes] = useState<DemandeStock[]>([]);
@@ -89,16 +88,14 @@ export default function DemandesDecaissement() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [rh, stock, dec] = await Promise.all([
-        rhApi.getDemandesRH(),
-        stockApi.getDemandesAchat(),
+      const [dispo, dec] = await Promise.all([
+        financeApi.getDemandesDisponibles(),
         financeApi.getDecaissements(),
       ]);
 
-      setRhDemandes(rh.results || rh);
-      setStockDemandes(stock.results || stock);
+      setRhDemandes(dispo.rh || []);
+      setStockDemandes(dispo.stock || []);
       setDecaissements(dec.results || dec);
-
     } catch (e) {
       toast({
         title: "Erreur",
@@ -112,28 +109,17 @@ export default function DemandesDecaissement() {
 
   useEffect(() => { fetchData(); }, []);
 
-  /* ================= FILTRAGE CORRECT ================= */
-
-  const availableRH = useMemo(
-    () => rhDemandes.filter(d => d.status === "approuve"),
-    [rhDemandes]
-  );
-
-  const availableStock = useMemo(
-    () => stockDemandes.filter(d => d.statut === "approuve"),
-    [stockDemandes]
-  );
-
   /* ================= CALCUL TOTAL ================= */
 
-  const total =
-    availableRH
+  const total = useMemo(() => {
+    const totalRH = rhDemandes
       .filter(d => selectedRH.includes(d.id))
-      .reduce((a, b) => a + b.montant, 0)
-    +
-    availableStock
+      .reduce((a, b) => a + b.montant, 0);
+    const totalStock = stockDemandes
       .filter(d => selectedStock.includes(d.id))
       .reduce((a, b) => a + b.montant_estime, 0);
+    return totalRH + totalStock;
+  }, [selectedRH, selectedStock, rhDemandes, stockDemandes]);
 
   /* ================= ACTIONS ================= */
 
@@ -163,7 +149,6 @@ export default function DemandesDecaissement() {
       setSelectedRH([]);
       setSelectedStock([]);
       fetchData();
-
     } catch {
       toast({
         title: "Erreur",
@@ -176,16 +161,20 @@ export default function DemandesDecaissement() {
   };
 
   const soumettre = async (id: string) => {
-    await financeApi.updateDecaissement(id, {
-      statut: "en_attente_coordonnateur",
-    });
-
-    toast({
-      title: "Envoyé",
-      description: "Envoyé au coordonnateur",
-    });
-
-    fetchData();
+    try {
+      await financeApi.soumettreDecaissement(id);
+      toast({
+        title: "Envoyé",
+        description: "Envoyé au coordonnateur",
+      });
+      fetchData();
+    } catch {
+      toast({
+        title: "Erreur",
+        description: "Soumission échouée",
+        variant: "destructive",
+      });
+    }
   };
 
   /* ================= RENDER ================= */
@@ -209,7 +198,6 @@ export default function DemandesDecaissement() {
         >
           Voir demandes reçues
         </Button>
-
         <Button
           variant={view === "soumission" ? "default" : "outline"}
           onClick={() => setView("soumission")}
@@ -224,7 +212,7 @@ export default function DemandesDecaissement() {
           {/* ---------- RH ---------- */}
           <Card>
             <CardHeader>
-              <CardTitle>Demandes RH approuvées</CardTitle>
+              <CardTitle>Demandes RH disponibles</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -237,7 +225,7 @@ export default function DemandesDecaissement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {availableRH.map(d => (
+                  {rhDemandes.map(d => (
                     <TableRow key={d.id}>
                       <TableCell>
                         <Checkbox
@@ -251,9 +239,7 @@ export default function DemandesDecaissement() {
                           }
                         />
                       </TableCell>
-
                       <TableCell>{d.description}</TableCell>
-
                       <TableCell>
                         <ul className="list-disc ml-4">
                           {d.achats?.map(a => (
@@ -262,16 +248,11 @@ export default function DemandesDecaissement() {
                             </li>
                           ))}
                           {d.payements?.map(p => (
-                            <li key={p.id}>
-                              Paiement : {p.montant} Ar
-                            </li>
+                            <li key={p.id}>Paiement : {p.montant} Ar</li>
                           ))}
                         </ul>
                       </TableCell>
-
-                      <TableCell>
-                        {d.montant.toLocaleString()} Ar
-                      </TableCell>
+                      <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -282,7 +263,7 @@ export default function DemandesDecaissement() {
           {/* ---------- STOCK ---------- */}
           <Card>
             <CardHeader>
-              <CardTitle>Demandes Stock approuvées</CardTitle>
+              <CardTitle>Demandes Stock disponibles</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -295,7 +276,7 @@ export default function DemandesDecaissement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {availableStock.map(d => (
+                  {stockDemandes.map(d => (
                     <TableRow key={d.id}>
                       <TableCell>
                         <Checkbox
@@ -309,18 +290,13 @@ export default function DemandesDecaissement() {
                           }
                         />
                       </TableCell>
-
                       <TableCell>{d.numero}</TableCell>
-
                       <TableCell>
                         <p>Article : {d.article?.nom || "-"}</p>
                         <p>Quantité : {d.quantite}</p>
                         <p>Justification : {d.justification}</p>
                       </TableCell>
-
-                      <TableCell>
-                        {d.montant_estime.toLocaleString()} Ar
-                      </TableCell>
+                      <TableCell>{d.montant_estime.toLocaleString()} Ar</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -359,9 +335,7 @@ export default function DemandesDecaissement() {
                   .map(d => (
                     <TableRow key={d.id}>
                       <TableCell>{d.reference}</TableCell>
-                      <TableCell>
-                        {d.montant_total.toLocaleString()} Ar
-                      </TableCell>
+                      <TableCell>{d.montant_total.toLocaleString()} Ar</TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded text-xs ${badge(d.statut)}`}>
                           {d.statut}
