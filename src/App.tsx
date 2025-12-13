@@ -46,6 +46,7 @@ import PageDemandesAchat from "./pages/stock/PageDemandesAchat";
 
 import DepensePage from "./pages/finance/DepensePage";
 import DemandesDecaissement from "./pages/finance/DemandesDecaissement";
+import CreateDecaissement from "./pages/finance/CreateDecaissement";
 
 import ValidationsCoordo from "./pages/coordinator/ValidationsCoordo";
 
@@ -130,6 +131,7 @@ const App = () => (
               
               <Route path="/finance/depenses" element={<DepensePage />} />
               <Route path="/finance/demandes-decaissement" element={<DemandesDecaissement />} />
+              <Route path="/finance/demandes-decaissement/create" element={<CreateDecaissement />} />
 
               <Route path="/cordinator/ValidationsCoordo" element={<ValidationsCoordo />} />
 
