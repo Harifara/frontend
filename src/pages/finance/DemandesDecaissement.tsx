@@ -1,6 +1,6 @@
 // src/pages/finance/DemandesDecaissement.tsx
 import React, { useEffect, useState } from "react";
-import { financeApi, rhApi, stockApi, authApi } from "@/lib/api";
+import { financeApi, rhApi, stockApi } from "@/lib/api";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -58,7 +58,6 @@ export default function DemandesDecaissement() {
   const [demandesStock, setDemandesStock] = useState<DemandeStock[]>([]);
   const [selectedRHIds, setSelectedRHIds] = useState<string[]>([]);
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
-  const [userId, setUserId] = useState<string>(""); // UUID utilisateur connecté
   const { toast } = useToast();
 
   // -----------------
@@ -82,32 +81,16 @@ export default function DemandesDecaissement() {
   // -----------------
   const fetchDemandesSources = async () => {
     try {
-      const [rhData, stockData] = await Promise.all([
-        rhApi.getDemandesRH(),
-        stockApi.getDemandesAchat(),
-      ]);
+      const [rhData, stockData] = await Promise.all([rhApi.getDemandesRH(), stockApi.getDemandesAchat()]);
       setDemandesRH(rhData.results || rhData);
       setDemandesStock(stockData.results || stockData);
     } catch (err) {
       console.error("Erreur récupération RH/Stock :", err);
-      toast({ title: "Erreur", description: "Impossible de récupérer les demandes RH/Stock.", variant: "destructive" });
-    }
-  };
-
-  // -----------------
-  // Récupérer l'utilisateur connecté
-  // -----------------
-  const fetchCurrentUser = async () => {
-    try {
-      const user = await authApi.getUser(); // Ajuster selon ton API
-      setUserId(user.id);
-    } catch (err) {
-      console.warn("Impossible de récupérer l'utilisateur connecté :", err);
+      toast({ title: "Erreur", description: "Impossible de récupérer les demandes RH ou Stock.", variant: "destructive" });
     }
   };
 
   useEffect(() => {
-    fetchCurrentUser();
     fetchDecaissements();
     fetchDemandesSources();
   }, []);
@@ -139,24 +122,20 @@ export default function DemandesDecaissement() {
       return;
     }
 
-    // Calcul montant total
+    // Calcul montant total sécurisé
     const montantRH = demandesRH
       .filter(d => selectedRHIds.includes(d.id))
-      .reduce((acc, d) => acc + d.montant, 0);
+      .reduce((acc, d) => acc + Number(d.montant || 0), 0);
     const montantStock = demandesStock
       .filter(d => selectedStockIds.includes(d.id))
-      .reduce((acc, d) => acc + d.montant_estime, 0);
-
-    if (!userId) {
-      toast({ title: "Erreur", description: "Impossible de récupérer l'utilisateur connecté.", variant: "destructive" });
-      return;
-    }
+      .reduce((acc, d) => acc + Number(d.montant_estime || 0), 0);
+    const montantTotal = montantRH + montantStock;
 
     const payload = {
       demandes_rh_ids: selectedRHIds,
       demandes_stock_ids: selectedStockIds,
-      montant_total: montantRH + montantStock,
-      cree_par_id: userId,
+      montant_total: montantTotal,
+      cree_par_id: "user-finance-uuid", // Remplacer par l'UUID réel de l'utilisateur connecté
     };
 
     setSubmitting(true);
@@ -202,10 +181,10 @@ export default function DemandesDecaissement() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {decaissements.length ? decaissements.map((d) => (
+            {decaissements.length ? decaissements.map(d => (
               <TableRow key={d.id}>
                 <TableCell>{d.id}</TableCell>
-                <TableCell>{d.montant_total.toFixed(2)} Ar</TableCell>
+                <TableCell>{Number(d.montant_total || 0).toFixed(2)} Ar</TableCell>
                 <TableCell>{STATUT_LABELS[d.statut] || d.statut}</TableCell>
                 <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
                 <TableCell>{d.date_decaissement ? new Date(d.date_decaissement).toLocaleString() : "-"}</TableCell>
@@ -273,8 +252,8 @@ export default function DemandesDecaissement() {
             </div>
             <div className="text-right font-semibold">
               Montant total : {(
-                demandesRH.filter(d => selectedRHIds.includes(d.id)).reduce((acc, d) => acc + d.montant, 0) +
-                demandesStock.filter(d => selectedStockIds.includes(d.id)).reduce((acc, d) => acc + d.montant_estime, 0)
+                demandesRH.filter(d => selectedRHIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant || 0), 0) +
+                demandesStock.filter(d => selectedStockIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant_estime || 0), 0)
               ).toFixed(2)} Ar
             </div>
           </div>
