@@ -45,12 +45,18 @@ interface DemandeAchat {
 // -----------------------------
 const badgeColor = (statut: string) => {
   switch (statut.toLowerCase()) {
-    case "brouillon": return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
-    case "en_attente_coordonnateur": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
-    case "approuve": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
-    case "decaisse": return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
-    case "rejete": return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
-    default: return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
+    case "brouillon":
+      return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
+    case "en_attente_coordonnateur":
+      return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    case "approuve":
+      return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
+    case "decaisse":
+      return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
+    case "rejete":
+      return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
+    default:
+      return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
   }
 };
 
@@ -68,7 +74,7 @@ export default function DemandesDecaissement() {
   const [depenseMontant, setDepenseMontant] = useState(0);
 
   // -----------------------------
-  // Fonction de redirection si non connecté
+  // Redirection login
   // -----------------------------
   const redirectLogin = () => {
     alert("Votre session a expiré. Veuillez vous reconnecter.");
@@ -94,13 +100,13 @@ export default function DemandesDecaissement() {
   const fetchData = async () => {
     try {
       const [dec, rh, stock] = await Promise.all([
-        financeApi.getDecaissements().catch((e) => { if(e.status === 401) redirectLogin(); throw e; }),
-        rhApi.getDemandes().catch((e) => { if(e.status === 401) redirectLogin(); throw e; }),
-        stockApi.getDemandesAchat().catch((e) => { if(e.status === 401) redirectLogin(); throw e; }),
+        financeApi.getDecaissements().catch((e) => { if (e.status === 401) redirectLogin(); throw e; }),
+        rhApi.getDemandes().catch((e) => { if (e.status === 401) redirectLogin(); throw e; }),
+        stockApi.getDemandesAchat().catch((e) => { if (e.status === 401) redirectLogin(); throw e; }),
       ]);
-      setDecaissements(dec);
-      setDemandesRH(rh);
-      setDemandesStock(stock);
+      setDecaissements(dec || []);
+      setDemandesRH(rh || []);
+      setDemandesStock(stock || []);
     } catch (err: any) {
       console.error("Erreur lors du chargement des données :", err.message);
     }
@@ -112,7 +118,7 @@ export default function DemandesDecaissement() {
   }, []);
 
   // -----------------------------
-  // Création d'une dépense
+  // Création dépense
   // -----------------------------
   const createDepense = async () => {
     if (!selectedDecaissementId) return;
@@ -128,12 +134,12 @@ export default function DemandesDecaissement() {
         montant: depenseMontant,
         mode_paiement: "espece",
         paye_par_id: user?.id,
-      }).catch((e) => { if(e.status === 401) redirectLogin(); throw e; });
+      }).catch((e) => { if (e.status === 401) redirectLogin(); throw e; });
 
       setDialogOpen(false);
       setDepenseDescription("");
       setDepenseMontant(0);
-      fetchData(); // rafraîchissement des données
+      fetchData();
     } catch (err: any) {
       console.error("Erreur lors de la création de la dépense :", err.message);
       alert("Impossible de créer la dépense.");
@@ -162,7 +168,7 @@ export default function DemandesDecaissement() {
           {decaissements.map((dec) => (
             <TableRow key={dec.id}>
               <TableCell>
-                {dec.demandes_rh_ids.length > 0 ? "RH" : "Stock"}
+                {dec.demandes_rh_ids.length > 0 ? "RH" : dec.demandes_stock_ids.length > 0 ? "Stock" : "-"}
               </TableCell>
               <TableCell>{new Date(dec.date_creation).toLocaleDateString()}</TableCell>
               <TableCell>{dec.montant_total.toLocaleString()}</TableCell>
@@ -170,7 +176,12 @@ export default function DemandesDecaissement() {
                 <span className={badgeColor(dec.statut)}>{dec.statut}</span>
               </TableCell>
               <TableCell>
-                <Button onClick={() => { setDialogOpen(true); setSelectedDecaissementId(dec.id); }}>
+                <Button
+                  onClick={() => {
+                    setSelectedDecaissementId(dec.id);
+                    setDialogOpen(true);
+                  }}
+                >
                   Ajouter dépense
                 </Button>
               </TableCell>
@@ -205,7 +216,7 @@ export default function DemandesDecaissement() {
         </DialogContent>
       </Dialog>
 
-      {/* Liste des demandes RH et Stock */}
+      {/* Liste demandes RH et Stock */}
       <div className="mt-6 grid grid-cols-2 gap-4">
         <div>
           <h2 className="font-bold mb-2">Demandes RH</h2>
