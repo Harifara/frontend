@@ -53,19 +53,9 @@ interface Decaissement {
   reference: string;
   statut: string;
   montant_total: number;
+  demandes_rh_ids?: string[];
+  demandes_stock_ids?: string[];
 }
-
-/* ================== UTILS ================== */
-
-const badge = (status: string) => {
-  const map: any = {
-    brouillon: "bg-gray-200 text-gray-800",
-    en_attente_coordonnateur: "bg-yellow-100 text-yellow-800",
-    approuve: "bg-green-100 text-green-800",
-    rejete: "bg-red-100 text-red-800",
-  };
-  return map[status] || "bg-gray-100";
-};
 
 /* ================== COMPONENT ================== */
 
@@ -74,8 +64,8 @@ export default function DemandesDecaissement() {
   const { toast } = useToast();
 
   const [view, setView] = useState<"creation" | "soumission">("creation");
-
   const [loading, setLoading] = useState(true);
+
   const [rhDemandes, setRhDemandes] = useState<DemandeRH[]>([]);
   const [stockDemandes, setStockDemandes] = useState<DemandeStock[]>([]);
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
@@ -100,25 +90,47 @@ export default function DemandesDecaissement() {
       setDecaissements(dec.results || dec);
 
     } catch {
-      toast({ title: "Erreur", description: "Chargement impossible", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: "Chargement impossible",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  /* ================== CALCUL ================== */
+  /* ================== FILTRAGE DES DEMANDES DÉJÀ UTILISÉES ================== */
+
+  const usedRHIds = decaissements.flatMap(d => d.demandes_rh_ids || []);
+  const usedStockIds = decaissements.flatMap(d => d.demandes_stock_ids || []);
+
+  const availableRH = rhDemandes.filter(d => !usedRHIds.includes(d.id));
+  const availableStock = stockDemandes.filter(d => !usedStockIds.includes(d.id));
+
+  /* ================== CALCUL TOTAL ================== */
 
   const total =
-    rhDemandes.filter(d => selectedRH.includes(d.id)).reduce((a, b) => a + b.montant, 0) +
-    stockDemandes.filter(d => selectedStock.includes(d.id)).reduce((a, b) => a + b.montant_estime, 0);
+    availableRH
+      .filter(d => selectedRH.includes(d.id))
+      .reduce((sum, d) => sum + d.montant, 0) +
+    availableStock
+      .filter(d => selectedStock.includes(d.id))
+      .reduce((sum, d) => sum + d.montant_estime, 0);
 
   /* ================== ACTIONS ================== */
 
   const creerDecaissement = async () => {
     if (!selectedRH.length && !selectedStock.length) {
-      return toast({ title: "Erreur", description: "Sélectionnez au moins une demande", variant: "destructive" });
+      return toast({
+        title: "Erreur",
+        description: "Sélectionnez au moins une demande",
+        variant: "destructive",
+      });
     }
 
     setSubmitting(true);
@@ -130,49 +142,77 @@ export default function DemandesDecaissement() {
         cree_par_id: user?.id,
       });
 
-      toast({ title: "Succès", description: "Décaissement créé (brouillon)" });
+      toast({
+        title: "Succès",
+        description: "Décaissement créé (brouillon)",
+      });
+
       setSelectedRH([]);
       setSelectedStock([]);
       fetchData();
 
     } catch {
-      toast({ title: "Erreur", description: "Création échouée", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: "Création échouée",
+        variant: "destructive",
+      });
     } finally {
       setSubmitting(false);
     }
   };
 
   const soumettre = async (id: string) => {
-    await financeApi.updateDecaissement(id, { statut: "en_attente_coordonnateur" });
-    toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
+    await financeApi.updateDecaissement(id, {
+      statut: "en_attente_coordonnateur",
+    });
+
+    toast({
+      title: "Envoyé",
+      description: "Envoyé au coordonnateur",
+    });
+
     fetchData();
   };
 
   /* ================== RENDER ================== */
 
   if (loading) {
-    return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>;
+    return (
+      <div className="flex justify-center p-8">
+        <Loader2 className="animate-spin" />
+      </div>
+    );
   }
 
   return (
     <div className="p-8 space-y-6">
 
-      {/* ================== HEADER ================== */}
+      {/* ===== HEADER ===== */}
       <div className="flex gap-4">
-        <Button variant={view === "creation" ? "default" : "outline"} onClick={() => setView("creation")}>
+        <Button
+          variant={view === "creation" ? "default" : "outline"}
+          onClick={() => setView("creation")}
+        >
           Voir demandes reçues
         </Button>
-        <Button variant={view === "soumission" ? "default" : "outline"} onClick={() => setView("soumission")}>
+
+        <Button
+          variant={view === "soumission" ? "default" : "outline"}
+          onClick={() => setView("soumission")}
+        >
           Voir soumissions à faire
         </Button>
       </div>
 
-      {/* ================== VUE CREATION ================== */}
+      {/* ================== VUE CRÉATION ================== */}
       {view === "creation" && (
         <>
           {/* ---------- RH ---------- */}
           <Card>
-            <CardHeader><CardTitle>Demandes RH</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Demandes RH disponibles</CardTitle>
+            </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
@@ -184,13 +224,17 @@ export default function DemandesDecaissement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rhDemandes.map(d => (
+                  {availableRH.map(d => (
                     <TableRow key={d.id}>
                       <TableCell>
                         <Checkbox
                           checked={selectedRH.includes(d.id)}
                           onCheckedChange={() =>
-                            setSelectedRH(p => p.includes(d.id) ? p.filter(i => i !== d.id) : [...p, d.id])
+                            setSelectedRH(p =>
+                              p.includes(d.id)
+                                ? p.filter(i => i !== d.id)
+                                : [...p, d.id]
+                            )
                           }
                         />
                       </TableCell>
@@ -198,10 +242,14 @@ export default function DemandesDecaissement() {
                       <TableCell>
                         <ul className="list-disc ml-4">
                           {d.achats?.map(a => (
-                            <li key={a.id}>{a.article} × {a.nombre} = {a.montant} Ar</li>
+                            <li key={a.id}>
+                              {a.article} × {a.nombre} = {a.montant} Ar
+                            </li>
                           ))}
                           {d.payements?.map(p => (
-                            <li key={p.id}>Paiement : {p.montant} Ar</li>
+                            <li key={p.id}>
+                              Paiement : {p.montant} Ar
+                            </li>
                           ))}
                         </ul>
                       </TableCell>
@@ -215,7 +263,9 @@ export default function DemandesDecaissement() {
 
           {/* ---------- STOCK ---------- */}
           <Card>
-            <CardHeader><CardTitle>Demandes Stock</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Demandes Stock disponibles</CardTitle>
+            </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
@@ -227,13 +277,17 @@ export default function DemandesDecaissement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {stockDemandes.map(d => (
+                  {availableStock.map(d => (
                     <TableRow key={d.id}>
                       <TableCell>
                         <Checkbox
                           checked={selectedStock.includes(d.id)}
                           onCheckedChange={() =>
-                            setSelectedStock(p => p.includes(d.id) ? p.filter(i => i !== d.id) : [...p, d.id])
+                            setSelectedStock(p =>
+                              p.includes(d.id)
+                                ? p.filter(i => i !== d.id)
+                                : [...p, d.id]
+                            )
                           }
                         />
                       </TableCell>
@@ -251,10 +305,10 @@ export default function DemandesDecaissement() {
             </CardContent>
           </Card>
 
-          <div className="flex justify-between">
+          <div className="flex justify-between items-center">
             <strong>Montant total : {total.toLocaleString()} Ar</strong>
             <Button onClick={creerDecaissement} disabled={submitting}>
-              Créer le décaissement
+              {submitting ? "Création..." : "Créer le décaissement"}
             </Button>
           </div>
         </>
@@ -263,7 +317,9 @@ export default function DemandesDecaissement() {
       {/* ================== VUE SOUMISSION ================== */}
       {view === "soumission" && (
         <Card>
-          <CardHeader><CardTitle>Décaissements à soumettre</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Décaissements à soumettre</CardTitle>
+          </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
@@ -274,15 +330,21 @@ export default function DemandesDecaissement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {decaissements.filter(d => d.statut === "brouillon").map(d => (
-                  <TableRow key={d.id}>
-                    <TableCell>{d.reference}</TableCell>
-                    <TableCell>{d.montant_total.toLocaleString()} Ar</TableCell>
-                    <TableCell>
-                      <Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {decaissements
+                  .filter(d => d.statut === "brouillon")
+                  .map(d => (
+                    <TableRow key={d.id}>
+                      <TableCell>{d.reference}</TableCell>
+                      <TableCell>
+                        {d.montant_total.toLocaleString()} Ar
+                      </TableCell>
+                      <TableCell>
+                        <Button size="sm" onClick={() => soumettre(d.id)}>
+                          Soumettre
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           </CardContent>
