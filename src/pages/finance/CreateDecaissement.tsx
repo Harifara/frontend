@@ -10,20 +10,18 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-/* ---------------- TYPES ---------------- */
+/* ================== TYPES ================== */
 
 interface Achat {
   id: string;
   article: string;
   nombre: number;
   montant: number;
-  statut: string;
 }
 
 interface Payement {
   id: string;
   montant: number;
-  status: string;
 }
 
 interface DemandeRH {
@@ -57,28 +55,25 @@ interface Decaissement {
   montant_total: number;
 }
 
-/* ---------------- UTILS ---------------- */
+/* ================== UTILS ================== */
 
 const badge = (status: string) => {
-  switch (status) {
-    case "brouillon":
-      return "bg-gray-200 text-gray-800";
-    case "en_attente_coordonnateur":
-      return "bg-yellow-100 text-yellow-800";
-    case "approuve":
-      return "bg-green-100 text-green-800";
-    case "rejete":
-      return "bg-red-100 text-red-800";
-    default:
-      return "bg-gray-100 text-gray-700";
-  }
+  const map: any = {
+    brouillon: "bg-gray-200 text-gray-800",
+    en_attente_coordonnateur: "bg-yellow-100 text-yellow-800",
+    approuve: "bg-green-100 text-green-800",
+    rejete: "bg-red-100 text-red-800",
+  };
+  return map[status] || "bg-gray-100";
 };
 
-/* ---------------- COMPONENT ---------------- */
+/* ================== COMPONENT ================== */
 
 export default function DemandesDecaissement() {
   const { user } = useAuth();
   const { toast } = useToast();
+
+  const [view, setView] = useState<"creation" | "soumission">("creation");
 
   const [loading, setLoading] = useState(true);
   const [rhDemandes, setRhDemandes] = useState<DemandeRH[]>([]);
@@ -89,7 +84,7 @@ export default function DemandesDecaissement() {
   const [selectedStock, setSelectedStock] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  /* ---------------- FETCH ---------------- */
+  /* ================== FETCH ================== */
 
   const fetchData = async () => {
     setLoading(true);
@@ -113,13 +108,13 @@ export default function DemandesDecaissement() {
 
   useEffect(() => { fetchData(); }, []);
 
-  /* ---------------- CALCUL ---------------- */
+  /* ================== CALCUL ================== */
 
   const total =
     rhDemandes.filter(d => selectedRH.includes(d.id)).reduce((a, b) => a + b.montant, 0) +
     stockDemandes.filter(d => selectedStock.includes(d.id)).reduce((a, b) => a + b.montant_estime, 0);
 
-  /* ---------------- ACTIONS ---------------- */
+  /* ================== ACTIONS ================== */
 
   const creerDecaissement = async () => {
     if (!selectedRH.length && !selectedStock.length) {
@@ -153,7 +148,7 @@ export default function DemandesDecaissement() {
     fetchData();
   };
 
-  /* ---------------- RENDER ---------------- */
+  /* ================== RENDER ================== */
 
   if (loading) {
     return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>;
@@ -161,158 +156,138 @@ export default function DemandesDecaissement() {
 
   return (
     <div className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold">Demandes de Décaissement</h1>
 
-      {/* ---------------- RH ---------------- */}
-      <Card>
-        <CardHeader><CardTitle>Demandes RH (détails)</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead></TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Détails</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Statut</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rhDemandes.map(d => (
-                <TableRow key={d.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedRH.includes(d.id)}
-                      onCheckedChange={() =>
-                        setSelectedRH(p => p.includes(d.id) ? p.filter(i => i !== d.id) : [...p, d.id])
-                      }
-                    />
-                  </TableCell>
-
-                  <TableCell>{d.description}</TableCell>
-
-                  <TableCell>
-                    <strong>Achats :</strong>
-                    <ul className="list-disc ml-4">
-                      {d.achats?.map(a => (
-                        <li key={a.id}>
-                          {a.article} - {a.nombre} × {a.montant} Ar
-                        </li>
-                      )) || "—"}
-                    </ul>
-
-                    <strong>Paiements :</strong>
-                    <ul className="list-disc ml-4">
-                      {d.payements?.map(p => (
-                        <li key={p.id}>{p.montant} Ar</li>
-                      )) || "—"}
-                    </ul>
-                  </TableCell>
-
-                  <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
-
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs ${badge(d.status)}`}>
-                      {d.status}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* ---------------- STOCK ---------------- */}
-      <Card>
-        <CardHeader><CardTitle>Demandes Stock (détails)</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead></TableHead>
-                <TableHead>Numéro</TableHead>
-                <TableHead>Détails</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Statut</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {stockDemandes.map(d => (
-                <TableRow key={d.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedStock.includes(d.id)}
-                      onCheckedChange={() =>
-                        setSelectedStock(p => p.includes(d.id) ? p.filter(i => i !== d.id) : [...p, d.id])
-                      }
-                    />
-                  </TableCell>
-
-                  <TableCell>{d.numero}</TableCell>
-
-                  <TableCell>
-                    <p><strong>Article :</strong> {d.article?.nom || "-"}</p>
-                    <p><strong>Quantité :</strong> {d.quantite}</p>
-                    <p><strong>Justification :</strong> {d.justification}</p>
-                  </TableCell>
-
-                  <TableCell>{d.montant_estime.toLocaleString()} Ar</TableCell>
-
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs ${badge(d.statut)}`}>
-                      {d.statut}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* ---------------- ACTION ---------------- */}
-      <div className="flex justify-between items-center">
-        <p className="font-bold">Montant total : {total.toLocaleString()} Ar</p>
-        <Button onClick={creerDecaissement} disabled={submitting}>
-          {submitting ? "Création..." : "Créer le décaissement"}
+      {/* ================== HEADER ================== */}
+      <div className="flex gap-4">
+        <Button variant={view === "creation" ? "default" : "outline"} onClick={() => setView("creation")}>
+          Voir demandes reçues
+        </Button>
+        <Button variant={view === "soumission" ? "default" : "outline"} onClick={() => setView("soumission")}>
+          Voir soumissions à faire
         </Button>
       </div>
 
-      {/* ---------------- BROUILLONS ---------------- */}
-      <Card>
-        <CardHeader><CardTitle>Brouillons</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Référence</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {decaissements.filter(d => d.statut === "brouillon").map(d => (
-                <TableRow key={d.id}>
-                  <TableCell>{d.reference}</TableCell>
-                  <TableCell>{d.montant_total.toLocaleString()} Ar</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs ${badge(d.statut)}`}>
-                      {d.statut}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Button size="sm" onClick={() => soumettre(d.id)}>
-                      Soumettre
-                    </Button>
-                  </TableCell>
+      {/* ================== VUE CREATION ================== */}
+      {view === "creation" && (
+        <>
+          {/* ---------- RH ---------- */}
+          <Card>
+            <CardHeader><CardTitle>Demandes RH</CardTitle></CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead />
+                    <TableHead>Description</TableHead>
+                    <TableHead>Détails</TableHead>
+                    <TableHead>Montant</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rhDemandes.map(d => (
+                    <TableRow key={d.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedRH.includes(d.id)}
+                          onCheckedChange={() =>
+                            setSelectedRH(p => p.includes(d.id) ? p.filter(i => i !== d.id) : [...p, d.id])
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>{d.description}</TableCell>
+                      <TableCell>
+                        <ul className="list-disc ml-4">
+                          {d.achats?.map(a => (
+                            <li key={a.id}>{a.article} × {a.nombre} = {a.montant} Ar</li>
+                          ))}
+                          {d.payements?.map(p => (
+                            <li key={p.id}>Paiement : {p.montant} Ar</li>
+                          ))}
+                        </ul>
+                      </TableCell>
+                      <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          {/* ---------- STOCK ---------- */}
+          <Card>
+            <CardHeader><CardTitle>Demandes Stock</CardTitle></CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead />
+                    <TableHead>Numéro</TableHead>
+                    <TableHead>Détails</TableHead>
+                    <TableHead>Montant</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stockDemandes.map(d => (
+                    <TableRow key={d.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedStock.includes(d.id)}
+                          onCheckedChange={() =>
+                            setSelectedStock(p => p.includes(d.id) ? p.filter(i => i !== d.id) : [...p, d.id])
+                          }
+                        />
+                      </TableCell>
+                      <TableCell>{d.numero}</TableCell>
+                      <TableCell>
+                        <p>Article : {d.article?.nom || "-"}</p>
+                        <p>Quantité : {d.quantite}</p>
+                        <p>Justification : {d.justification}</p>
+                      </TableCell>
+                      <TableCell>{d.montant_estime.toLocaleString()} Ar</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-between">
+            <strong>Montant total : {total.toLocaleString()} Ar</strong>
+            <Button onClick={creerDecaissement} disabled={submitting}>
+              Créer le décaissement
+            </Button>
+          </div>
+        </>
+      )}
+
+      {/* ================== VUE SOUMISSION ================== */}
+      {view === "soumission" && (
+        <Card>
+          <CardHeader><CardTitle>Décaissements à soumettre</CardTitle></CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Référence</TableHead>
+                  <TableHead>Montant</TableHead>
+                  <TableHead>Action</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {decaissements.filter(d => d.statut === "brouillon").map(d => (
+                  <TableRow key={d.id}>
+                    <TableCell>{d.reference}</TableCell>
+                    <TableCell>{d.montant_total.toLocaleString()} Ar</TableCell>
+                    <TableCell>
+                      <Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
