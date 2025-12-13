@@ -33,13 +33,16 @@ export default function DecaissementsRecus() {
       console.log("➡️ REQUEST: financeApi.getDecaissements()");
       const res = await financeApi.getDecaissements();
       const list = res.results || res;
-      console.log("⬅️ RESPONSE: Décaissements reçus depuis l'API :", list);
+      console.log("⬅️ RESPONSE: Décaissements reçus :", list);
 
-      // Filtrer uniquement ceux en attente du coordonnateur
       setDecaissements(list.filter((d: Decaissement) => d.statut === "en_attente_coordonnateur"));
-    } catch (err) {
-      console.error("Erreur lors de la récupération des décaissements :", err);
-      toast({ title: "Erreur", description: "Chargement impossible", variant: "destructive" });
+    } catch (err: any) {
+      console.error("Erreur lors de la récupération :", err);
+      toast({
+        title: "Erreur",
+        description: err?.response?.data?.detail || "Impossible de charger les décaissements",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -49,7 +52,7 @@ export default function DecaissementsRecus() {
     fetchDecaissements();
   }, []);
 
-  // 🔹 Validation ou rejet d'un décaissement
+  // 🔹 Validation ou rejet
   const handleDecision = async (id: string, decision: "approuve" | "rejete") => {
     setSubmitting(prev => ({ ...prev, [id]: true }));
     console.log(`➡️ REQUEST: cordoApi.createValidation() pour ${id} avec décision ${decision}`);
@@ -81,7 +84,11 @@ export default function DecaissementsRecus() {
   };
 
   if (loading) {
-    return <div className="flex justify-center p-8"><Loader2 className="animate-spin w-8 h-8" /></div>;
+    return (
+      <div className="flex justify-center p-8">
+        <Loader2 className="animate-spin w-8 h-8" />
+      </div>
+    );
   }
 
   return (
@@ -104,37 +111,39 @@ export default function DecaissementsRecus() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {decaissements.length ? decaissements.map(d => (
-                <TableRow key={d.id}>
-                  <TableCell>{d.reference || d.id}</TableCell>
-                  <TableCell>{Number(d.montant_total).toLocaleString()} Ar</TableCell>
-                  <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Input
-                      placeholder="Commentaire (optionnel)"
-                      value={commentaires[d.id] || ""}
-                      onChange={e => setCommentaires(prev => ({ ...prev, [d.id]: e.target.value }))}
-                    />
-                  </TableCell>
-                  <TableCell className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleDecision(d.id, "approuve")}
-                      disabled={submitting[d.id]}
-                    >
-                      {submitting[d.id] ? "..." : "Approuver"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDecision(d.id, "rejete")}
-                      disabled={submitting[d.id]}
-                    >
-                      {submitting[d.id] ? "..." : "Rejeter"}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )) : (
+              {decaissements.length > 0 ? (
+                decaissements.map(d => (
+                  <TableRow key={d.id}>
+                    <TableCell>{d.reference || d.id}</TableCell>
+                    <TableCell>{Number(d.montant_total).toLocaleString()} Ar</TableCell>
+                    <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <Input
+                        placeholder="Commentaire (optionnel)"
+                        value={commentaires[d.id] || ""}
+                        onChange={e => setCommentaires(prev => ({ ...prev, [d.id]: e.target.value }))}
+                      />
+                    </TableCell>
+                    <TableCell className="flex space-x-2">
+                      <Button
+                        size="sm"
+                        onClick={() => handleDecision(d.id, "approuve")}
+                        disabled={submitting[d.id]}
+                      >
+                        {submitting[d.id] ? "..." : "Approuver"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDecision(d.id, "rejete")}
+                        disabled={submitting[d.id]}
+                      >
+                        {submitting[d.id] ? "..." : "Rejeter"}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-6">
                     Aucun décaissement en attente
