@@ -84,7 +84,7 @@ const Demandes = () => {
     setIsLoading(true);
     try {
       const [demandesRes, achatsRes, payementsRes] = await Promise.all([
-        rhApi.getDemandes(),
+        rhApi.getDemandesRH(),
         rhApi.getAchats(),
         rhApi.getPayements(),
       ]);
