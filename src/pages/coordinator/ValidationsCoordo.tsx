@@ -56,8 +56,7 @@ export default function DecaissementsRecus() {
     try {
       await cordoApi.createValidation({
         demande_decaissement_id: id,
-        coordonnateur_id: user!.id,
-        decision,
+        decision,                    // ✅ Ne pas envoyer coordonnateur_id
         commentaire: commentaires[id] || "",
       });
       console.log(`⬅️ RESPONSE: Décaissement ${decision} effectué pour ${id}`);
