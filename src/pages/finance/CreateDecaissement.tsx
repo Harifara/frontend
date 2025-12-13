@@ -54,10 +54,20 @@ export default function DemandesDecaissement() {
         stockApi.getDemandesStock(),
         financeApi.getDecaissements(),
       ]);
+
+      console.log("✅ RH raw data:", rh);
+      console.log("✅ Stock raw data:", stock);
+      console.log("✅ Decaissements raw data:", dec);
+
       setRhDemandes(rh.results || rh);
       setStockDemandes(stock.results || stock);
       setDecaissements(dec.results || dec);
+
+      console.log("📌 RH after setState:", rh.results || rh);
+      console.log("📌 Stock after setState:", stock.results || stock);
+
     } catch (e) {
+      console.error("❌ Erreur lors du fetch:", e);
       toast({ title: "Erreur", description: "Chargement impossible", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -68,12 +78,23 @@ export default function DemandesDecaissement() {
 
   /* ================= FILTRAGE ================= */
 
-  const availableRH = useMemo(() => rhDemandes.filter(d => d.status === "approuve"), [rhDemandes]);
-  const availableStock = useMemo(() => stockDemandes.filter(d => d.statut === "approuve"), [stockDemandes]);
+  const availableRH = useMemo(() => {
+    const filtered = rhDemandes.filter(d => d.status === "approuve");
+    console.log("📊 RH approuvées:", filtered);
+    return filtered;
+  }, [rhDemandes]);
+
+  const availableStock = useMemo(() => {
+    const filtered = stockDemandes.filter(d => d.statut === "approuve");
+    console.log("📊 Stock approuvées:", filtered);
+    return filtered;
+  }, [stockDemandes]);
 
   const total =
     availableRH.filter(d => selectedRH.includes(d.id)).reduce((a, b) => a + b.montant, 0) +
     availableStock.filter(d => selectedStock.includes(d.id)).reduce((a, b) => a + b.montant_estime, 0);
+
+  console.log("💰 Total sélectionné:", total);
 
   /* ================= ACTIONS ================= */
 
