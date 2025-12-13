@@ -973,9 +973,10 @@ export const financeApi = {
 
   getDecaissement: async (id: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
-      headers: getHeaders(token),
-    });
+    return fetchWithLog(
+      `${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`,
+      { headers: getHeaders(token) }
+    );
   },
 
   createDecaissement: async (payload: DecaissementPayload): Promise<any> => {
@@ -987,42 +988,19 @@ export const financeApi = {
     });
   },
 
-  updateDecaissement: async (id: string, payload: Partial<DecaissementPayload>): Promise<any> => {
+  updateDecaissement: async (
+    id: string,
+    payload: Partial<DecaissementPayload>
+  ): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
-      method: "PATCH",
-      headers: getHeaders(token),
-      body: JSON.stringify(payload),
-    });
-  },
-
-  // Envoi au coordo (juste pour marquer envoyée)
-  envoyerAuCoordo: async (id: string): Promise<any> => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/coordo_validation/`, {
-      method: "POST",
-      headers: getHeaders(token),
-      body: JSON.stringify({ decision: "non_traite" }),
-    });
-  },
-
-  // Validation ou rejet par coordo
-  validerDecaissementCoordo: async (id: string, payload?: { coordo_id?: string; coordo_commentaire?: string }): Promise<any> => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/coordo_validation/`, {
-      method: "POST",
-      headers: getHeaders(token),
-      body: JSON.stringify({ ...payload, decision: "valide" }),
-    });
-  },
-
-  rejeterDecaissementCoordo: async (id: string, payload?: { coordo_id?: string; coordo_commentaire?: string }): Promise<any> => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/coordo_validation/`, {
-      method: "POST",
-      headers: getHeaders(token),
-      body: JSON.stringify({ ...payload, decision: "rejete" }),
-    });
+    return fetchWithLog(
+      `${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`,
+      {
+        method: "PATCH",
+        headers: getHeaders(token),
+        body: JSON.stringify(payload),
+      }
+    );
   },
 
   // ==========================================
@@ -1039,29 +1017,24 @@ export const financeApi = {
 
   validateDepense: async (depenseId: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(depenseId)}/valider/`, {
-      method: "POST",
-      headers: getHeaders(token),
-    });
+    return fetchWithLog(
+      `${API_BASE_URL}/finance/depenses/${cleanUUID(depenseId)}/valider/`,
+      {
+        method: "POST",
+        headers: getHeaders(token),
+      }
+    );
   },
 
   rejeterDepense: async (depenseId: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(depenseId)}/rejeter/`, {
-      method: "POST",
-      headers: getHeaders(token),
-    });
-  },
-
-  // ==========================================
-  // 🔵 DÉPENSE FINALE (optionnel)
-  // ==========================================
-  payerDepenseFinale: async (finalId: string): Promise<any> => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/depenses-finales/${cleanUUID(finalId)}/payer/`, {
-      method: "POST",
-      headers: getHeaders(token),
-    });
+    return fetchWithLog(
+      `${API_BASE_URL}/finance/depenses/${cleanUUID(depenseId)}/rejeter/`,
+      {
+        method: "POST",
+        headers: getHeaders(token),
+      }
+    );
   },
 };
 
@@ -1079,15 +1052,17 @@ export const cordoApi = {
 
   getValidation: async (id: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/cordo/validations/${cleanUUID(id)}/`, {
-      headers: getHeaders(token),
-    });
+    return fetchWithLog(
+      `${API_BASE_URL}/cordo/validations/${cleanUUID(id)}/`,
+      { headers: getHeaders(token) }
+    );
   },
 
+  // ✅ ACTION MÉTIER PRINCIPALE
   createValidation: async (payload: {
-    decaissement_id: string;
-    coordo_id: string;
-    decision: 'valide' | 'rejete';
+    demande_decaissement_id: string;
+    coordonnateur_id: string;
+    decision: "approuve" | "rejete";
     commentaire?: string;
   }): Promise<any> => {
     const token = await ensureKongToken();
@@ -1098,25 +1073,32 @@ export const cordoApi = {
     });
   },
 
-  updateValidation: async (id: string, payload: Partial<{
-    decision: 'valide' | 'rejete';
-    commentaire?: string;
-  }>): Promise<any> => {
+  updateValidation: async (
+    id: string,
+    payload: Partial<{
+      decision: "approuve" | "rejete";
+      commentaire?: string;
+    }>
+  ): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/cordo/validations/${cleanUUID(id)}/`, {
-      method: "PATCH",
-      headers: getHeaders(token),
-      body: JSON.stringify(payload),
-    });
+    return fetchWithLog(
+      `${API_BASE_URL}/cordo/validations/${cleanUUID(id)}/`,
+      {
+        method: "PATCH",
+        headers: getHeaders(token),
+        body: JSON.stringify(payload),
+      }
+    );
   },
 
   deleteValidation: async (id: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/cordo/validations/${cleanUUID(id)}/`, {
-      method: "DELETE",
-      headers: getHeaders(token),
-    });
+    return fetchWithLog(
+      `${API_BASE_URL}/cordo/validations/${cleanUUID(id)}/`,
+      {
+        method: "DELETE",
+        headers: getHeaders(token),
+      }
+    );
   },
 };
-
-

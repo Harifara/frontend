@@ -13,17 +13,15 @@ interface Depense {
   id: string;
   description: string;
   montant: number;
-  statut: string;
 }
 
 interface Decaissement {
   id: string;
-  source_service: string;
-  source_type: "RH" | "Stock";
-  source_id: string;
+  demandes_rh_ids: string[];
+  demandes_stock_ids: string[];
   date_creation: string;
-  total_montant: number;
-  statut: "brouillon" | "en_attente_coordo" | "validé" | "payé";
+  montant_total: number;
+  statut: "brouillon" | "en_attente_coordonnateur" | "approuve" | "rejete" | "decaisse";
   depenses: Depense[];
 }
 
@@ -48,9 +46,10 @@ interface DemandeAchat {
 const badgeColor = (statut: string) => {
   switch (statut.toLowerCase()) {
     case "brouillon": return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
-    case "en_attente_coordo": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
-    case "validé": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
-    case "payé": return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
+    case "en_attente_coordonnateur": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
+    case "approuve": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
+    case "decaisse": return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
+    case "rejete": return "bg-red-100 text-red-800 px-2 py-1 rounded text-xs font-semibold";
     default: return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
   }
 };
@@ -64,7 +63,7 @@ export default function DemandesDecaissement() {
   const [demandesRH, setDemandesRH] = useState<DemandeRH[]>([]);
   const [demandesStock, setDemandesStock] = useState<DemandeAchat[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedDemandeId, setSelectedDemandeId] = useState<string | null>(null);
+  const [selectedDecaissementId, setSelectedDecaissementId] = useState<string | null>(null);
   const [depenseDescription, setDepenseDescription] = useState("");
   const [depenseMontant, setDepenseMontant] = useState(0);
 
@@ -73,7 +72,7 @@ export default function DemandesDecaissement() {
   // -----------------------------
   const fetchUser = async () => {
     try {
-      const u = await stockApi.me();
+      const u = await authApi.me();
       setUser(u);
     } catch (err: any) {
       console.error("Impossible de récupérer l'utilisateur connecté :", err.message);
@@ -107,21 +106,28 @@ export default function DemandesDecaissement() {
   // -----------------------------
   // Création d'un décaissement
   // -----------------------------
-  const createDecaissement = async (source_type: "RH" | "Stock", source_id: string, montant: number) => {
+  const createDepense = async () => {
+    if (!selectedDecaissementId) return;
+    if (!depenseDescription || depenseMontant <= 0) {
+      alert("Veuillez saisir une description et un montant valide.");
+      return;
+    }
+
     try {
-      await financeApi.createDecaissement({
-        source_type,
-        source_id,
-        total_montant: montant,
-        depenses: [{ description: depenseDescription, montant }],
+      await financeApi.createDepense({
+        decaissement: selectedDecaissementId,
+        description: depenseDescription,
+        montant: depenseMontant,
+        mode_paiement: "espece", // par défaut
+        paye_par_id: user?.id,
       });
       setDialogOpen(false);
       setDepenseDescription("");
       setDepenseMontant(0);
       fetchData(); // refresh
     } catch (err: any) {
-      console.error("Erreur lors de la création du décaissement :", err.message);
-      alert("Impossible de créer le décaissement.");
+      console.error("Erreur lors de la création de la dépense :", err.message);
+      alert("Impossible de créer la dépense.");
     }
   };
 
@@ -136,8 +142,7 @@ export default function DemandesDecaissement() {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Service source</TableHead>
-            <TableHead>Type</TableHead>
+            <TableHead>Type source</TableHead>
             <TableHead>Date création</TableHead>
             <TableHead>Total</TableHead>
             <TableHead>Statut</TableHead>
@@ -147,13 +152,18 @@ export default function DemandesDecaissement() {
         <TableBody>
           {decaissements.map((dec) => (
             <TableRow key={dec.id}>
-              <TableCell>{dec.source_service}</TableCell>
-              <TableCell>{dec.source_type}</TableCell>
-              <TableCell>{new Date(dec.date_creation).toLocaleDateString()}</TableCell>
-              <TableCell>{dec.total_montant.toLocaleString()}</TableCell>
-              <TableCell><span className={badgeColor(dec.statut)}>{dec.statut}</span></TableCell>
               <TableCell>
-                <Button onClick={() => setDialogOpen(true) || setSelectedDemandeId(dec.id)}>Ajouter dépense</Button>
+                {dec.demandes_rh_ids.length > 0 ? "RH" : "Stock"}
+              </TableCell>
+              <TableCell>{new Date(dec.date_creation).toLocaleDateString()}</TableCell>
+              <TableCell>{dec.montant_total.toLocaleString()}</TableCell>
+              <TableCell>
+                <span className={badgeColor(dec.statut)}>{dec.statut}</span>
+              </TableCell>
+              <TableCell>
+                <Button onClick={() => { setDialogOpen(true); setSelectedDecaissementId(dec.id); }}>
+                  Ajouter dépense
+                </Button>
               </TableCell>
             </TableRow>
           ))}
@@ -181,13 +191,7 @@ export default function DemandesDecaissement() {
           </div>
           <DialogFooter className="flex justify-end gap-2 mt-4">
             <Button onClick={() => setDialogOpen(false)}>Annuler</Button>
-            <Button
-              onClick={() => {
-                if (selectedDemandeId) createDecaissement("RH", selectedDemandeId, depenseMontant);
-              }}
-            >
-              Créer
-            </Button>
+            <Button onClick={createDepense}>Créer</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
