@@ -1,140 +1,63 @@
-// src/pages/finance/DemandesDecaissement.tsx
-import React, { useEffect, useState, useMemo } from "react";
-import { financeApi, rhApi, stockApi, cordoApi } from "@/lib/api";
+// src/pages/cordo/DecaissementsEnAttente.tsx
+import React, { useEffect, useState } from "react";
+import { financeApi, cordoApi } from "@/lib/api";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-/* ================= TYPES ================= */
-interface Achat { id: string; article: string; nombre: number; montant: number; }
-interface Payement { id: string; montant: number; }
-interface DemandeRH { id: string; description: string; montant: number; status: string; achats?: Achat[]; payements?: Payement[]; }
-interface Article { id: string; nom: string; }
-interface DemandeStock { id: string; numero: string; article?: Article | null; quantite: number; montant_estime: number; justification: string; statut: string; }
-interface Decaissement { id: string; reference?: string; statut: string; montant_total: number; date_creation: string; date_decaissement?: string; }
-interface Validation { id: string; demande_decaissement_id: string; coordonnateur_id: string; decision: "approuve" | "rejete"; commentaire?: string; date_validation: string; }
+interface Decaissement {
+  id: string;
+  reference?: string;
+  montant_total: number;
+  statut: string;
+  date_creation: string;
+  date_decaissement?: string;
+}
 
-/* ================= UTILS ================= */
-const badge = (status: string) => {
-  const map: Record<string, string> = {
-    brouillon: "bg-gray-200 text-gray-800",
-    en_attente_coordonnateur: "bg-yellow-100 text-yellow-800",
-    approuve: "bg-green-100 text-green-800",
-    rejete: "bg-red-100 text-red-800",
-    decaisse: "bg-blue-100 text-blue-800",
-  };
-  return map[status] || "bg-gray-100 text-gray-700";
-};
-
-/* ================= COMPONENT ================= */
-export default function DemandesDecaissement() {
+export default function DecaissementsCoordonnateur() {
   const { user } = useAuth();
   const { toast } = useToast();
 
-  const [loading, setLoading] = useState(true);
-  const [rhDemandes, setRhDemandes] = useState<DemandeRH[]>([]);
-  const [stockDemandes, setStockDemandes] = useState<DemandeStock[]>([]);
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
-  const [validations, setValidations] = useState<Validation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [commentaires, setCommentaires] = useState<Record<string, string>>({});
+  const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
 
-  const [selectedRH, setSelectedRH] = useState<string[]>([]);
-  const [selectedStock, setSelectedStock] = useState<string[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-
-  /* ================= FETCH ================= */
-  const fetchData = async () => {
+  const fetchDecaissements = async () => {
     setLoading(true);
     try {
-      const [rh, stock, dec, val] = await Promise.all([
-        rhApi.getDemandesRH(),
-        stockApi.getDemandesStock(),
-        financeApi.getDecaissements(),
-        cordoApi.getValidations(),
-      ]);
-
-      setRhDemandes(rh.results || rh);
-      setStockDemandes(stock.results || stock);
-      setDecaissements(dec.results || dec);
-      setValidations(val.results || val);
-    } catch (e) {
-      console.error("Erreur fetchData:", e);
-      toast({ title: "Erreur", description: "Chargement impossible", variant: "destructive" });
+      const data = await financeApi.getDecaissements();
+      setDecaissements((data.results || data).filter(d => d.statut === "en_attente_coordonnateur"));
+    } catch (err) {
+      console.error(err);
+      toast({ title: "Erreur", description: "Impossible de charger les décaissements.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchDecaissements(); }, []);
 
-  /* ================= CALCUL ================= */
-  const availableRH = useMemo(() => rhDemandes.filter(d => d.status === "approuve"), [rhDemandes]);
-  const availableStock = useMemo(() => stockDemandes.filter(d => d.statut === "approuve"), [stockDemandes]);
-
-  const total = 
-    availableRH.filter(d => selectedRH.includes(d.id)).reduce((a, b) => a + b.montant, 0) +
-    availableStock.filter(d => selectedStock.includes(d.id)).reduce((a, b) => a + b.montant_estime, 0);
-
-  /* ================= ACTIONS ================= */
-  const creerDecaissement = async () => {
-    if (!selectedRH.length && !selectedStock.length) {
-      return toast({ title: "Erreur", description: "Sélectionnez au moins une demande", variant: "destructive" });
-    }
-
-    setSubmitting(true);
+  const handleDecision = async (decaissementId: string, decision: "approuve" | "rejete") => {
+    setSubmitting(prev => ({ ...prev, [decaissementId]: true }));
     try {
-      await financeApi.createDecaissement({
-        demandes_rh_ids: selectedRH,
-        demandes_stock_ids: selectedStock,
-        montant_total: total,
-        cree_par_id: user?.id,
+      await cordoApi.createValidation({
+        demande_decaissement_id: decaissementId,
+        coordonnateur_id: user!.id,
+        decision,
+        commentaire: commentaires[decaissementId] || "",
       });
-      toast({ title: "Succès", description: "Décaissement créé (brouillon)" });
-      setSelectedRH([]);
-      setSelectedStock([]);
-      fetchData();
-    } catch (e) {
-      console.error("Erreur creation decaissement:", e);
-      toast({ title: "Erreur", description: "Création échouée", variant: "destructive" });
+      toast({ title: "Succès", description: `Décaissement ${decision === "approuve" ? "approuvé" : "rejeté"}` });
+      fetchDecaissements();
+    } catch (e: any) {
+      console.error("Erreur validation:", e);
+      toast({ title: "Erreur", description: e?.message || "Échec de la validation", variant: "destructive" });
     } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const soumettre = async (id: string) => {
-    try {
-      await financeApi.updateDecaissement(id, { statut: "en_attente_coordonnateur" });
-      toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
-      fetchData();
-    } catch (e) {
-      console.error("Erreur soumettre:", e);
-      toast({ title: "Erreur", description: "Soumission échouée", variant: "destructive" });
-    }
-  };
-
-  const createValidation = async (demandeId: string, decision: "approuve" | "rejete", commentaire?: string) => {
-    try {
-      await cordoApi.createValidation({ demande_decaissement_id: demandeId, coordonnateur_id: user!.id, decision, commentaire });
-      toast({ title: "Succès", description: "Validation créée" });
-      fetchData();
-    } catch (e) {
-      console.error("Erreur createValidation:", e);
-      toast({ title: "Erreur", description: "Validation échouée", variant: "destructive" });
-    }
-  };
-
-  const deleteValidation = async (id: string) => {
-    if (!confirm("Voulez-vous vraiment supprimer cette validation ?")) return;
-    try {
-      await cordoApi.deleteValidation(id);
-      toast({ title: "Supprimé", description: "Validation supprimée" });
-      fetchData();
-    } catch (e) {
-      console.error("Erreur deleteValidation:", e);
-      toast({ title: "Erreur", description: "Suppression échouée", variant: "destructive" });
+      setSubmitting(prev => ({ ...prev, [decaissementId]: false }));
     }
   };
 
@@ -142,143 +65,59 @@ export default function DemandesDecaissement() {
 
   return (
     <div className="p-8 space-y-6">
+      <h1 className="text-3xl font-bold">Décaissements à valider</h1>
 
-      <h1 className="text-3xl font-bold">Gestion des Décaissements</h1>
-
-      {/* ---------------- DEMANDES RH ---------------- */}
       <Card>
-        <CardHeader><CardTitle>Demandes RH approuvées</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead></TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Détails</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Statut</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {availableRH.map(d => (
-                <TableRow key={d.id}>
-                  <TableCell>
-                    <Checkbox checked={selectedRH.includes(d.id)} onCheckedChange={() => setSelectedRH(p => p.includes(d.id) ? p.filter(i => i !== d.id) : [...p, d.id])}/>
-                  </TableCell>
-                  <TableCell>{d.description}</TableCell>
-                  <TableCell>
-                    <ul className="list-disc ml-4">
-                      {d.achats?.map(a => <li key={a.id}>{a.article} × {a.nombre} = {a.montant} Ar</li>) || "—"}
-                      {d.payements?.map(p => <li key={p.id}>Paiement : {p.montant} Ar</li>) || "—"}
-                    </ul>
-                  </TableCell>
-                  <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
-                  <TableCell><span className={`px-2 py-1 rounded text-xs ${badge(d.status)}`}>{d.status}</span></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* ---------------- DEMANDES STOCK ---------------- */}
-      <Card>
-        <CardHeader><CardTitle>Demandes Stock approuvées</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead></TableHead>
-                <TableHead>Numéro</TableHead>
-                <TableHead>Détails</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Statut</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {availableStock.map(d => (
-                <TableRow key={d.id}>
-                  <TableCell>
-                    <Checkbox checked={selectedStock.includes(d.id)} onCheckedChange={() => setSelectedStock(p => p.includes(d.id) ? p.filter(i => i !== d.id) : [...p, d.id])}/>
-                  </TableCell>
-                  <TableCell>{d.numero}</TableCell>
-                  <TableCell>
-                    <p>Article : {d.article?.nom || "-"}</p>
-                    <p>Quantité : {d.quantite}</p>
-                    <p>Justification : {d.justification}</p>
-                  </TableCell>
-                  <TableCell>{d.montant_estime.toLocaleString()} Ar</TableCell>
-                  <TableCell><span className={`px-2 py-1 rounded text-xs ${badge(d.statut)}`}>{d.statut}</span></TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* ---------------- ACTION CREATION ---------------- */}
-      <div className="flex justify-between items-center">
-        <strong>Montant total : {total.toLocaleString()} Ar</strong>
-        <Button onClick={creerDecaissement} disabled={submitting}>{submitting ? "Création..." : "Créer le décaissement"}</Button>
-      </div>
-
-      {/* ---------------- BROUILLONS ---------------- */}
-      <Card>
-        <CardHeader><CardTitle>Brouillons</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Décaissements soumis</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Référence</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Action</TableHead>
+                <TableHead>Montant total</TableHead>
+                <TableHead>Date création</TableHead>
+                <TableHead>Commentaire</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {decaissements.filter(d => d.statut === "brouillon").map(d => (
+              {decaissements.length ? decaissements.map(d => (
                 <TableRow key={d.id}>
                   <TableCell>{d.reference || d.id}</TableCell>
                   <TableCell>{Number(d.montant_total).toLocaleString()} Ar</TableCell>
-                  <TableCell><span className={`px-2 py-1 rounded text-xs ${badge(d.statut)}`}>{d.statut}</span></TableCell>
+                  <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
                   <TableCell>
-                    <Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button>
+                    <Input
+                      placeholder="Commentaire (optionnel)"
+                      value={commentaires[d.id] || ""}
+                      onChange={(e) => setCommentaires(prev => ({ ...prev, [d.id]: e.target.value }))}
+                    />
+                  </TableCell>
+                  <TableCell className="flex space-x-2">
+                    <Button
+                      size="sm"
+                      onClick={() => handleDecision(d.id, "approuve")}
+                      disabled={submitting[d.id]}
+                    >
+                      {submitting[d.id] ? "..." : "Approuver"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => handleDecision(d.id, "rejete")}
+                      disabled={submitting[d.id]}
+                    >
+                      {submitting[d.id] ? "..." : "Rejeter"}
+                    </Button>
                   </TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* ---------------- VALIDATIONS COORDONNATEUR ---------------- */}
-      <Card>
-        <CardHeader><CardTitle>Validations Coordonnateur</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Décaissement</TableHead>
-                <TableHead>Décision</TableHead>
-                <TableHead>Commentaire</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {validations.map(v => (
-                <TableRow key={v.id}>
-                  <TableCell>{v.id}</TableCell>
-                  <TableCell>{v.demande_decaissement_id}</TableCell>
-                  <TableCell>{v.decision}</TableCell>
-                  <TableCell>{v.commentaire || "-"}</TableCell>
-                  <TableCell>{new Date(v.date_validation).toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Button size="sm" variant="destructive" onClick={() => deleteValidation(v.id)}>Supprimer</Button>
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-6">
+                    Aucun décaissement en attente
                   </TableCell>
                 </TableRow>
-              ))}
+              )}
             </TableBody>
           </Table>
         </CardContent>
