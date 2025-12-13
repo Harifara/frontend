@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext"; // ✅ récupérer l'utilisateur
 
 // -----------------
 // Types
@@ -47,6 +48,7 @@ const STATUT_LABELS: Record<string, string> = {
 // Composant principal
 // -----------------
 export default function DemandesDecaissement() {
+  const { user } = useAuth(); // ✅ récupérer l'utilisateur connecté
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -117,25 +119,25 @@ export default function DemandesDecaissement() {
   // Création d’un décaissement
   // -----------------
   const handleCreateDecaissement = async () => {
+    if (!user?.id) {
+      toast({ title: "Erreur", description: "Utilisateur non connecté.", variant: "destructive" });
+      return;
+    }
+
     if (!selectedRHIds.length && !selectedStockIds.length) {
       toast({ title: "Erreur", description: "Sélectionnez au moins une demande RH ou Stock.", variant: "destructive" });
       return;
     }
 
-    // Calcul montant total sécurisé
-    const montantRH = demandesRH
-      .filter(d => selectedRHIds.includes(d.id))
-      .reduce((acc, d) => acc + Number(d.montant || 0), 0);
-    const montantStock = demandesStock
-      .filter(d => selectedStockIds.includes(d.id))
-      .reduce((acc, d) => acc + Number(d.montant_estime || 0), 0);
+    const montantRH = demandesRH.filter(d => selectedRHIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant || 0), 0);
+    const montantStock = demandesStock.filter(d => selectedStockIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant_estime || 0), 0);
     const montantTotal = montantRH + montantStock;
 
     const payload = {
       demandes_rh_ids: selectedRHIds,
       demandes_stock_ids: selectedStockIds,
       montant_total: montantTotal,
-      cree_par_id: "user-finance-uuid", // Remplacer par l'UUID réel de l'utilisateur connecté
+      cree_par_id: user.id, // ✅ UUID réel de l'utilisateur connecté
     };
 
     setSubmitting(true);
