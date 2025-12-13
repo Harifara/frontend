@@ -54,17 +54,27 @@ export default function DecaissementsRecus() {
     setSubmitting(prev => ({ ...prev, [id]: true }));
     console.log(`➡️ REQUEST: cordoApi.createValidation() pour ${id} avec décision ${decision}`);
     try {
-      await cordoApi.createValidation({
+      const payload = {
         demande_decaissement_id: id,
-        decision,                    // ✅ Ne pas envoyer coordonnateur_id
+        decision,
         commentaire: commentaires[id] || "",
+      };
+      const response = await cordoApi.createValidation(payload);
+      console.log(`⬅️ RESPONSE: Décaissement ${decision} effectué pour ${id}`, response);
+
+      toast({
+        title: "Succès",
+        description: `Décaissement ${decision === "approuve" ? "approuvé" : "rejeté"}`
       });
-      console.log(`⬅️ RESPONSE: Décaissement ${decision} effectué pour ${id}`);
-      toast({ title: "Succès", description: `Décaissement ${decision === "approuve" ? "approuvé" : "rejeté"}` });
+
       fetchDecaissements(); // rafraîchit la liste après action
     } catch (err: any) {
       console.error("Erreur lors de la validation :", err);
-      toast({ title: "Erreur", description: err?.message || "Action échouée", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: err?.response?.data?.detail || err?.message || "Action échouée",
+        variant: "destructive"
+      });
     } finally {
       setSubmitting(prev => ({ ...prev, [id]: false }));
     }
