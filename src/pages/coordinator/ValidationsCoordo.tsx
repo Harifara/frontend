@@ -1,4 +1,3 @@
-// src/pages/cordo/DecaissementsEnAttente.tsx
 import React, { useEffect, useState } from "react";
 import { financeApi, cordoApi } from "@/lib/api";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -18,7 +17,12 @@ interface Decaissement {
   date_decaissement?: string;
 }
 
-export default function DecaissementsCoordonnateur() {
+interface Props {
+  filtreStatut: string; // ex: "en_attente_coordonnateur"
+  titre: string;
+}
+
+export default function DecaissementsList({ filtreStatut, titre }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -31,9 +35,8 @@ export default function DecaissementsCoordonnateur() {
     setLoading(true);
     try {
       const data = await financeApi.getDecaissements();
-      setDecaissements((data.results || data).filter(d => d.statut === "en_attente_coordonnateur"));
-    } catch (err) {
-      console.error(err);
+      setDecaissements((data.results || data).filter(d => d.statut === filtreStatut));
+    } catch {
       toast({ title: "Erreur", description: "Impossible de charger les décaissements.", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -42,22 +45,21 @@ export default function DecaissementsCoordonnateur() {
 
   useEffect(() => { fetchDecaissements(); }, []);
 
-  const handleDecision = async (decaissementId: string, decision: "approuve" | "rejete") => {
-    setSubmitting(prev => ({ ...prev, [decaissementId]: true }));
+  const handleDecision = async (id: string, decision: "approuve" | "rejete") => {
+    setSubmitting(prev => ({ ...prev, [id]: true }));
     try {
       await cordoApi.createValidation({
-        demande_decaissement_id: decaissementId,
+        demande_decaissement_id: id,
         coordonnateur_id: user!.id,
         decision,
-        commentaire: commentaires[decaissementId] || "",
+        commentaire: commentaires[id] || "",
       });
       toast({ title: "Succès", description: `Décaissement ${decision === "approuve" ? "approuvé" : "rejeté"}` });
       fetchDecaissements();
-    } catch (e: any) {
-      console.error("Erreur validation:", e);
-      toast({ title: "Erreur", description: e?.message || "Échec de la validation", variant: "destructive" });
+    } catch {
+      toast({ title: "Erreur", description: "Action échouée", variant: "destructive" });
     } finally {
-      setSubmitting(prev => ({ ...prev, [decaissementId]: false }));
+      setSubmitting(prev => ({ ...prev, [id]: false }));
     }
   };
 
@@ -65,56 +67,60 @@ export default function DecaissementsCoordonnateur() {
 
   return (
     <div className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold">Décaissements à valider</h1>
+      <h1 className="text-3xl font-bold">{titre}</h1>
 
       <Card>
-        <CardHeader><CardTitle>Décaissements soumis</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{titre}</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Référence</TableHead>
-                <TableHead>Montant total</TableHead>
+                <TableHead>Montant</TableHead>
                 <TableHead>Date création</TableHead>
-                <TableHead>Commentaire</TableHead>
-                <TableHead>Actions</TableHead>
+                {filtreStatut === "en_attente_coordonnateur" && <TableHead>Commentaire</TableHead>}
+                {filtreStatut === "en_attente_coordonnateur" && <TableHead>Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {decaissements.length ? decaissements.map(d => (
                 <TableRow key={d.id}>
                   <TableCell>{d.reference || d.id}</TableCell>
-                  <TableCell>{Number(d.montant_total).toLocaleString()} Ar</TableCell>
+                  <TableCell>{d.montant_total.toLocaleString()} Ar</TableCell>
                   <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
-                  <TableCell>
-                    <Input
-                      placeholder="Commentaire (optionnel)"
-                      value={commentaires[d.id] || ""}
-                      onChange={(e) => setCommentaires(prev => ({ ...prev, [d.id]: e.target.value }))}
-                    />
-                  </TableCell>
-                  <TableCell className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleDecision(d.id, "approuve")}
-                      disabled={submitting[d.id]}
-                    >
-                      {submitting[d.id] ? "..." : "Approuver"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDecision(d.id, "rejete")}
-                      disabled={submitting[d.id]}
-                    >
-                      {submitting[d.id] ? "..." : "Rejeter"}
-                    </Button>
-                  </TableCell>
+                  {filtreStatut === "en_attente_coordonnateur" && (
+                    <>
+                      <TableCell>
+                        <Input
+                          placeholder="Commentaire (optionnel)"
+                          value={commentaires[d.id] || ""}
+                          onChange={e => setCommentaires(prev => ({ ...prev, [d.id]: e.target.value }))}
+                        />
+                      </TableCell>
+                      <TableCell className="flex space-x-2">
+                        <Button
+                          size="sm"
+                          onClick={() => handleDecision(d.id, "approuve")}
+                          disabled={submitting[d.id]}
+                        >
+                          {submitting[d.id] ? "..." : "Approuver"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDecision(d.id, "rejete")}
+                          disabled={submitting[d.id]}
+                        >
+                          {submitting[d.id] ? "..." : "Rejeter"}
+                        </Button>
+                      </TableCell>
+                    </>
+                  )}
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-6">
-                    Aucun décaissement en attente
+                  <TableCell colSpan={filtreStatut === "en_attente_coordonnateur" ? 5 : 3} className="text-center py-6">
+                    Aucun décaissement
                   </TableCell>
                 </TableRow>
               )}

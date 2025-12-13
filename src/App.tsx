@@ -47,11 +47,10 @@ import PageDemandesAchat from "./pages/stock/PageDemandesAchat";
 import DepensePage from "./pages/finance/DepensePage";
 import DemandesDecaissement from "./pages/finance/DemandesDecaissement";
 import CreateDecaissement from "./pages/finance/CreateDecaissement";
-import DecaissementsRejetes from "./pages/coordinator/DecaissementsRejetes";
-import DecaissementsValides from "./pages/coordinator/DecaissementsValides";
+
 
 import ValidationsCoordo from "./pages/coordinator/ValidationsCoordo";
-import ValidationsCoordo from "./pages/coordinator/ValidationsCoordo";
+
 
 
 
@@ -137,9 +136,7 @@ const App = () => (
               <Route path="/finance/demandes-decaissement/create" element={<CreateDecaissement />} />
 
               <Route path="/cordinator/ValidationsCoordo" element={<ValidationsCoordo />} />
-              <Route path="/cordinator/DecaissementsRejetes" element={<DecaissementsRejetes />} />
-              <Route path="/cordinator/DecaissementsValides" element={<DecaissementsValides />} />
-              <Route path="/cordinator/DecaissementsRecus" element={<DecaissementsRecus />} />
+
 
              
               </Route>

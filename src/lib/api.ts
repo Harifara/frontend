@@ -960,11 +960,12 @@ getStocksAutresMagasinsRaw: async (articleId: string) => {
 
 };
 
+// ==========================================
+// 🔵 SERVICE FINANCE
+// ==========================================
 export const financeApi = {
-  // ==========================================
-  // 🔵 DEMANDES DE DÉCAISSEMENT
-  // ==========================================
-  getDecaissements: async (): Promise<any> => {
+  // ===== DEMANDES DE DÉCAISSEMENT =====
+  getDecaissements: async (): Promise<any[]> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/decaissements/`, {
       headers: getHeaders(token),
@@ -973,13 +974,12 @@ export const financeApi = {
 
   getDecaissement: async (id: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(
-      `${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`,
-      { headers: getHeaders(token) }
-    );
+    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
+      headers: getHeaders(token),
+    });
   },
 
-  createDecaissement: async (payload: DecaissementPayload): Promise<any> => {
+  createDecaissement: async (payload: any): Promise<any> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/decaissements/`, {
       method: "POST",
@@ -988,25 +988,17 @@ export const financeApi = {
     });
   },
 
-  updateDecaissement: async (
-    id: string,
-    payload: Partial<DecaissementPayload>
-  ): Promise<any> => {
+  updateDecaissement: async (id: string, payload: any): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(
-      `${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`,
-      {
-        method: "PATCH",
-        headers: getHeaders(token),
-        body: JSON.stringify(payload),
-      }
-    );
+    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
+      method: "PATCH",
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
   },
 
-  // ==========================================
-  // 🔵 DÉPENSES
-  // ==========================================
-  createDepense: async (payload: DepensePayload): Promise<any> => {
+  // ===== DÉPENSES =====
+  createDepense: async (payload: any): Promise<any> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/depenses/`, {
       method: "POST",
@@ -1017,26 +1009,21 @@ export const financeApi = {
 
   validateDepense: async (depenseId: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(
-      `${API_BASE_URL}/finance/depenses/${cleanUUID(depenseId)}/valider/`,
-      {
-        method: "POST",
-        headers: getHeaders(token),
-      }
-    );
+    return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(depenseId)}/valider/`, {
+      method: "POST",
+      headers: getHeaders(token),
+    });
   },
 
   rejeterDepense: async (depenseId: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(
-      `${API_BASE_URL}/finance/depenses/${cleanUUID(depenseId)}/rejeter/`,
-      {
-        method: "POST",
-        headers: getHeaders(token),
-      }
-    );
+    return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(depenseId)}/rejeter/`, {
+      method: "POST",
+      headers: getHeaders(token),
+    });
   },
 
+  // ===== DEMANDES DISPONIBLES (RH + Stock) =====
   getDemandesDisponibles: async (): Promise<{ rh: any[]; stock: any[] }> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/demandes-disponibles/`, {
@@ -1045,12 +1032,11 @@ export const financeApi = {
   },
 };
 
-
+// ==========================================
+// 🔵 SERVICE COORDONNATEUR
+// ==========================================
 export const cordoApi = {
-  // ==========================================
-  // 🔵 VALIDATIONS COORDONNATEUR
-  // ==========================================
-  getValidations: async (): Promise<any> => {
+  getValidations: async (): Promise<any[]> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/cordo/validations/`, {
       headers: getHeaders(token),
@@ -1059,16 +1045,13 @@ export const cordoApi = {
 
   getValidation: async (id: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(
-      `${API_BASE_URL}/cordo/validations/${cleanUUID(id)}/`,
-      { headers: getHeaders(token) }
-    );
+    return fetchWithLog(`${API_BASE_URL}/cordo/validations/${cleanUUID(id)}/`, {
+      headers: getHeaders(token),
+    });
   },
 
-  // ✅ ACTION MÉTIER PRINCIPALE
   createValidation: async (payload: {
     demande_decaissement_id: string;
-    coordonnateur_id: string;
     decision: "approuve" | "rejete";
     commentaire?: string;
   }): Promise<any> => {
@@ -1082,30 +1065,21 @@ export const cordoApi = {
 
   updateValidation: async (
     id: string,
-    payload: Partial<{
-      decision: "approuve" | "rejete";
-      commentaire?: string;
-    }>
+    payload: Partial<{ decision: "approuve" | "rejete"; commentaire?: string }>
   ): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(
-      `${API_BASE_URL}/cordo/validations/${cleanUUID(id)}/`,
-      {
-        method: "PATCH",
-        headers: getHeaders(token),
-        body: JSON.stringify(payload),
-      }
-    );
+    return fetchWithLog(`${API_BASE_URL}/cordo/validations/${cleanUUID(id)}/`, {
+      method: "PATCH",
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
   },
 
   deleteValidation: async (id: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(
-      `${API_BASE_URL}/cordo/validations/${cleanUUID(id)}/`,
-      {
-        method: "DELETE",
-        headers: getHeaders(token),
-      }
-    );
+    return fetchWithLog(`${API_BASE_URL}/cordo/validations/${cleanUUID(id)}/`, {
+      method: "DELETE",
+      headers: getHeaders(token),
+    });
   },
 };
