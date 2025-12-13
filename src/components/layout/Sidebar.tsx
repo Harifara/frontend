@@ -69,6 +69,9 @@ const navigation = [
   { name: "Demandes de décaissement", href: "/finance/demandes-decaissement", icon: ClipboardList, roles: ["responsable_finance"] },
 
   { name: "Validations Coordo", href: "/cordinator/ValidationsCoordo", icon: ClipboardList, roles: ["coordinateur"] },
+  { name: "Décaissements rejetés", href: "/cordinator/DecaissementsRejetes", icon: ClipboardList, roles: ["coordinateur"] },
+  { name: "Décaissements validés", href: "/cordinator/DecaissementsValides", icon: ClipboardList, roles: ["coordinateur"] },
+  { name: "Décaissements reçus", href: "/cordinator/DecaissementsRecus", icon: ClipboardList, roles: ["coordinateur"] },
 
 
 ];
