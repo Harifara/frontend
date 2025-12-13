@@ -1,216 +1,125 @@
 // src/pages/finance/DemandesDecaissement.tsx
 import React, { useEffect, useState } from "react";
-import { financeApi, rhApi, stockApi, authApi } from "@/lib/api";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { financeApi } from "@/lib/api";
+import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-
-// -----------------------------
-// Types
-// -----------------------------
-interface Depense {
-  id: string;
-  description: string;
-  montant: number;
-  statut: string;
-}
+import { Loader2 } from "lucide-react";
 
 interface Decaissement {
   id: string;
-  source_service: string;
-  source_type: "RH" | "Stock";
-  source_id: string;
-  date_creation: string;
-  total_montant: number;
-  statut: "brouillon" | "en_attente_coordo" | "validé" | "payé";
-  depenses: Depense[];
-}
-
-interface DemandeRH {
-  id: string;
-  description: string;
-  montant: number;
-  status: string;
-}
-
-interface DemandeAchat {
-  id: string;
-  article_nom: string;
-  quantite: number;
-  montant_estime: number;
+  montant_total: number;
   statut: string;
+  date_creation: string;
+  date_decaissement?: string;
 }
 
-// -----------------------------
-// Badge couleur selon statut
-// -----------------------------
-const badgeColor = (statut: string) => {
-  switch (statut.toLowerCase()) {
-    case "brouillon": return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
-    case "en_attente_coordo": return "bg-yellow-100 text-yellow-800 px-2 py-1 rounded text-xs font-semibold";
-    case "validé": return "bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold";
-    case "payé": return "bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold";
-    default: return "bg-gray-100 text-gray-800 px-2 py-1 rounded text-xs font-semibold";
-  }
+const STATUT_LABELS: Record<string, string> = {
+  brouillon: "Brouillon",
+  en_attente_coordonnateur: "En attente validation coordonnateur",
+  approuve: "Approuvé",
+  rejete: "Rejeté",
+  decaisse: "Décaissement effectué",
 };
 
-// -----------------------------
-// Composant principal
-// -----------------------------
 export default function DemandesDecaissement() {
-  const [user, setUser] = useState<any>(null);
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
-  const [demandesRH, setDemandesRH] = useState<DemandeRH[]>([]);
-  const [demandesStock, setDemandesStock] = useState<DemandeAchat[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [selected, setSelected] = useState<Decaissement | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedDemandeId, setSelectedDemandeId] = useState<string | null>(null);
-  const [depenseDescription, setDepenseDescription] = useState("");
-  const [depenseMontant, setDepenseMontant] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
-  // -----------------------------
-  // Récupération utilisateur
-  // -----------------------------
-  const fetchUser = async () => {
+  const fetchDecaissements = async () => {
+    setLoading(true);
     try {
-      const u = await stockApi.me();
-      setUser(u);
-    } catch (err: any) {
-      console.error("Impossible de récupérer l'utilisateur connecté :", err.message);
-      alert("Vous devez vous reconnecter.");
+      const data = await financeApi.getDecaissements();
+      setDecaissements(data);
+    } catch (error) {
+      console.error("Erreur lors du chargement des décaissements :", error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // -----------------------------
-  // Chargement des données
-  // -----------------------------
-  const fetchData = async () => {
+  const handleSoumettre = async (decaissement: Decaissement) => {
+    setSubmitting(true);
     try {
-      const [dec, rh, stock] = await Promise.all([
-        financeApi.getDecaissements(),
-        rhApi.getDemandes(),
-        stockApi.getDemandesAchat(),
-      ]);
-      setDecaissements(dec);
-      setDemandesRH(rh);
-      setDemandesStock(stock);
-    } catch (err: any) {
-      console.error("Erreur lors du chargement des données :", err.message);
+      await financeApi.updateDecaissement(decaissement.id, { statut: "en_attente_coordonnateur" });
+      fetchDecaissements();
+      setDialogOpen(false);
+    } catch (error) {
+      console.error("Erreur lors de la soumission :", error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   useEffect(() => {
-    fetchUser();
-    fetchData();
+    fetchDecaissements();
   }, []);
 
-  // -----------------------------
-  // Création d'un décaissement
-  // -----------------------------
-  const createDecaissement = async (source_type: "RH" | "Stock", source_id: string, montant: number) => {
-    try {
-      await financeApi.createDecaissement({
-        source_type,
-        source_id,
-        total_montant: montant,
-        depenses: [{ description: depenseDescription, montant }],
-      });
-      setDialogOpen(false);
-      setDepenseDescription("");
-      setDepenseMontant(0);
-      fetchData(); // refresh
-    } catch (err: any) {
-      console.error("Erreur lors de la création du décaissement :", err.message);
-      alert("Impossible de créer le décaissement.");
-    }
-  };
-
-  // -----------------------------
-  // Rendu
-  // -----------------------------
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold mb-4">Demandes de Décaissement</h1>
+      <h1 className="text-2xl font-bold mb-4">Demandes de Décaissement</h1>
 
-      {/* Liste des décaissements */}
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Service source</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Date création</TableHead>
-            <TableHead>Total</TableHead>
-            <TableHead>Statut</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {decaissements.map((dec) => (
-            <TableRow key={dec.id}>
-              <TableCell>{dec.source_service}</TableCell>
-              <TableCell>{dec.source_type}</TableCell>
-              <TableCell>{new Date(dec.date_creation).toLocaleDateString()}</TableCell>
-              <TableCell>{dec.total_montant.toLocaleString()}</TableCell>
-              <TableCell><span className={badgeColor(dec.statut)}>{dec.statut}</span></TableCell>
-              <TableCell>
-                <Button onClick={() => setDialogOpen(true) || setSelectedDemandeId(dec.id)}>Ajouter dépense</Button>
-              </TableCell>
+      {loading ? (
+        <div className="flex justify-center items-center h-40">
+          <Loader2 className="animate-spin w-8 h-8 mr-2" /> Chargement...
+        </div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableCell>ID</TableCell>
+              <TableCell>Montant total</TableCell>
+              <TableCell>Statut</TableCell>
+              <TableCell>Date création</TableCell>
+              <TableCell>Date décaissement</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {decaissements.map((d) => (
+              <TableRow key={d.id}>
+                <TableCell>{d.id}</TableCell>
+                <TableCell>{d.montant_total.toFixed(2)} Ar</TableCell>
+                <TableCell>{STATUT_LABELS[d.statut] || d.statut}</TableCell>
+                <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
+                <TableCell>{d.date_decaissement ? new Date(d.date_decaissement).toLocaleString() : "-"}</TableCell>
+                <TableCell>
+                  {d.statut === "brouillon" && (
+                    <Button size="sm" onClick={() => { setSelected(d); setDialogOpen(true); }}>
+                      Soumettre
+                    </Button>
+                  )}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
 
-      {/* Dialog création dépense */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Ajouter une dépense</DialogTitle>
+            <DialogTitle>Soumettre la demande au coordonnateur</DialogTitle>
           </DialogHeader>
-          <div className="space-y-2">
-            <Input
-              placeholder="Description"
-              value={depenseDescription}
-              onChange={(e) => setDepenseDescription(e.target.value)}
-            />
-            <Input
-              type="number"
-              placeholder="Montant"
-              value={depenseMontant}
-              onChange={(e) => setDepenseMontant(Number(e.target.value))}
-            />
+          <div className="py-4">
+            <p>Êtes-vous sûr de vouloir soumettre la demande {selected?.id} ?</p>
           </div>
-          <DialogFooter className="flex justify-end gap-2 mt-4">
-            <Button onClick={() => setDialogOpen(false)}>Annuler</Button>
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={submitting}>
+              Annuler
+            </Button>
             <Button
-              onClick={() => {
-                if (selectedDemandeId) createDecaissement("RH", selectedDemandeId, depenseMontant);
-              }}
+              onClick={() => selected && handleSoumettre(selected)}
+              disabled={submitting}
             >
-              Créer
+              {submitting ? "Soumission..." : "Soumettre"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Liste des demandes RH et Stock pour info */}
-      <div className="mt-6 grid grid-cols-2 gap-4">
-        <div>
-          <h2 className="font-bold mb-2">Demandes RH</h2>
-          <ul className="list-disc pl-5">
-            {demandesRH.map((d) => (
-              <li key={d.id}>{d.description} - {d.montant.toLocaleString()} Ar</li>
-            ))}
-          </ul>
-        </div>
-        <div>
-          <h2 className="font-bold mb-2">Demandes Stock</h2>
-          <ul className="list-disc pl-5">
-            {demandesStock.map((d) => (
-              <li key={d.id}>{d.article_nom} x {d.quantite} - {d.montant_estime.toLocaleString()} Ar</li>
-            ))}
-          </ul>
-        </div>
-      </div>
     </div>
   );
 }
