@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { financeApi, rhApi, stockApi } from "@/lib/api";
 import {
   Table, TableHeader, TableRow, TableHead, TableBody, TableCell
@@ -10,7 +10,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-/* ================== TYPES ================== */
+/* ================= TYPES ================= */
 
 interface Achat {
   id: string;
@@ -53,19 +53,29 @@ interface Decaissement {
   reference: string;
   statut: string;
   montant_total: number;
-  demandes_rh_ids?: string[];
-  demandes_stock_ids?: string[];
 }
 
-/* ================== COMPONENT ================== */
+/* ================= UTILS ================= */
+
+const badge = (status: string) => {
+  const map: Record<string, string> = {
+    brouillon: "bg-gray-200 text-gray-800",
+    en_attente_coordonnateur: "bg-yellow-100 text-yellow-800",
+    approuve: "bg-green-100 text-green-800",
+    rejete: "bg-red-100 text-red-800",
+  };
+  return map[status] || "bg-gray-100 text-gray-700";
+};
+
+/* ================= COMPONENT ================= */
 
 export default function DemandesDecaissement() {
   const { user } = useAuth();
   const { toast } = useToast();
 
   const [view, setView] = useState<"creation" | "soumission">("creation");
-  const [loading, setLoading] = useState(true);
 
+  const [loading, setLoading] = useState(true);
   const [rhDemandes, setRhDemandes] = useState<DemandeRH[]>([]);
   const [stockDemandes, setStockDemandes] = useState<DemandeStock[]>([]);
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
@@ -74,7 +84,7 @@ export default function DemandesDecaissement() {
   const [selectedStock, setSelectedStock] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  /* ================== FETCH ================== */
+  /* ================= FETCH ================= */
 
   const fetchData = async () => {
     setLoading(true);
@@ -89,7 +99,7 @@ export default function DemandesDecaissement() {
       setStockDemandes(stock.results || stock);
       setDecaissements(dec.results || dec);
 
-    } catch {
+    } catch (e) {
       toast({
         title: "Erreur",
         description: "Chargement impossible",
@@ -100,29 +110,32 @@ export default function DemandesDecaissement() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  /* ================== FILTRAGE DES DEMANDES DÉJÀ UTILISÉES ================== */
+  /* ================= FILTRAGE CORRECT ================= */
 
-  const usedRHIds = decaissements.flatMap(d => d.demandes_rh_ids || []);
-  const usedStockIds = decaissements.flatMap(d => d.demandes_stock_ids || []);
+  const availableRH = useMemo(
+    () => rhDemandes.filter(d => d.status === "approuve"),
+    [rhDemandes]
+  );
 
-  const availableRH = rhDemandes.filter(d => !usedRHIds.includes(d.id));
-  const availableStock = stockDemandes.filter(d => !usedStockIds.includes(d.id));
+  const availableStock = useMemo(
+    () => stockDemandes.filter(d => d.statut === "approuve"),
+    [stockDemandes]
+  );
 
-  /* ================== CALCUL TOTAL ================== */
+  /* ================= CALCUL TOTAL ================= */
 
   const total =
     availableRH
       .filter(d => selectedRH.includes(d.id))
-      .reduce((sum, d) => sum + d.montant, 0) +
+      .reduce((a, b) => a + b.montant, 0)
+    +
     availableStock
       .filter(d => selectedStock.includes(d.id))
-      .reduce((sum, d) => sum + d.montant_estime, 0);
+      .reduce((a, b) => a + b.montant_estime, 0);
 
-  /* ================== ACTIONS ================== */
+  /* ================= ACTIONS ================= */
 
   const creerDecaissement = async () => {
     if (!selectedRH.length && !selectedStock.length) {
@@ -175,7 +188,7 @@ export default function DemandesDecaissement() {
     fetchData();
   };
 
-  /* ================== RENDER ================== */
+  /* ================= RENDER ================= */
 
   if (loading) {
     return (
@@ -188,7 +201,7 @@ export default function DemandesDecaissement() {
   return (
     <div className="p-8 space-y-6">
 
-      {/* ===== HEADER ===== */}
+      {/* HEADER */}
       <div className="flex gap-4">
         <Button
           variant={view === "creation" ? "default" : "outline"}
@@ -205,13 +218,13 @@ export default function DemandesDecaissement() {
         </Button>
       </div>
 
-      {/* ================== VUE CRÉATION ================== */}
+      {/* ================= VUE CREATION ================= */}
       {view === "creation" && (
         <>
           {/* ---------- RH ---------- */}
           <Card>
             <CardHeader>
-              <CardTitle>Demandes RH disponibles</CardTitle>
+              <CardTitle>Demandes RH approuvées</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -238,7 +251,9 @@ export default function DemandesDecaissement() {
                           }
                         />
                       </TableCell>
+
                       <TableCell>{d.description}</TableCell>
+
                       <TableCell>
                         <ul className="list-disc ml-4">
                           {d.achats?.map(a => (
@@ -253,7 +268,10 @@ export default function DemandesDecaissement() {
                           ))}
                         </ul>
                       </TableCell>
-                      <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
+
+                      <TableCell>
+                        {d.montant.toLocaleString()} Ar
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -264,7 +282,7 @@ export default function DemandesDecaissement() {
           {/* ---------- STOCK ---------- */}
           <Card>
             <CardHeader>
-              <CardTitle>Demandes Stock disponibles</CardTitle>
+              <CardTitle>Demandes Stock approuvées</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -291,13 +309,18 @@ export default function DemandesDecaissement() {
                           }
                         />
                       </TableCell>
+
                       <TableCell>{d.numero}</TableCell>
+
                       <TableCell>
                         <p>Article : {d.article?.nom || "-"}</p>
                         <p>Quantité : {d.quantite}</p>
                         <p>Justification : {d.justification}</p>
                       </TableCell>
-                      <TableCell>{d.montant_estime.toLocaleString()} Ar</TableCell>
+
+                      <TableCell>
+                        {d.montant_estime.toLocaleString()} Ar
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -314,7 +337,7 @@ export default function DemandesDecaissement() {
         </>
       )}
 
-      {/* ================== VUE SOUMISSION ================== */}
+      {/* ================= VUE SOUMISSION ================= */}
       {view === "soumission" && (
         <Card>
           <CardHeader>
@@ -326,6 +349,7 @@ export default function DemandesDecaissement() {
                 <TableRow>
                   <TableHead>Référence</TableHead>
                   <TableHead>Montant</TableHead>
+                  <TableHead>Statut</TableHead>
                   <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
@@ -337,6 +361,11 @@ export default function DemandesDecaissement() {
                       <TableCell>{d.reference}</TableCell>
                       <TableCell>
                         {d.montant_total.toLocaleString()} Ar
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded text-xs ${badge(d.statut)}`}>
+                          {d.statut}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <Button size="sm" onClick={() => soumettre(d.id)}>
