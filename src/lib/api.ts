@@ -537,7 +537,7 @@ completeAchat: async (id: string) =>
     headers: getHeaders(await ensureKongToken()),
   }),
 
-getDemandes: async () => fetchWithLog(`${API_BASE_URL}/rh/demandes/`, {
+getDemandesRH: async () => fetchWithLog(`${API_BASE_URL}/rh/demandes/`, {
     headers: getHeaders(await ensureKongToken()),
   }),
   createDemande: async (payload: any) => fetchWithLog(`${API_BASE_URL}/rh/demandes/`, {
@@ -810,7 +810,7 @@ deleteMouvement: async (id: string) =>
 // ⭐ DEMANDES DE REAPPRO
 // ==========================
 
-getDemandes: async () => {
+getDemandesStock: async () => {
   const token = await ensureKongToken();
   const res = await fetch(
     `${API_BASE_URL}/stock/demandes-reapprovisionnement/`,
