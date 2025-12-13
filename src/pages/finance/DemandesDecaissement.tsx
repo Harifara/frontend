@@ -7,13 +7,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext"; // ✅ récupérer l'utilisateur
+import { useAuth } from "@/contexts/AuthContext"; // récupérer l'utilisateur
 
 // -----------------
 // Types
 // -----------------
 interface Decaissement {
   id: string;
+  reference?: string; // nouvelle propriété
   montant_total: number;
   statut: string;
   date_creation: string;
@@ -48,7 +49,7 @@ const STATUT_LABELS: Record<string, string> = {
 // Composant principal
 // -----------------
 export default function DemandesDecaissement() {
-  const { user } = useAuth(); // ✅ récupérer l'utilisateur connecté
+  const { user } = useAuth(); // utilisateur connecté
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -129,15 +130,19 @@ export default function DemandesDecaissement() {
       return;
     }
 
-    const montantRH = demandesRH.filter(d => selectedRHIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant || 0), 0);
-    const montantStock = demandesStock.filter(d => selectedStockIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant_estime || 0), 0);
+    const montantRH = demandesRH
+      .filter(d => selectedRHIds.includes(d.id))
+      .reduce((acc, d) => acc + Number(d.montant || 0), 0);
+    const montantStock = demandesStock
+      .filter(d => selectedStockIds.includes(d.id))
+      .reduce((acc, d) => acc + Number(d.montant_estime || 0), 0);
     const montantTotal = montantRH + montantStock;
 
     const payload = {
       demandes_rh_ids: selectedRHIds,
       demandes_stock_ids: selectedStockIds,
       montant_total: montantTotal,
-      cree_par_id: user.id, // ✅ UUID réel de l'utilisateur connecté
+      cree_par_id: user.id, // UUID réel
     };
 
     setSubmitting(true);
@@ -174,7 +179,7 @@ export default function DemandesDecaissement() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableCell>ID</TableCell>
+              <TableCell>Référence</TableCell>
               <TableCell>Montant total</TableCell>
               <TableCell>Statut</TableCell>
               <TableCell>Date création</TableCell>
@@ -185,7 +190,7 @@ export default function DemandesDecaissement() {
           <TableBody>
             {decaissements.length ? decaissements.map(d => (
               <TableRow key={d.id}>
-                <TableCell>{d.id}</TableCell>
+                <TableCell>{d.reference || d.id}</TableCell> {/* affichage de la référence */}
                 <TableCell>{Number(d.montant_total || 0).toFixed(2)} Ar</TableCell>
                 <TableCell>{STATUT_LABELS[d.statut] || d.statut}</TableCell>
                 <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
@@ -216,7 +221,7 @@ export default function DemandesDecaissement() {
             <DialogTitle>Soumettre la demande au coordonnateur</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p>Êtes-vous sûr de vouloir soumettre la demande {selected?.id} ?</p>
+            <p>Êtes-vous sûr de vouloir soumettre la demande {selected?.reference || selected?.id} ?</p>
           </div>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDialogOpen(false)} disabled={submitting}>
