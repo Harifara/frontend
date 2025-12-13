@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
 /* ================= TYPES ================= */
-
 interface Achat { id: string; article: string; nombre: number; montant: number; }
 interface Payement { id: string; montant: number; }
 interface DemandeRH { id: string; description: string; montant: number; status: string; achats?: Achat[]; payements?: Payement[]; }
@@ -18,7 +17,6 @@ interface DemandeStock { id: string; numero: string; article?: Article | null; q
 interface Decaissement { id: string; reference: string; statut: string; montant_total: number; }
 
 /* ================= UTILS ================= */
-
 const badge = (status: string) => {
   const map: Record<string, string> = {
     brouillon: "bg-gray-200 text-gray-800",
@@ -30,7 +28,6 @@ const badge = (status: string) => {
 };
 
 /* ================= COMPONENT ================= */
-
 export default function DemandesDecaissement() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -45,7 +42,6 @@ export default function DemandesDecaissement() {
   const [submitting, setSubmitting] = useState(false);
 
   /* ================= FETCH ================= */
-
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -67,7 +63,7 @@ export default function DemandesDecaissement() {
       console.log("📌 Stock after setState:", stock.results || stock);
 
     } catch (e) {
-      console.error("❌ Erreur lors du fetch:", e);
+      console.error("Erreur fetchData:", e);
       toast({ title: "Erreur", description: "Chargement impossible", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -77,17 +73,17 @@ export default function DemandesDecaissement() {
   useEffect(() => { fetchData(); }, []);
 
   /* ================= FILTRAGE ================= */
-
+  // Ici on filtre selon le statut exact côté API
   const availableRH = useMemo(() => {
-    const filtered = rhDemandes.filter(d => d.status === "approuve");
-    console.log("📊 RH approuvées:", filtered);
-    return filtered;
+    const arr = rhDemandes.filter(d => d.status === "approuve");
+    console.log("📊 RH approuvées:", arr);
+    return arr;
   }, [rhDemandes]);
 
   const availableStock = useMemo(() => {
-    const filtered = stockDemandes.filter(d => d.statut === "approuve");
-    console.log("📊 Stock approuvées:", filtered);
-    return filtered;
+    const arr = stockDemandes.filter(d => d.statut === "approuve");
+    console.log("📊 Stock approuvées:", arr);
+    return arr;
   }, [stockDemandes]);
 
   const total =
@@ -97,7 +93,6 @@ export default function DemandesDecaissement() {
   console.log("💰 Total sélectionné:", total);
 
   /* ================= ACTIONS ================= */
-
   const creerDecaissement = async () => {
     if (!selectedRH.length && !selectedStock.length) {
       return toast({ title: "Erreur", description: "Sélectionnez au moins une demande", variant: "destructive" });
@@ -122,13 +117,18 @@ export default function DemandesDecaissement() {
   };
 
   const soumettre = async (id: string) => {
-    await financeApi.updateDecaissement(id, { statut: "en_attente_coordonnateur" });
-    toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
-    fetchData();
+    try {
+      await financeApi.updateDecaissement(id, { statut: "en_attente_coordonnateur" });
+      toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
+      fetchData();
+    } catch {
+      toast({ title: "Erreur", description: "Soumission échouée", variant: "destructive" });
+    }
   };
 
   if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>;
 
+  /* ================= RENDER ================= */
   return (
     <div className="p-8 space-y-6">
       {/* HEADER */}
