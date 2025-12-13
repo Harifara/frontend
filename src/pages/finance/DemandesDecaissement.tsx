@@ -1,6 +1,6 @@
 // src/pages/finance/DemandesDecaissement.tsx
 import React, { useEffect, useState } from "react";
-import { financeApi, rhApi, stockApi } from "@/lib/api";
+import { financeApi, rhApi, stockApi, authApi } from "@/lib/api";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -67,7 +67,6 @@ export default function DemandesDecaissement() {
     setLoading(true);
     try {
       const data = await financeApi.getDecaissements();
-      // Si DRF paginé
       setDecaissements(data.results || data);
     } catch (error) {
       console.error("Erreur lors du chargement des décaissements :", error);
@@ -132,24 +131,32 @@ export default function DemandesDecaissement() {
       .filter(d => selectedStockIds.includes(d.id))
       .reduce((acc, d) => acc + d.montant_estime, 0);
 
-    const payload = {
-      demandes_rh_ids: selectedRHIds,
-      demandes_stock_ids: selectedStockIds,
-      montant_total: montantRH + montantStock,
-      cree_par_id: "user-finance-id", // Remplacer par l'UUID de l'utilisateur connecté
-    };
-
     setSubmitting(true);
     try {
+      // ✅ Récupérer UUID réel de l'utilisateur connecté
+      const userRes = await authApi.me();
+      const userId = userRes.id;
+
+      const payload = {
+        demandes_rh_ids: selectedRHIds,
+        demandes_stock_ids: selectedStockIds,
+        montant_total: montantRH + montantStock,
+        cree_par_id: userId, // UUID valide
+      };
+
       await financeApi.createDecaissement(payload);
       toast({ title: "Succès", description: "Décaissement créé." });
       setModalCreateOpen(false);
       setSelectedRHIds([]);
       setSelectedStockIds([]);
       fetchDecaissements();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Erreur création :", error);
-      toast({ title: "Erreur", description: "Impossible de créer le décaissement.", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: error?.response?.data ? JSON.stringify(error.response.data) : "Impossible de créer le décaissement.",
+        variant: "destructive"
+      });
     } finally {
       setSubmitting(false);
     }
