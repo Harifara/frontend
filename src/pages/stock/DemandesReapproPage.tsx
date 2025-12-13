@@ -51,7 +51,7 @@ export default function DemandesReapproPage() {
   const fetchDemandes = async () => {
     try {
       setLoading(true);
-      const res = await stockApi.getDemandes();
+      const res = await stockApi.getDemandesStock();
       setDemandes(res);
     } catch (error) {
       console.error("Erreur récupération demandes :", error);
