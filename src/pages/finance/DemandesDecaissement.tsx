@@ -68,6 +68,14 @@ export default function DemandesDecaissement() {
   const [depenseMontant, setDepenseMontant] = useState(0);
 
   // -----------------------------
+  // Fonction de redirection si non connecté
+  // -----------------------------
+  const redirectLogin = () => {
+    alert("Votre session a expiré. Veuillez vous reconnecter.");
+    window.location.href = "/login";
+  };
+
+  // -----------------------------
   // Récupération utilisateur
   // -----------------------------
   const fetchUser = async () => {
@@ -76,7 +84,7 @@ export default function DemandesDecaissement() {
       setUser(u);
     } catch (err: any) {
       console.error("Impossible de récupérer l'utilisateur connecté :", err.message);
-      alert("Vous devez vous reconnecter.");
+      redirectLogin();
     }
   };
 
@@ -86,9 +94,9 @@ export default function DemandesDecaissement() {
   const fetchData = async () => {
     try {
       const [dec, rh, stock] = await Promise.all([
-        financeApi.getDecaissements(),
-        rhApi.getDemandes(),
-        stockApi.getDemandesAchat(),
+        financeApi.getDecaissements().catch((e) => { if(e.status === 401) redirectLogin(); throw e; }),
+        rhApi.getDemandes().catch((e) => { if(e.status === 401) redirectLogin(); throw e; }),
+        stockApi.getDemandesAchat().catch((e) => { if(e.status === 401) redirectLogin(); throw e; }),
       ]);
       setDecaissements(dec);
       setDemandesRH(rh);
@@ -104,7 +112,7 @@ export default function DemandesDecaissement() {
   }, []);
 
   // -----------------------------
-  // Création d'un décaissement
+  // Création d'une dépense
   // -----------------------------
   const createDepense = async () => {
     if (!selectedDecaissementId) return;
@@ -118,13 +126,14 @@ export default function DemandesDecaissement() {
         decaissement: selectedDecaissementId,
         description: depenseDescription,
         montant: depenseMontant,
-        mode_paiement: "espece", // par défaut
+        mode_paiement: "espece",
         paye_par_id: user?.id,
-      });
+      }).catch((e) => { if(e.status === 401) redirectLogin(); throw e; });
+
       setDialogOpen(false);
       setDepenseDescription("");
       setDepenseMontant(0);
-      fetchData(); // refresh
+      fetchData(); // rafraîchissement des données
     } catch (err: any) {
       console.error("Erreur lors de la création de la dépense :", err.message);
       alert("Impossible de créer la dépense.");
@@ -196,7 +205,7 @@ export default function DemandesDecaissement() {
         </DialogContent>
       </Dialog>
 
-      {/* Liste des demandes RH et Stock pour info */}
+      {/* Liste des demandes RH et Stock */}
       <div className="mt-6 grid grid-cols-2 gap-4">
         <div>
           <h2 className="font-bold mb-2">Demandes RH</h2>
