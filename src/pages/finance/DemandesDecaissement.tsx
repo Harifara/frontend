@@ -7,14 +7,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/AuthContext"; // récupérer l'utilisateur
 
 // -----------------
 // Types
 // -----------------
 interface Decaissement {
   id: string;
-  reference?: string;
+  reference?: string; // nouvelle propriété
   montant_total: number;
   statut: string;
   date_creation: string;
@@ -37,7 +37,6 @@ interface DemandeStock {
   statut: string;
 }
 
-// Labels et couleurs des statuts
 const STATUT_LABELS: Record<string, string> = {
   brouillon: "Brouillon",
   en_attente_coordonnateur: "En attente validation coordonnateur",
@@ -46,19 +45,11 @@ const STATUT_LABELS: Record<string, string> = {
   decaisse: "Décaissement effectué",
 };
 
-const STATUT_COLORS: Record<string, string> = {
-  brouillon: "bg-gray-200 text-gray-800",
-  en_attente_coordonnateur: "bg-yellow-200 text-yellow-800",
-  approuve: "bg-green-200 text-green-800",
-  rejete: "bg-red-200 text-red-800",
-  decaisse: "bg-blue-200 text-blue-800",
-};
-
 // -----------------
 // Composant principal
 // -----------------
 export default function DemandesDecaissement() {
-  const { user } = useAuth();
+  const { user } = useAuth(); // utilisateur connecté
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -139,15 +130,19 @@ export default function DemandesDecaissement() {
       return;
     }
 
-    const montantRH = demandesRH.filter(d => selectedRHIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant || 0), 0);
-    const montantStock = demandesStock.filter(d => selectedStockIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant_estime || 0), 0);
+    const montantRH = demandesRH
+      .filter(d => selectedRHIds.includes(d.id))
+      .reduce((acc, d) => acc + Number(d.montant || 0), 0);
+    const montantStock = demandesStock
+      .filter(d => selectedStockIds.includes(d.id))
+      .reduce((acc, d) => acc + Number(d.montant_estime || 0), 0);
     const montantTotal = montantRH + montantStock;
 
     const payload = {
       demandes_rh_ids: selectedRHIds,
       demandes_stock_ids: selectedStockIds,
       montant_total: montantTotal,
-      cree_par_id: user.id,
+      cree_par_id: user.id, // UUID réel
     };
 
     setSubmitting(true);
@@ -195,13 +190,9 @@ export default function DemandesDecaissement() {
           <TableBody>
             {decaissements.length ? decaissements.map(d => (
               <TableRow key={d.id}>
-                <TableCell>{d.reference || d.id}</TableCell>
+                <TableCell>{d.reference || d.id}</TableCell> {/* affichage de la référence */}
                 <TableCell>{Number(d.montant_total || 0).toFixed(2)} Ar</TableCell>
-                <TableCell>
-                  <span className={`px-2 py-1 rounded-full text-sm font-semibold ${STATUT_COLORS[d.statut] || "bg-gray-100 text-gray-700"}`}>
-                    {STATUT_LABELS[d.statut] || d.statut}
-                  </span>
-                </TableCell>
+                <TableCell>{STATUT_LABELS[d.statut] || d.statut}</TableCell>
                 <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
                 <TableCell>{d.date_decaissement ? new Date(d.date_decaissement).toLocaleString() : "-"}</TableCell>
                 <TableCell>
