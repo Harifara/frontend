@@ -31,11 +31,34 @@ export default function DecaissementsList({ filtreStatut, titre }: Props) {
   const [commentaires, setCommentaires] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
 
+  const badge = (status: string) => {
+    switch (status) {
+      case "brouillon": return "bg-gray-200 text-gray-800";
+      case "en_attente_coordonnateur": return "bg-yellow-100 text-yellow-800";
+      case "approuve": return "bg-green-100 text-green-800";
+      case "rejete": return "bg-red-100 text-red-800";
+      default: return "bg-gray-100 text-gray-700";
+    }
+  };
+
   const fetchDecaissements = async () => {
     setLoading(true);
     try {
       const data = await financeApi.getDecaissements();
-      setDecaissements((data.results || data).filter(d => d.statut === filtreStatut));
+      const allDec = data.results || data;
+
+      let filtered: Decaissement[] = [];
+
+      if (filtreStatut === "en_attente_coordonnateur") {
+        // Inclure les décaissements soumis par finance (brouillon) et en attente coordonnateur
+        filtered = allDec.filter(d => 
+          d.statut === "en_attente_coordonnateur" || d.statut === "brouillon"
+        );
+      } else {
+        filtered = allDec.filter(d => d.statut === filtreStatut);
+      }
+
+      setDecaissements(filtered);
     } catch {
       toast({ title: "Erreur", description: "Impossible de charger les décaissements.", variant: "destructive" });
     } finally {
@@ -78,6 +101,7 @@ export default function DecaissementsList({ filtreStatut, titre }: Props) {
                 <TableHead>Référence</TableHead>
                 <TableHead>Montant</TableHead>
                 <TableHead>Date création</TableHead>
+                <TableHead>Statut</TableHead>
                 {filtreStatut === "en_attente_coordonnateur" && <TableHead>Commentaire</TableHead>}
                 {filtreStatut === "en_attente_coordonnateur" && <TableHead>Actions</TableHead>}
               </TableRow>
@@ -88,6 +112,9 @@ export default function DecaissementsList({ filtreStatut, titre }: Props) {
                   <TableCell>{d.reference || d.id}</TableCell>
                   <TableCell>{d.montant_total.toLocaleString()} Ar</TableCell>
                   <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded text-xs ${badge(d.statut)}`}>{d.statut}</span>
+                  </TableCell>
                   {filtreStatut === "en_attente_coordonnateur" && (
                     <>
                       <TableCell>
@@ -119,7 +146,7 @@ export default function DecaissementsList({ filtreStatut, titre }: Props) {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={filtreStatut === "en_attente_coordonnateur" ? 5 : 3} className="text-center py-6">
+                  <TableCell colSpan={filtreStatut === "en_attente_coordonnateur" ? 6 : 4} className="text-center py-6">
                     Aucun décaissement
                   </TableCell>
                 </TableRow>
