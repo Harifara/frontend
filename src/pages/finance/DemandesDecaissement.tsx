@@ -58,6 +58,7 @@ export default function DemandesDecaissement() {
   const [demandesStock, setDemandesStock] = useState<DemandeStock[]>([]);
   const [selectedRHIds, setSelectedRHIds] = useState<string[]>([]);
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
+  const [userId, setUserId] = useState<string>(""); // UUID utilisateur connecté
   const { toast } = useToast();
 
   // -----------------
@@ -70,6 +71,7 @@ export default function DemandesDecaissement() {
       setDecaissements(data.results || data);
     } catch (error) {
       console.error("Erreur lors du chargement des décaissements :", error);
+      toast({ title: "Erreur", description: "Impossible de charger les décaissements.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -88,10 +90,24 @@ export default function DemandesDecaissement() {
       setDemandesStock(stockData.results || stockData);
     } catch (err) {
       console.error("Erreur récupération RH/Stock :", err);
+      toast({ title: "Erreur", description: "Impossible de récupérer les demandes RH/Stock.", variant: "destructive" });
+    }
+  };
+
+  // -----------------
+  // Récupérer l'utilisateur connecté
+  // -----------------
+  const fetchCurrentUser = async () => {
+    try {
+      const user = await authApi.getUser(); // Ajuster selon ton API
+      setUserId(user.id);
+    } catch (err) {
+      console.warn("Impossible de récupérer l'utilisateur connecté :", err);
     }
   };
 
   useEffect(() => {
+    fetchCurrentUser();
     fetchDecaissements();
     fetchDemandesSources();
   }, []);
@@ -131,32 +147,29 @@ export default function DemandesDecaissement() {
       .filter(d => selectedStockIds.includes(d.id))
       .reduce((acc, d) => acc + d.montant_estime, 0);
 
+    if (!userId) {
+      toast({ title: "Erreur", description: "Impossible de récupérer l'utilisateur connecté.", variant: "destructive" });
+      return;
+    }
+
+    const payload = {
+      demandes_rh_ids: selectedRHIds,
+      demandes_stock_ids: selectedStockIds,
+      montant_total: montantRH + montantStock,
+      cree_par_id: userId,
+    };
+
     setSubmitting(true);
     try {
-      // ✅ Récupérer UUID réel de l'utilisateur connecté
-      const userRes = await authApi.me();
-      const userId = userRes.id;
-
-      const payload = {
-        demandes_rh_ids: selectedRHIds,
-        demandes_stock_ids: selectedStockIds,
-        montant_total: montantRH + montantStock,
-        cree_par_id: userId, // UUID valide
-      };
-
       await financeApi.createDecaissement(payload);
       toast({ title: "Succès", description: "Décaissement créé." });
       setModalCreateOpen(false);
       setSelectedRHIds([]);
       setSelectedStockIds([]);
       fetchDecaissements();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erreur création :", error);
-      toast({
-        title: "Erreur",
-        description: error?.response?.data ? JSON.stringify(error.response.data) : "Impossible de créer le décaissement.",
-        variant: "destructive"
-      });
+      toast({ title: "Erreur", description: "Impossible de créer le décaissement.", variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
