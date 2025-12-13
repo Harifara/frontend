@@ -68,6 +68,8 @@ export default function DemandesDecaissement() {
   const [modalCreateOpen, setModalCreateOpen] = useState(false);
   const [demandesRH, setDemandesRH] = useState<DemandeRH[]>([]);
   const [demandesStock, setDemandesStock] = useState<DemandeStock[]>([]);
+  const [availableRH, setAvailableRH] = useState<DemandeRH[]>([]);
+  const [availableStock, setAvailableStock] = useState<DemandeStock[]>([]);
   const [selectedRHIds, setSelectedRHIds] = useState<string[]>([]);
   const [selectedStockIds, setSelectedStockIds] = useState<string[]>([]);
   const { toast } = useToast();
@@ -139,8 +141,8 @@ export default function DemandesDecaissement() {
       return;
     }
 
-    const montantRH = demandesRH.filter(d => selectedRHIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant || 0), 0);
-    const montantStock = demandesStock.filter(d => selectedStockIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant_estime || 0), 0);
+    const montantRH = availableRH.filter(d => selectedRHIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant || 0), 0);
+    const montantStock = availableStock.filter(d => selectedStockIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant_estime || 0), 0);
     const montantTotal = montantRH + montantStock;
 
     const payload = {
@@ -167,21 +169,13 @@ export default function DemandesDecaissement() {
   };
 
   // -----------------
-  // Filtrer les demandes déjà utilisées
+  // Filtrer les demandes disponibles
   // -----------------
-  const usedRHIds = decaissements.flatMap(d => d.demandes_rh_ids || []);
-  const usedStockIds = decaissements.flatMap(d => d.demandes_stock_ids || []);
-
-  const availableRH = demandesRH.filter(d => !usedRHIds.includes(d.id));
-  const availableStock = demandesStock.filter(d => !usedStockIds.includes(d.id));
-
-  // -----------------
-  // Calcul du montant total
-  // -----------------
-  const montantTotalSelection = () => {
-    const montantRH = demandesRH.filter(d => selectedRHIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant || 0), 0);
-    const montantStock = demandesStock.filter(d => selectedStockIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant_estime || 0), 0);
-    return montantRH + montantStock;
+  const filterAvailableDemandes = () => {
+    const usedRHIds = decaissements.flatMap(d => d.demandes_rh_ids || []);
+    const usedStockIds = decaissements.flatMap(d => d.demandes_stock_ids || []);
+    setAvailableRH(demandesRH.filter(d => !usedRHIds.includes(d.id)));
+    setAvailableStock(demandesStock.filter(d => !usedStockIds.includes(d.id)));
   };
 
   // -----------------
@@ -191,7 +185,14 @@ export default function DemandesDecaissement() {
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Demandes de Décaissement</h1>
-        <Button onClick={() => setModalCreateOpen(true)}>Nouvelle Demande</Button>
+        <Button
+          onClick={() => {
+            filterAvailableDemandes(); // Filtrer juste avant ouverture du modal
+            setModalCreateOpen(true);
+          }}
+        >
+          Nouvelle Demande
+        </Button>
       </div>
 
       {loading ? (
@@ -285,7 +286,10 @@ export default function DemandesDecaissement() {
               />
             </div>
             <div className="text-right font-semibold">
-              Montant total : {montantTotalSelection().toFixed(2)} Ar
+              Montant total : {(
+                availableRH.filter(d => selectedRHIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant || 0), 0) +
+                availableStock.filter(d => selectedStockIds.includes(d.id)).reduce((acc, d) => acc + Number(d.montant_estime || 0), 0)
+              ).toFixed(2)} Ar
             </div>
           </div>
           <DialogFooter>
