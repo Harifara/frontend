@@ -1,133 +1,157 @@
-// src/pages/coordo/ValidationsCoordo.tsx
+// src/pages/cordo/Validations.tsx
 import React, { useEffect, useState } from "react";
-import { cordoApi } from "@/lib/api"; // Assurez-vous d'avoir l'API Cordo
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cordoApi } from "@/lib/api";
+import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 
-
-// Types
 interface Validation {
   id: string;
-  decaissement_id: string;
-  coordo_id: string;
-  decision: string;
-  commentaire: string;
-  date_decision: string;
+  demande_decaissement_id: string;
+  coordonnateur_id: string;
+  decision: "approuve" | "rejete";
+  commentaire?: string;
+  date_validation: string;
 }
 
-interface Decaissement {
-  id: string;
-  source_service: string;
-  date_creation: string;
-  total_montant: number;
-  statut: string;
-}
+export default function ValidationsCoordonnateurPage() {
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-// -------------------------
-// Composant principal
-// -------------------------
-export const ValidationsCoordo: React.FC = () => {
-  const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [selected, setSelected] = useState<Decaissement | null>(null);
-  const [commentaire, setCommentaire] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+  const [validations, setValidations] = useState<Validation[]>([]);
+  const [demandeId, setDemandeId] = useState("");
+  const [decision, setDecision] = useState<"approuve" | "rejete">("approuve");
+  const [commentaire, setCommentaire] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const fetchDecaissements = async () => {
+  /* ================= FETCH ================= */
+  const fetchValidations = async () => {
     setLoading(true);
     try {
-      const data = await cordoApi.getDecaissements(); // Lister les demandes à valider
-      setDecaissements(data);
-    } catch (err) {
-      console.error(err);
+      const data = await cordoApi.getValidations();
+      console.log("✅ Validations raw data:", data);
+      setValidations(data.results || data);
+    } catch (e) {
+      console.error("Erreur fetchValidations:", e);
+      toast({ title: "Erreur", description: "Impossible de charger les validations", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchDecaissements();
+    fetchValidations();
   }, []);
 
-  const handleDecision = async (decision: "valide" | "rejete") => {
-    if (!selected) return;
-    await cordoApi.validerDecaissement(selected.id, {
-      coordo_commentaire: commentaire,
-      decision,
-    });
-    setCommentaire("");
-    setSelected(null);
-    fetchDecaissements();
+  /* ================= ACTIONS ================= */
+  const createValidation = async () => {
+    if (!demandeId) {
+      return toast({ title: "Erreur", description: "ID de demande requis", variant: "destructive" });
+    }
+    setSubmitting(true);
+    try {
+      await cordoApi.createValidation({
+        demande_decaissement_id: demandeId,
+        coordonnateur_id: user?.id!,
+        decision,
+        commentaire,
+      });
+      toast({ title: "Succès", description: "Validation créée" });
+      setDemandeId("");
+      setCommentaire("");
+      setDecision("approuve");
+      fetchValidations();
+    } catch (e: any) {
+      console.error("Erreur createValidation:", e);
+      toast({ title: "Erreur", description: e?.message || "Création échouée", variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
+  const deleteValidation = async (id: string) => {
+    if (!confirm("Voulez-vous vraiment supprimer cette validation ?")) return;
+    try {
+      await cordoApi.deleteValidation(id);
+      toast({ title: "Supprimé", description: "Validation supprimée" });
+      fetchValidations();
+    } catch (e) {
+      console.error("Erreur deleteValidation:", e);
+      toast({ title: "Erreur", description: "Suppression échouée", variant: "destructive" });
+    }
+  };
+
+  if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>;
+
   return (
-    <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Validations Coordonnateur</h1>
+    <div className="p-8 space-y-6">
+      {/* FORMULAIRE CREATION */}
+      <Card>
+        <CardHeader><CardTitle>Créer une validation</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <Input
+            placeholder="ID de la demande de décaissement"
+            value={demandeId}
+            onChange={(e) => setDemandeId(e.target.value)}
+          />
+          <Select value={decision} onValueChange={(val) => setDecision(val as "approuve" | "rejete")}>
+            <SelectTrigger>
+              <SelectValue placeholder="Décision" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="approuve">Approuvé</SelectItem>
+              <SelectItem value="rejete">Rejeté</SelectItem>
+            </SelectContent>
+          </Select>
+          <Input
+            placeholder="Commentaire (optionnel)"
+            value={commentaire}
+            onChange={(e) => setCommentaire(e.target.value)}
+          />
+          <Button onClick={createValidation} disabled={submitting}>
+            {submitting ? "Création..." : "Créer la validation"}
+          </Button>
+        </CardContent>
+      </Card>
 
-      {loading ? (
-        <p>Chargement...</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Source</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Total</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {decaissements.map((d) => (
-              <TableRow key={d.id}>
-                <TableCell>{d.source_service}</TableCell>
-                <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
-                <TableCell>{d.total_montant.toFixed(2)}</TableCell>
-                <TableCell>{d.statut}</TableCell>
-                <TableCell>
-                  <Button onClick={() => setSelected(d)}>Valider / Rejeter</Button>
-                </TableCell>
+      {/* TABLE DES VALIDATIONS */}
+      <Card>
+        <CardHeader><CardTitle>Validations existantes</CardTitle></CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>ID</TableHead>
+                <TableHead>Demande Décaissement</TableHead>
+                <TableHead>Décision</TableHead>
+                <TableHead>Commentaire</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Action</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-
-      {/* Dialog pour valider ou rejeter */}
-      <Dialog open={!!selected} onOpenChange={() => setSelected(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Décaissement {selected?.id}</DialogTitle>
-          </DialogHeader>
-
-          {selected && (
-            <div className="flex flex-col gap-2">
-              <p><strong>Source:</strong> {selected.source_service}</p>
-              <p><strong>Total:</strong> {selected.total_montant.toFixed(2)}</p>
-              <p><strong>Statut:</strong> {selected.statut}</p>
-
-              <Textarea
-                placeholder="Commentaire (optionnel)"
-                value={commentaire}
-                onChange={(e) => setCommentaire(e.target.value)}
-              />
-
-              <div className="flex gap-2 mt-2">
-                <Button onClick={() => handleDecision("valide")}>Valider</Button>
-                <Button onClick={() => handleDecision("rejete")} variant="destructive">Rejeter</Button>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button onClick={() => setSelected(null)}>Fermer</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </TableHeader>
+            <TableBody>
+              {validations.map((v) => (
+                <TableRow key={v.id}>
+                  <TableCell>{v.id}</TableCell>
+                  <TableCell>{v.demande_decaissement_id}</TableCell>
+                  <TableCell>{v.decision}</TableCell>
+                  <TableCell>{v.commentaire || "-"}</TableCell>
+                  <TableCell>{new Date(v.date_validation).toLocaleString()}</TableCell>
+                  <TableCell>
+                    <Button size="sm" variant="destructive" onClick={() => deleteValidation(v.id)}>Supprimer</Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
-};
-
-export default ValidationsCoordo;
+}
