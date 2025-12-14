@@ -18,6 +18,7 @@ const STATUS_BADGES: Record<string, string> = {
   en_attente_coordonnateur: "bg-yellow-100 text-yellow-800",
   approuve: "bg-green-100 text-green-800",
   rejete: "bg-red-100 text-red-800",
+  decaisse: "bg-blue-100 text-blue-800",
 };
 
 export default function DemandesDecaissement() {
@@ -32,7 +33,7 @@ export default function DemandesDecaissement() {
   const [selectedStock, setSelectedStock] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  // 🔹 Fetch data
+  // 🔹 Fetch data depuis API
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -55,11 +56,13 @@ export default function DemandesDecaissement() {
     fetchData();
   }, []);
 
-  // 🔹 Toggle selection
-  const toggleRH = (id: string) => setSelectedRH(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  const toggleStock = (id: string) => setSelectedStock(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  // 🔹 Toggle selection pour RH et Stock
+  const toggleRH = (id: string) =>
+    setSelectedRH(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const toggleStock = (id: string) =>
+    setSelectedStock(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
-  // 🔹 Total pour les sélections
+  // 🔹 Montant total sélection
   const totalSelection = useMemo(() => {
     const totalRH = rhDemandes.filter(d => selectedRH.includes(d.id))
                                .reduce((sum, d) => sum + (d.montant || 0), 0);
@@ -79,7 +82,6 @@ export default function DemandesDecaissement() {
         demandes_rh_ids: selectedRH,
         demandes_stock_ids: selectedStock,
       });
-      // Ajouter le décaissement avec le montant correct
       setDecaissements(prev => [...prev, { ...newDec, montant_total: totalSelection }]);
       setSelectedRH([]);
       setSelectedStock([]);
