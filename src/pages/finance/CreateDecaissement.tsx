@@ -32,8 +32,9 @@ export default function DemandesDecaissement() {
   const [selectedRH, setSelectedRH] = useState<string[]>([]);
   const [selectedStock, setSelectedStock] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<"recus" | "soumettre">("recus");
 
-  // 🔹 Fetch data depuis API
+  // 🔹 Fetch data
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -45,33 +46,22 @@ export default function DemandesDecaissement() {
       setRhDemandes(rh);
       setStockDemandes(stock);
       setDecaissements(dec);
-    } catch (err) {
+    } catch {
       toast({ title: "Erreur", description: "Impossible de charger les données", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
-  // 🔹 Toggle selection pour RH et Stock
-  const toggleRH = (id: string) =>
-    setSelectedRH(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  const toggleStock = (id: string) =>
-    setSelectedStock(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const toggleRH = (id: string) => setSelectedRH(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const toggleStock = (id: string) => setSelectedStock(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
-  // 🔹 Montant total sélection
   const totalSelection = useMemo(() => {
-    const totalRH = rhDemandes.filter(d => selectedRH.includes(d.id))
-                               .reduce((sum, d) => sum + (d.montant || 0), 0);
-    const totalStock = stockDemandes.filter(d => selectedStock.includes(d.id))
-                                    .reduce((sum, d) => sum + (d.montant_estime || 0), 0);
+    const totalRH = rhDemandes.filter(d => selectedRH.includes(d.id)).reduce((sum, d) => sum + (d.montant || 0), 0);
+    const totalStock = stockDemandes.filter(d => selectedStock.includes(d.id)).reduce((sum, d) => sum + (d.montant_estime || 0), 0);
     return totalRH + totalStock;
   }, [selectedRH, selectedStock, rhDemandes, stockDemandes]);
 
-  // 🔹 Créer un décaissement
   const creerDecaissement = async () => {
     if (!selectedRH.length && !selectedStock.length) {
       return toast({ title: "Erreur", description: "Sélectionnez au moins une demande", variant: "destructive" });
@@ -88,16 +78,13 @@ export default function DemandesDecaissement() {
       toast({ title: "Succès", description: "Décaissement créé (brouillon)" });
     } catch {
       toast({ title: "Erreur", description: "Création échouée", variant: "destructive" });
-    } finally {
-      setSubmitting(false);
-    }
+    } finally { setSubmitting(false); }
   };
 
-  // 🔹 Soumettre un décaissement
   const soumettre = async (id: string) => {
     try {
       await financeApi.soumettreDecaissement(id);
-      await fetchData(); // rafraîchir la liste
+      await fetchData();
       toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
     } catch {
       toast({ title: "Erreur", description: "Soumission échouée", variant: "destructive" });
@@ -110,114 +97,92 @@ export default function DemandesDecaissement() {
     <div className="p-8 space-y-6">
       <h1 className="text-3xl font-bold">Demandes de Décaissement</h1>
 
-      {/* Demandes RH */}
-      <Card>
-        <CardHeader><CardTitle>Demandes RH</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead></TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Statut</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rhDemandes.map(d => (
-                <TableRow key={d.id}>
-                  <TableCell>
-                    <Checkbox checked={selectedRH.includes(d.id)} onCheckedChange={() => toggleRH(d.id)} />
-                  </TableCell>
-                  <TableCell>{d.description}</TableCell>
-                  <TableCell>{(d.montant || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.status] || "bg-gray-100 text-gray-700"}`}>
-                      {d.status}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Demandes Stock */}
-      <Card>
-        <CardHeader><CardTitle>Demandes Stock</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead></TableHead>
-                <TableHead>Numéro</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Statut</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {stockDemandes.map(d => (
-                <TableRow key={d.id}>
-                  <TableCell>
-                    <Checkbox checked={selectedStock.includes(d.id)} onCheckedChange={() => toggleStock(d.id)} />
-                  </TableCell>
-                  <TableCell>{d.numero}</TableCell>
-                  <TableCell>{(d.montant_estime || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
-                      {d.statut}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Montant total sélection */}
-      <div className="flex justify-between items-center">
-        <p className="font-bold">
-          Montant total sélection : {Number(totalSelection).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar
-        </p>
-        <Button onClick={creerDecaissement} disabled={submitting}>
-          {submitting ? "Création..." : "Créer le décaissement"}
-        </Button>
+      {/* 🔹 Onglets */}
+      <div className="flex gap-4 mb-4">
+        <Button variant={activeTab === "recus" ? "default" : "outline"} onClick={() => setActiveTab("recus")}>Voir demandes reçues</Button>
+        <Button variant={activeTab === "soumettre" ? "default" : "outline"} onClick={() => setActiveTab("soumettre")}>Voir demandes à soumettre</Button>
       </div>
 
-      {/* Brouillons */}
-      <Card>
-        <CardHeader><CardTitle>Brouillons</CardTitle></CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Référence</TableHead>
-                <TableHead>Montant</TableHead>
-                <TableHead>Statut</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {decaissements.filter(d => d.statut === "brouillon").map(d => (
-                <TableRow key={d.id}>
-                  <TableCell>{d.reference}</TableCell>
-                  <TableCell>{(d.montant_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
-                  <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
-                      {d.statut}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button>
-                  </TableCell>
+      {/* 🔹 Onglet Demandes reçues */}
+      {activeTab === "recus" && (
+        <Card>
+          <CardHeader><CardTitle>Demandes reçues</CardTitle></CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead></TableHead>
+                  <TableHead>Description / Numéro</TableHead>
+                  <TableHead>Montant</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead>Source</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {rhDemandes.map(d => (
+                  <TableRow key={d.id}>
+                    <TableCell><Checkbox checked={selectedRH.includes(d.id)} onCheckedChange={() => toggleRH(d.id)} /></TableCell>
+                    <TableCell>{d.description}</TableCell>
+                    <TableCell>{(d.montant || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ar</TableCell>
+                    <TableCell><span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.status]}`}>{d.status}</span></TableCell>
+                    <TableCell>RH</TableCell>
+                  </TableRow>
+                ))}
+                {stockDemandes.map(d => (
+                  <TableRow key={d.id}>
+                    <TableCell><Checkbox checked={selectedStock.includes(d.id)} onCheckedChange={() => toggleStock(d.id)} /></TableCell>
+                    <TableCell>{d.numero}</TableCell>
+                    <TableCell>{(d.montant_estime || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ar</TableCell>
+                    <TableCell><span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut]}`}>{d.statut}</span></TableCell>
+                    <TableCell>Stock</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {/* Montant total et création */}
+            <div className="flex justify-between items-center mt-4 bg-gray-50 p-4 rounded shadow-sm">
+              <p className="font-bold text-lg">
+                Montant total sélection : <span className="text-blue-600">{totalSelection.toLocaleString(undefined, { minimumFractionDigits: 2 })} Ar</span>
+              </p>
+              <Button className="bg-blue-600 text-white hover:bg-blue-700" onClick={creerDecaissement} disabled={submitting}>
+                {submitting ? "Création..." : "Créer le décaissement"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 🔹 Onglet Demandes à soumettre */}
+      {activeTab === "soumettre" && (
+        <Card>
+          <CardHeader><CardTitle>Demandes à soumettre</CardTitle></CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Référence</TableHead>
+                  <TableHead>Montant</TableHead>
+                  <TableHead>Statut</TableHead>
+                  <TableHead>Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {decaissements.filter(d => d.statut === "brouillon").map(d => (
+                  <TableRow key={d.id}>
+                    <TableCell>{d.reference}</TableCell>
+                    <TableCell>{(d.montant_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })} Ar</TableCell>
+                    <TableCell><span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut]}`}>{d.statut}</span></TableCell>
+                    <TableCell>
+                      <Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
