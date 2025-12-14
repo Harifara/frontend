@@ -75,7 +75,7 @@ export default function DemandesDecaissement() {
   const toggle = (id: string) =>
     setSelected(prev => (prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]));
 
-  // 🔹 Total pour les sélections (forcé en Number pour éviter concaténation)
+  // 🔹 Total pour les sélections
   const totalSelection = useMemo(() => {
     return demandes
       .filter(d => selected.includes(d.id))
@@ -97,7 +97,7 @@ export default function DemandesDecaissement() {
       // Ajouter le décaissement avec le montant correct
       setDecaissements(prev => [...prev, { ...newDec, montant_total: totalSelection }]);
 
-      // Retirer les demandes utilisées de la liste
+      // 🔹 Retirer les demandes utilisées de la liste
       setDemandes(prev => prev.filter(d => !selected.includes(d.id)));
 
       // Réinitialiser les sélections
