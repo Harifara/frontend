@@ -18,15 +18,20 @@ export default defineConfig(({ mode }) => ({
     },
   },
 
-  // ✅ Corrige l’erreur Vercel / Rollup
   optimizeDeps: {
     include: ["framer-motion"],
   },
 
-  // ✅ Empêche Rollup de bloquer le build
   build: {
+    chunkSizeWarningLimit: 2000, // augmente la limite pour les gros bundles
     rollupOptions: {
-      external: ["framer-motion"],
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            return "vendor";
+          }
+        },
+      },
     },
   },
 }));
