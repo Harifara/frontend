@@ -131,7 +131,7 @@ export default function DemandesDecaissement() {
       {/* Toggle view */}
       <div className="space-x-2 mb-4">
         <Button onClick={() => setView("recues")} variant={view === "recues" ? "default" : "outline"}>Voir demandes reçues</Button>
-        <Button onClick={() => setView("brouillons")} variant={view === "brouillons" ? "default" : "outline"}>Voir demandes à soumettre</Button>
+        <Button onClick={() => setView("brouillons")} variant={view === "brouillons" ? "default" : "outline"}>Voir brouillons</Button>
       </div>
 
       {view === "recues" && (
@@ -167,7 +167,9 @@ export default function DemandesDecaissement() {
 
             {/* Montant total sélection */}
             <div className="flex justify-between items-center mt-4">
-              <p className="font-bold">Montant total sélection : {totalSelection.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</p>
+              <p className="font-bold">
+                Montant total sélection : {totalSelection.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar
+              </p>
               <Button onClick={creerDecaissement} disabled={submitting}>{submitting ? "Création..." : "Créer le décaissement"}</Button>
             </div>
           </CardContent>
