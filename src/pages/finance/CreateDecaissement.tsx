@@ -32,6 +32,7 @@ const STATUS_BADGES: Record<string, string> = {
   en_attente_coordonnateur: "bg-yellow-100 text-yellow-800",
   approuve: "bg-green-100 text-green-800",
   rejete: "bg-red-100 text-red-800",
+  decaisse: "bg-blue-100 text-blue-800",
 };
 
 export default function DemandesDecaissement() {
@@ -45,7 +46,7 @@ export default function DemandesDecaissement() {
   const [submitting, setSubmitting] = useState(false);
   const [view, setView] = useState<"recues" | "brouillons">("recues");
 
-  // 🔹 Fetch data via API centralisée
+  // 🔹 Fetch data depuis l'API finance
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -54,7 +55,7 @@ export default function DemandesDecaissement() {
         financeApi.getDemandesDisponibles(),
       ]);
 
-      // 🔹 Transformer les données
+      // 🔹 Transformer les données RH et Stock
       const rhDemandes: Demande[] = demandesDisponibles.rh.map(d => ({
         ...d,
         montant: Number(d.montant),
@@ -88,6 +89,7 @@ export default function DemandesDecaissement() {
       .reduce((sum, d) => sum + Number(d.montant || 0), 0);
   }, [selected, demandes]);
 
+  // 🔹 Créer un décaissement (brouillon)
   const creerDecaissement = async () => {
     if (!selected.length) {
       return toast({ title: "Erreur", description: "Sélectionnez au moins une demande", variant: "destructive" });
@@ -101,7 +103,7 @@ export default function DemandesDecaissement() {
 
       toast({ title: "Succès", description: "Décaissement créé (brouillon)" });
       setSelected([]);
-      await fetchData(); // 🔹 Rafraîchir toutes les listes
+      await fetchData(); // Rafraîchir les listes
     } catch {
       toast({ title: "Erreur", description: "Création échouée", variant: "destructive" });
     } finally {
@@ -113,7 +115,7 @@ export default function DemandesDecaissement() {
     try {
       await financeApi.soumettreDecaissement(id);
       toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
-      await fetchData(); // 🔹 Rafraîchir toutes les listes
+      await fetchData(); // Rafraîchir
     } catch {
       toast({ title: "Erreur", description: "Soumission échouée", variant: "destructive" });
     }

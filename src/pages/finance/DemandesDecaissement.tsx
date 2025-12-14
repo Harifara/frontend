@@ -39,17 +39,26 @@ export default function DecaissementsEnAttente() {
     setLoading(true);
     try {
       const data = await financeApi.getDecaissements();
-      const filtered = (data.results || data).filter((d: Decaissement) => d.statut === "en_attente_coordonnateur");
+      // Filtrer les décaissements non décaissés et en attente coordonnateur
+      const filtered = (data.results || data).filter(
+        (d: Decaissement) => d.statut === "en_attente_coordonnateur"
+      );
       setDecaissements(filtered);
     } catch (err: any) {
       console.error(err);
-      toast({ title: "Erreur", description: "Impossible de charger les décaissements.", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les décaissements.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { fetchDecaissements(); }, []);
+  useEffect(() => {
+    fetchDecaissements();
+  }, []);
 
   if (loading) return (
     <div className="flex justify-center items-center h-40">
@@ -76,7 +85,9 @@ export default function DecaissementsEnAttente() {
               <TableCell>{d.reference || d.id}</TableCell>
               <TableCell>{Number(d.montant_total || 0).toLocaleString()} Ar</TableCell>
               <TableCell>
-                <span className={`px-2 py-1 rounded-full text-sm font-semibold ${STATUT_COLORS[d.statut] || "bg-gray-100 text-gray-700"}`}>
+                <span
+                  className={`px-2 py-1 rounded-full text-sm font-semibold ${STATUT_COLORS[d.statut] || "bg-gray-100 text-gray-700"}`}
+                >
                   {STATUT_LABELS[d.statut] || d.statut}
                 </span>
               </TableCell>

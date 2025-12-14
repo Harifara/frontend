@@ -964,23 +964,24 @@ export const financeApi = {
   // ===== DEMANDES DE DÉCAISSEMENT =====
   getDecaissements: async (): Promise<any[]> => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/`, {
+    const data: any[] = await fetchWithLog(`${API_BASE_URL}/finance/decaissements/`, {
       headers: getHeaders(token),
     });
+    // Filtrer uniquement les demandes qui ne sont pas encore "decaisse"
+    return data.filter((d) => d.statut !== 'decaisse');
   },
 
   getDecaissement: async (id: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(
-      `${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`,
-      { headers: getHeaders(token) }
-    );
+    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
+      headers: getHeaders(token),
+    });
   },
 
   createDecaissement: async (payload: any): Promise<any> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/decaissements/`, {
-      method: "POST",
+      method: 'POST',
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
@@ -988,22 +989,19 @@ export const financeApi = {
 
   updateDecaissement: async (id: string, payload: any): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(
-      `${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`,
-      {
-        method: "PATCH",
-        headers: getHeaders(token),
-        body: JSON.stringify(payload),
-      }
-    );
+    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
+      method: 'PATCH',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
   },
 
   soumettreDecaissement: async (id: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(
-      `${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/soumettre/`,
-      { method: "POST", headers: getHeaders(token) }
-    );
+    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/soumettre/`, {
+      method: 'POST',
+      headers: getHeaders(token),
+    });
   },
 
   // ===== DÉPENSES =====
@@ -1016,16 +1014,15 @@ export const financeApi = {
 
   getDepense: async (id: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(
-      `${API_BASE_URL}/finance/depenses/${cleanUUID(id)}/`,
-      { headers: getHeaders(token) }
-    );
+    return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(id)}/`, {
+      headers: getHeaders(token),
+    });
   },
 
   createDepense: async (payload: any): Promise<any> => {
     const token = await ensureKongToken();
     return fetchWithLog(`${API_BASE_URL}/finance/depenses/`, {
-      method: "POST",
+      method: 'POST',
       headers: getHeaders(token),
       body: JSON.stringify(payload),
     });
@@ -1033,14 +1030,11 @@ export const financeApi = {
 
   updateDepense: async (id: string, payload: any): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(
-      `${API_BASE_URL}/finance/depenses/${cleanUUID(id)}/`,
-      {
-        method: "PATCH",
-        headers: getHeaders(token),
-        body: JSON.stringify(payload),
-      }
-    );
+    return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(id)}/`, {
+      method: 'PATCH',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload),
+    });
   },
 
   // ===== DEMANDES DISPONIBLES (RH + Stock) =====
