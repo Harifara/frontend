@@ -9,8 +9,8 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-interface DemandeRH { id: string; description: string; montant: number; achats?: any[]; payements?: any[]; status: string; }
-interface DemandeStock { id: string; numero: string; article?: { nom: string }; quantite: number; montant_estime: number; justification: string; statut: string; }
+interface DemandeRH { id: string; description: string; montant: number; status: string; }
+interface DemandeStock { id: string; numero: string; montant_estime: number; statut: string; }
 interface Decaissement { id: string; reference: string; statut: string; montant_total: number; }
 
 const STATUS_BADGES: Record<string, string> = {
@@ -32,34 +32,37 @@ export default function DemandesDecaissement() {
   const [selectedStock, setSelectedStock] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [rh, stock, dec] = await Promise.all([
+        rhApi.getDemandesRH(),
+        stockApi.getDemandesAchat(),
+        financeApi.getDecaissements(),
+      ]);
+      setRhDemandes(rh);
+      setStockDemandes(stock);
+      setDecaissements(dec);
+    } catch (err) {
+      toast({ title: "Erreur", description: "Impossible de charger les données", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [rh, stock, dec] = await Promise.all([
-          rhApi.getDemandesRH(),
-          stockApi.getDemandesAchat(),
-          financeApi.getDecaissements(),
-        ]);
-        setRhDemandes(rh);
-        setStockDemandes(stock);
-        setDecaissements(dec);
-      } catch (err) {
-        toast({ title: "Erreur", description: "Impossible de charger les données", variant: "destructive" });
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
   const toggleRH = (id: string) => setSelectedRH(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   const toggleStock = (id: string) => setSelectedStock(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
-  const total = useMemo(() => 
-    rhDemandes.filter(d => selectedRH.includes(d.id)).reduce((a, b) => a + b.montant, 0) +
-    stockDemandes.filter(d => selectedStock.includes(d.id)).reduce((a, b) => a + b.montant_estime, 0)
-  , [selectedRH, selectedStock, rhDemandes, stockDemandes]);
+  const total = useMemo(
+    () =>
+      rhDemandes.filter(d => selectedRH.includes(d.id)).reduce((a, b) => a + b.montant, 0) +
+      stockDemandes.filter(d => selectedStock.includes(d.id)).reduce((a, b) => a + b.montant_estime, 0),
+    [selectedRH, selectedStock, rhDemandes, stockDemandes]
+  );
 
   const creerDecaissement = async () => {
     if (!selectedRH.length && !selectedStock.length) {
@@ -85,7 +88,8 @@ export default function DemandesDecaissement() {
   const soumettre = async (id: string) => {
     try {
       await financeApi.soumettreDecaissement(id);
-      setDecaissements(prev => prev.map(d => d.id === id ? { ...d, statut: "en_attente_coordonnateur" } : d));
+      // Rafraîchir les décaissements depuis le backend pour être sûr
+      await fetchData();
       toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
     } catch {
       toast({ title: "Erreur", description: "Soumission échouée", variant: "destructive" });
@@ -116,7 +120,11 @@ export default function DemandesDecaissement() {
                   <TableCell><Checkbox checked={selectedRH.includes(d.id)} onCheckedChange={() => toggleRH(d.id)} /></TableCell>
                   <TableCell>{d.description}</TableCell>
                   <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
-                  <TableCell><span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.status] || "bg-gray-100 text-gray-700"}`}>{d.status}</span></TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.status] || "bg-gray-100 text-gray-700"}`}>
+                      {d.status}
+                    </span>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -142,7 +150,11 @@ export default function DemandesDecaissement() {
                   <TableCell><Checkbox checked={selectedStock.includes(d.id)} onCheckedChange={() => toggleStock(d.id)} /></TableCell>
                   <TableCell>{d.numero}</TableCell>
                   <TableCell>{d.montant_estime.toLocaleString()} Ar</TableCell>
-                  <TableCell><span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span></TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
+                      {d.statut}
+                    </span>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -152,7 +164,9 @@ export default function DemandesDecaissement() {
 
       <div className="flex justify-between items-center">
         <p className="font-bold">Montant total : {total.toLocaleString()} Ar</p>
-        <Button onClick={creerDecaissement} disabled={submitting}>{submitting ? "Création..." : "Créer le décaissement"}</Button>
+        <Button onClick={creerDecaissement} disabled={submitting}>
+          {submitting ? "Création..." : "Créer le décaissement"}
+        </Button>
       </div>
 
       <Card>
@@ -172,8 +186,14 @@ export default function DemandesDecaissement() {
                 <TableRow key={d.id}>
                   <TableCell>{d.reference}</TableCell>
                   <TableCell>{d.montant_total.toLocaleString()} Ar</TableCell>
-                  <TableCell><span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span></TableCell>
-                  <TableCell><Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button></TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
+                      {d.statut}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
