@@ -21,6 +21,7 @@ const STATUS_BADGES: Record<string, string> = {
 };
 
 export default function DemandesDecaissement() {
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -31,9 +32,7 @@ export default function DemandesDecaissement() {
   const [selectedStock, setSelectedStock] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  const [failedRH, setFailedRH] = useState<string[]>([]);
-  const [failedStock, setFailedStock] = useState<string[]>([]);
-
+  // 🔹 Fetch data
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -52,18 +51,24 @@ export default function DemandesDecaissement() {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+  }, []);
 
+  // 🔹 Toggle selection
   const toggleRH = (id: string) => setSelectedRH(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   const toggleStock = (id: string) => setSelectedStock(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
-  const totalSelection = useMemo(
-    () =>
-      rhDemandes.filter(d => selectedRH.includes(d.id)).reduce((sum, d) => sum + (d.montant || 0), 0) +
-      stockDemandes.filter(d => selectedStock.includes(d.id)).reduce((sum, d) => sum + (d.montant_estime || 0), 0),
-    [selectedRH, selectedStock, rhDemandes, stockDemandes]
-  );
+  // 🔹 Total pour les sélections
+  const totalSelection = useMemo(() => {
+    const totalRH = rhDemandes.filter(d => selectedRH.includes(d.id))
+                               .reduce((sum, d) => sum + (d.montant || 0), 0);
+    const totalStock = stockDemandes.filter(d => selectedStock.includes(d.id))
+                                    .reduce((sum, d) => sum + (d.montant_estime || 0), 0);
+    return totalRH + totalStock;
+  }, [selectedRH, selectedStock, rhDemandes, stockDemandes]);
 
+  // 🔹 Créer un décaissement
   const creerDecaissement = async () => {
     if (!selectedRH.length && !selectedStock.length) {
       return toast({ title: "Erreur", description: "Sélectionnez au moins une demande", variant: "destructive" });
@@ -74,13 +79,7 @@ export default function DemandesDecaissement() {
         demandes_rh_ids: selectedRH,
         demandes_stock_ids: selectedStock,
       });
-
-      // Vérifier quelles demandes n'ont pas pu être prises en compte
-      const failedRHIds = newDec.demandes_rh_ids.filter((id: string) => !selectedRH.includes(id));
-      const failedStockIds = newDec.demandes_stock_ids.filter((id: string) => !selectedStock.includes(id));
-      setFailedRH(failedRHIds);
-      setFailedStock(failedStockIds);
-
+      // Ajouter le décaissement avec le montant correct
       setDecaissements(prev => [...prev, { ...newDec, montant_total: totalSelection }]);
       setSelectedRH([]);
       setSelectedStock([]);
@@ -92,10 +91,11 @@ export default function DemandesDecaissement() {
     }
   };
 
+  // 🔹 Soumettre un décaissement
   const soumettre = async (id: string) => {
     try {
       await financeApi.soumettreDecaissement(id);
-      await fetchData();
+      await fetchData(); // rafraîchir la liste
       toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
     } catch {
       toast({ title: "Erreur", description: "Soumission échouée", variant: "destructive" });
@@ -107,15 +107,6 @@ export default function DemandesDecaissement() {
   return (
     <div className="p-8 space-y-6">
       <h1 className="text-3xl font-bold">Demandes de Décaissement</h1>
-
-      {/* Warning si certaines demandes ont échoué */}
-      {(failedRH.length > 0 || failedStock.length > 0) && (
-        <div className="p-4 bg-yellow-100 text-yellow-800 rounded">
-          <p>⚠️ Certaines demandes n'ont pas pu être incluses :</p>
-          {failedRH.length > 0 && <p>RH : {failedRH.join(", ")}</p>}
-          {failedStock.length > 0 && <p>Stock : {failedStock.join(", ")}</p>}
-        </div>
-      )}
 
       {/* Demandes RH */}
       <Card>
@@ -133,11 +124,15 @@ export default function DemandesDecaissement() {
             <TableBody>
               {rhDemandes.map(d => (
                 <TableRow key={d.id}>
-                  <TableCell><Checkbox checked={selectedRH.includes(d.id)} onCheckedChange={() => toggleRH(d.id)} /></TableCell>
-                  <TableCell>{d.description}</TableCell>
-                  <TableCell>{(d.montant || 0).toLocaleString()} Ar</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.status] || "bg-gray-100 text-gray-700"}`}>{d.status}</span>
+                    <Checkbox checked={selectedRH.includes(d.id)} onCheckedChange={() => toggleRH(d.id)} />
+                  </TableCell>
+                  <TableCell>{d.description}</TableCell>
+                  <TableCell>{(d.montant || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.status] || "bg-gray-100 text-gray-700"}`}>
+                      {d.status}
+                    </span>
                   </TableCell>
                 </TableRow>
               ))}
@@ -162,11 +157,15 @@ export default function DemandesDecaissement() {
             <TableBody>
               {stockDemandes.map(d => (
                 <TableRow key={d.id}>
-                  <TableCell><Checkbox checked={selectedStock.includes(d.id)} onCheckedChange={() => toggleStock(d.id)} /></TableCell>
-                  <TableCell>{d.numero}</TableCell>
-                  <TableCell>{(d.montant_estime || 0).toLocaleString()} Ar</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span>
+                    <Checkbox checked={selectedStock.includes(d.id)} onCheckedChange={() => toggleStock(d.id)} />
+                  </TableCell>
+                  <TableCell>{d.numero}</TableCell>
+                  <TableCell>{(d.montant_estime || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
+                      {d.statut}
+                    </span>
                   </TableCell>
                 </TableRow>
               ))}
@@ -177,7 +176,9 @@ export default function DemandesDecaissement() {
 
       {/* Montant total sélection */}
       <div className="flex justify-between items-center">
-        <p className="font-bold">Montant total sélection : {totalSelection.toLocaleString()} Ar</p>
+        <p className="font-bold">
+          Montant total sélection : {Number(totalSelection).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar
+        </p>
         <Button onClick={creerDecaissement} disabled={submitting}>
           {submitting ? "Création..." : "Créer le décaissement"}
         </Button>
@@ -200,7 +201,7 @@ export default function DemandesDecaissement() {
               {decaissements.filter(d => d.statut === "brouillon").map(d => (
                 <TableRow key={d.id}>
                   <TableCell>{d.reference}</TableCell>
-                  <TableCell>{(d.montant_total || 0).toLocaleString()} Ar</TableCell>
+                  <TableCell>{(d.montant_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
                       {d.statut}
