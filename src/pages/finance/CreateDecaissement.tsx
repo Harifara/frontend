@@ -23,6 +23,8 @@ interface Decaissement {
   reference: string;
   statut: string;
   montant_total: number;
+  demandes_rh_ids?: string[];
+  demandes_stock_ids?: string[];
 }
 
 const STATUS_BADGES: Record<string, string> = {
@@ -43,7 +45,7 @@ export default function DemandesDecaissement() {
   const [submitting, setSubmitting] = useState(false);
   const [view, setView] = useState<"recues" | "brouillons">("recues");
 
-  // 🔹 Fetch data
+  // 🔹 Fetch data et filtrage des demandes déjà utilisées
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -53,10 +55,15 @@ export default function DemandesDecaissement() {
         financeApi.getDecaissements(),
       ]);
 
+      // 🔹 Récupérer toutes les demandes déjà utilisées
+      const usedRhIds = dec.reduce<string[]>((acc, d) => [...acc, ...(d.demandes_rh_ids || [])], []);
+      const usedStockIds = dec.reduce<string[]>((acc, d) => [...acc, ...(d.demandes_stock_ids || [])], []);
+
+      // 🔹 Combiner et filtrer les demandes déjà utilisées
       const combinedDemandes: Demande[] = [
         ...rh.map(d => ({ ...d, montant: Number(d.montant), source: "RH" as const })),
         ...stock.map(d => ({ ...d, montant: Number(d.montant_estime), source: "Stock" as const })),
-      ];
+      ].filter(d => !usedRhIds.includes(d.id) && !usedStockIds.includes(d.id));
 
       setDemandes(combinedDemandes);
       setDecaissements(dec);
@@ -71,11 +78,11 @@ export default function DemandesDecaissement() {
     fetchData();
   }, []);
 
-  // 🔹 Toggle selection
+  // 🔹 Toggle sélection
   const toggle = (id: string) =>
     setSelected(prev => (prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]));
 
-  // 🔹 Total pour les sélections
+  // 🔹 Calcul du montant total sélectionné
   const totalSelection = useMemo(() => {
     return demandes
       .filter(d => selected.includes(d.id))
@@ -94,18 +101,13 @@ export default function DemandesDecaissement() {
 
       const newDec = await financeApi.createDecaissement({ demandes_rh_ids, demandes_stock_ids });
 
-      // 🔹 Calculer le montant total côté front
-      let montant_total = demandes
-        .filter(d => selected.includes(d.id))
-        .reduce((sum, d) => sum + Number(d.montant || 0), 0);
+      // 🔹 Ajouter le décaissement avec le montant correct
+      setDecaissements(prev => [...prev, { ...newDec, montant_total: totalSelection, demandes_rh_ids, demandes_stock_ids }]);
 
-      // Ajouter le décaissement avec le montant correct
-      setDecaissements(prev => [...prev, { ...newDec, montant_total }]);
-
-      // 🔹 Retirer les demandes utilisées de la liste
+      // 🔹 Retirer les demandes sélectionnées
       setDemandes(prev => prev.filter(d => !selected.includes(d.id)));
 
-      // Réinitialiser les sélections
+      // 🔹 Réinitialiser la sélection
       setSelected([]);
 
       toast({ title: "Succès", description: "Décaissement créé (brouillon)" });
