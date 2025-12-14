@@ -54,8 +54,8 @@ export default function DemandesDecaissement() {
       ]);
 
       const combinedDemandes: Demande[] = [
-        ...rh.map(d => ({ ...d, montant: d.montant, source: "RH" as const })),
-        ...stock.map(d => ({ ...d, montant: d.montant_estime, source: "Stock" as const })),
+        ...rh.map(d => ({ ...d, montant: Number(d.montant), source: "RH" as const })),
+        ...stock.map(d => ({ ...d, montant: Number(d.montant_estime), source: "Stock" as const })),
       ];
 
       setDemandes(combinedDemandes);
@@ -75,11 +75,11 @@ export default function DemandesDecaissement() {
   const toggle = (id: string) =>
     setSelected(prev => (prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]));
 
-  // 🔹 Total pour les sélections
+  // 🔹 Total pour les sélections (forcé en Number pour éviter concaténation)
   const totalSelection = useMemo(() => {
     return demandes
       .filter(d => selected.includes(d.id))
-      .reduce((sum, d) => sum + (d.montant || 0), 0);
+      .reduce((sum, d) => sum + Number(d.montant || 0), 0);
   }, [selected, demandes]);
 
   // 🔹 Créer un décaissement
@@ -131,7 +131,7 @@ export default function DemandesDecaissement() {
       {/* Toggle view */}
       <div className="space-x-2 mb-4">
         <Button onClick={() => setView("recues")} variant={view === "recues" ? "default" : "outline"}>Voir demandes reçues</Button>
-        <Button onClick={() => setView("brouillons")} variant={view === "brouillons" ? "default" : "outline"}>Voir brouillons</Button>
+        <Button onClick={() => setView("brouillons")} variant={view === "brouillons" ? "default" : "outline"}>Voir demandes à soumettre</Button>
       </div>
 
       {view === "recues" && (
@@ -155,7 +155,7 @@ export default function DemandesDecaissement() {
                       <Checkbox checked={selected.includes(d.id)} onCheckedChange={() => toggle(d.id)} />
                     </TableCell>
                     <TableCell>{d.description || d.numero}</TableCell>
-                    <TableCell>{d.montant.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
+                    <TableCell>{Number(d.montant).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
                     <TableCell>{d.source}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span>
@@ -170,7 +170,9 @@ export default function DemandesDecaissement() {
               <p className="font-bold">
                 Montant total sélection : {totalSelection.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar
               </p>
-              <Button onClick={creerDecaissement} disabled={submitting}>{submitting ? "Création..." : "Créer le décaissement"}</Button>
+              <Button onClick={creerDecaissement} disabled={submitting}>
+                {submitting ? "Création..." : "Créer le décaissement"}
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -193,7 +195,7 @@ export default function DemandesDecaissement() {
                 {decaissements.filter(d => d.statut === "brouillon").map(d => (
                   <TableRow key={d.id}>
                     <TableCell>{d.reference}</TableCell>
-                    <TableCell>{d.montant_total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
+                    <TableCell>{Number(d.montant_total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span>
                     </TableCell>
