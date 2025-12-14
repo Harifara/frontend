@@ -30,7 +30,6 @@ const STATUS_BADGES: Record<string, string> = {
   en_attente_coordonnateur: "bg-yellow-100 text-yellow-800",
   approuve: "bg-green-100 text-green-800",
   rejete: "bg-red-100 text-red-800",
-  decaisse: "bg-blue-100 text-blue-800",
 };
 
 export default function DemandesDecaissement() {
@@ -42,7 +41,7 @@ export default function DemandesDecaissement() {
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  const [view, setView] = useState<"recues" | "brouillons" | "approuves" | "rejetees">("recues");
+  const [view, setView] = useState<"recues" | "brouillons">("recues");
 
   // 🔹 Fetch data
   const fetchData = async () => {
@@ -131,13 +130,10 @@ export default function DemandesDecaissement() {
 
       {/* Toggle view */}
       <div className="space-x-2 mb-4">
-        <Button onClick={() => setView("recues")} variant={view === "recues" ? "default" : "outline"}>Demandes reçues</Button>
-        <Button onClick={() => setView("brouillons")} variant={view === "brouillons" ? "default" : "outline"}>Brouillons</Button>
-        <Button onClick={() => setView("approuves")} variant={view === "approuves" ? "default" : "outline"}>Validés</Button>
-        <Button onClick={() => setView("rejetees")} variant={view === "rejetees" ? "default" : "outline"}>Rejetés</Button>
+        <Button onClick={() => setView("recues")} variant={view === "recues" ? "default" : "outline"}>Voir demandes reçues</Button>
+        <Button onClick={() => setView("brouillons")} variant={view === "brouillons" ? "default" : "outline"}>Voir demandes à soumettre</Button>
       </div>
 
-      {/* 📄 Vues */}
       {view === "recues" && (
         <Card>
           <CardHeader><CardTitle>Demandes reçues</CardTitle></CardHeader>
@@ -169,6 +165,7 @@ export default function DemandesDecaissement() {
               </TableBody>
             </Table>
 
+            {/* Montant total sélection */}
             <div className="flex justify-between items-center mt-4">
               <p className="font-bold">Montant total sélection : {totalSelection.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</p>
               <Button onClick={creerDecaissement} disabled={submitting}>{submitting ? "Création..." : "Créer le décaissement"}</Button>
@@ -208,63 +205,6 @@ export default function DemandesDecaissement() {
           </CardContent>
         </Card>
       )}
-
-      {view === "approuves" && (
-        <Card>
-          <CardHeader><CardTitle>Décaissements validés</CardTitle></CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Référence</TableHead>
-                  <TableHead>Montant</TableHead>
-                  <TableHead>Statut</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {decaissements.filter(d => d.statut === "approuve").map(d => (
-                  <TableRow key={d.id}>
-                    <TableCell>{d.reference}</TableCell>
-                    <TableCell>{d.montant_total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
-      {view === "rejetees" && (
-        <Card>
-          <CardHeader><CardTitle>Décaissements rejetés</CardTitle></CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Référence</TableHead>
-                  <TableHead>Montant</TableHead>
-                  <TableHead>Statut</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {decaissements.filter(d => d.statut === "rejete").map(d => (
-                  <TableRow key={d.id}>
-                    <TableCell>{d.reference}</TableCell>
-                    <TableCell>{d.montant_total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
-
     </div>
   );
 }
