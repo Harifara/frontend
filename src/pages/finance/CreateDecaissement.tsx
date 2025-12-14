@@ -21,7 +21,6 @@ const STATUS_BADGES: Record<string, string> = {
 };
 
 export default function DemandesDecaissement() {
-  const { user } = useAuth();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -31,6 +30,9 @@ export default function DemandesDecaissement() {
   const [selectedRH, setSelectedRH] = useState<string[]>([]);
   const [selectedStock, setSelectedStock] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+
+  const [failedRH, setFailedRH] = useState<string[]>([]);
+  const [failedStock, setFailedStock] = useState<string[]>([]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -50,14 +52,11 @@ export default function DemandesDecaissement() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const toggleRH = (id: string) => setSelectedRH(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
   const toggleStock = (id: string) => setSelectedStock(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
-  // Calcul montant total localement pour éviter les erreurs backend
   const totalSelection = useMemo(
     () =>
       rhDemandes.filter(d => selectedRH.includes(d.id)).reduce((sum, d) => sum + (d.montant || 0), 0) +
@@ -75,7 +74,13 @@ export default function DemandesDecaissement() {
         demandes_rh_ids: selectedRH,
         demandes_stock_ids: selectedStock,
       });
-      // Remplacer le montant par le montant calculé localement
+
+      // Vérifier quelles demandes n'ont pas pu être prises en compte
+      const failedRHIds = newDec.demandes_rh_ids.filter((id: string) => !selectedRH.includes(id));
+      const failedStockIds = newDec.demandes_stock_ids.filter((id: string) => !selectedStock.includes(id));
+      setFailedRH(failedRHIds);
+      setFailedStock(failedStockIds);
+
       setDecaissements(prev => [...prev, { ...newDec, montant_total: totalSelection }]);
       setSelectedRH([]);
       setSelectedStock([]);
@@ -103,7 +108,16 @@ export default function DemandesDecaissement() {
     <div className="p-8 space-y-6">
       <h1 className="text-3xl font-bold">Demandes de Décaissement</h1>
 
-      {/* RH */}
+      {/* Warning si certaines demandes ont échoué */}
+      {(failedRH.length > 0 || failedStock.length > 0) && (
+        <div className="p-4 bg-yellow-100 text-yellow-800 rounded">
+          <p>⚠️ Certaines demandes n'ont pas pu être incluses :</p>
+          {failedRH.length > 0 && <p>RH : {failedRH.join(", ")}</p>}
+          {failedStock.length > 0 && <p>Stock : {failedStock.join(", ")}</p>}
+        </div>
+      )}
+
+      {/* Demandes RH */}
       <Card>
         <CardHeader><CardTitle>Demandes RH</CardTitle></CardHeader>
         <CardContent>
@@ -132,7 +146,7 @@ export default function DemandesDecaissement() {
         </CardContent>
       </Card>
 
-      {/* Stock */}
+      {/* Demandes Stock */}
       <Card>
         <CardHeader><CardTitle>Demandes Stock</CardTitle></CardHeader>
         <CardContent>
@@ -161,7 +175,7 @@ export default function DemandesDecaissement() {
         </CardContent>
       </Card>
 
-      {/* Total sélection */}
+      {/* Montant total sélection */}
       <div className="flex justify-between items-center">
         <p className="font-bold">Montant total sélection : {totalSelection.toLocaleString()} Ar</p>
         <Button onClick={creerDecaissement} disabled={submitting}>
@@ -188,7 +202,9 @@ export default function DemandesDecaissement() {
                   <TableCell>{d.reference}</TableCell>
                   <TableCell>{(d.montant_total || 0).toLocaleString()} Ar</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span>
+                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
+                      {d.statut}
+                    </span>
                   </TableCell>
                   <TableCell>
                     <Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button>
