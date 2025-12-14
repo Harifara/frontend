@@ -94,10 +94,10 @@ export default function DemandesDecaissement() {
 
       const newDec = await financeApi.createDecaissement({ demandes_rh_ids, demandes_stock_ids });
 
-      // Ajouter le décaissement avec le montant correct
+      // ✅ Ajouter le décaissement avec le montant total correct
       setDecaissements(prev => [...prev, { ...newDec, montant_total: totalSelection }]);
 
-      // 🔹 Retirer les demandes utilisées de la liste
+      // 🔹 Retirer les demandes sélectionnées de la liste "Demandes reçues"
       setDemandes(prev => prev.filter(d => !selected.includes(d.id)));
 
       // Réinitialiser les sélections
@@ -115,7 +115,7 @@ export default function DemandesDecaissement() {
   const soumettre = async (id: string) => {
     try {
       await financeApi.soumettreDecaissement(id);
-      await fetchData(); // Rafraîchir la liste
+      await fetchData(); // Rafraîchir les listes
       toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
     } catch {
       toast({ title: "Erreur", description: "Soumission échouée", variant: "destructive" });
@@ -158,7 +158,9 @@ export default function DemandesDecaissement() {
                     <TableCell>{Number(d.montant).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
                     <TableCell>{d.source}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span>
+                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
+                        {d.statut}
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -195,9 +197,13 @@ export default function DemandesDecaissement() {
                 {decaissements.filter(d => d.statut === "brouillon").map(d => (
                   <TableRow key={d.id}>
                     <TableCell>{d.reference}</TableCell>
-                    <TableCell>{Number(d.montant_total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span>
+                      {Number(d.montant_total || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar
+                    </TableCell>
+                    <TableCell>
+                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
+                        {d.statut}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button>
