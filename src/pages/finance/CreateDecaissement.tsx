@@ -1,6 +1,6 @@
 // src/pages/finance/DemandesDecaissement.tsx
 import React, { useEffect, useState, useMemo } from "react";
-import { financeApi, rhApi, stockApi } from "@/lib/api";
+import { financeApi } from "@/lib/api";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,27 +45,28 @@ export default function DemandesDecaissement() {
   const [submitting, setSubmitting] = useState(false);
   const [view, setView] = useState<"recues" | "brouillons">("recues");
 
-  // 🔹 Fetch data et filtrage des demandes déjà utilisées
+  // 🔹 Fetch data via API centralisée
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [rh, stock, dec] = await Promise.all([
-        rhApi.getDemandesRH(),
-        stockApi.getDemandesAchat(),
+      const [dec, demandesDisponibles] = await Promise.all([
         financeApi.getDecaissements(),
+        financeApi.getDemandesDisponibles(),
       ]);
 
-      // 🔹 Récupérer toutes les demandes déjà utilisées
-      const usedRhIds = dec.reduce<string[]>((acc, d) => [...acc, ...(d.demandes_rh_ids || [])], []);
-      const usedStockIds = dec.reduce<string[]>((acc, d) => [...acc, ...(d.demandes_stock_ids || [])], []);
+      // 🔹 Transformer les données
+      const rhDemandes: Demande[] = demandesDisponibles.rh.map(d => ({
+        ...d,
+        montant: Number(d.montant),
+        source: "RH",
+      }));
+      const stockDemandes: Demande[] = demandesDisponibles.stock.map(d => ({
+        ...d,
+        montant: Number(d.montant_estime),
+        source: "Stock",
+      }));
 
-      // 🔹 Combiner et filtrer les demandes déjà utilisées
-      const combinedDemandes: Demande[] = [
-        ...rh.map(d => ({ ...d, montant: Number(d.montant), source: "RH" as const })),
-        ...stock.map(d => ({ ...d, montant: Number(d.montant_estime), source: "Stock" as const })),
-      ].filter(d => !usedRhIds.includes(d.id) && !usedStockIds.includes(d.id));
-
-      setDemandes(combinedDemandes);
+      setDemandes([...rhDemandes, ...stockDemandes]);
       setDecaissements(dec);
     } catch (err) {
       toast({ title: "Erreur", description: "Impossible de charger les données", variant: "destructive" });
@@ -78,18 +79,15 @@ export default function DemandesDecaissement() {
     fetchData();
   }, []);
 
-  // 🔹 Toggle sélection
   const toggle = (id: string) =>
     setSelected(prev => (prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]));
 
-  // 🔹 Calcul du montant total sélectionné
   const totalSelection = useMemo(() => {
     return demandes
       .filter(d => selected.includes(d.id))
       .reduce((sum, d) => sum + Number(d.montant || 0), 0);
   }, [selected, demandes]);
 
-  // 🔹 Créer un décaissement
   const creerDecaissement = async () => {
     if (!selected.length) {
       return toast({ title: "Erreur", description: "Sélectionnez au moins une demande", variant: "destructive" });
@@ -99,18 +97,11 @@ export default function DemandesDecaissement() {
       const demandes_rh_ids = demandes.filter(d => selected.includes(d.id) && d.source === "RH").map(d => d.id);
       const demandes_stock_ids = demandes.filter(d => selected.includes(d.id) && d.source === "Stock").map(d => d.id);
 
-      const newDec = await financeApi.createDecaissement({ demandes_rh_ids, demandes_stock_ids });
-
-      // 🔹 Ajouter le décaissement avec le montant correct
-      setDecaissements(prev => [...prev, { ...newDec, montant_total: totalSelection, demandes_rh_ids, demandes_stock_ids }]);
-
-      // 🔹 Retirer les demandes sélectionnées
-      setDemandes(prev => prev.filter(d => !selected.includes(d.id)));
-
-      // 🔹 Réinitialiser la sélection
-      setSelected([]);
+      await financeApi.createDecaissement({ demandes_rh_ids, demandes_stock_ids });
 
       toast({ title: "Succès", description: "Décaissement créé (brouillon)" });
+      setSelected([]);
+      await fetchData(); // 🔹 Rafraîchir toutes les listes
     } catch {
       toast({ title: "Erreur", description: "Création échouée", variant: "destructive" });
     } finally {
@@ -118,12 +109,11 @@ export default function DemandesDecaissement() {
     }
   };
 
-  // 🔹 Soumettre un décaissement
   const soumettre = async (id: string) => {
     try {
       await financeApi.soumettreDecaissement(id);
-      await fetchData(); // Rafraîchir la liste
       toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
+      await fetchData(); // 🔹 Rafraîchir toutes les listes
     } catch {
       toast({ title: "Erreur", description: "Soumission échouée", variant: "destructive" });
     }
@@ -135,7 +125,6 @@ export default function DemandesDecaissement() {
     <div className="p-8 space-y-6">
       <h1 className="text-3xl font-bold">Demandes de Décaissement</h1>
 
-      {/* Toggle view */}
       <div className="space-x-2 mb-4">
         <Button onClick={() => setView("recues")} variant={view === "recues" ? "default" : "outline"}>Voir demandes reçues</Button>
         <Button onClick={() => setView("brouillons")} variant={view === "brouillons" ? "default" : "outline"}>Voir demandes à soumettre</Button>
@@ -162,7 +151,7 @@ export default function DemandesDecaissement() {
                       <Checkbox checked={selected.includes(d.id)} onCheckedChange={() => toggle(d.id)} />
                     </TableCell>
                     <TableCell>{d.description || d.numero}</TableCell>
-                    <TableCell>{Number(d.montant).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
+                    <TableCell>{d.montant.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
                     <TableCell>{d.source}</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span>
@@ -172,7 +161,6 @@ export default function DemandesDecaissement() {
               </TableBody>
             </Table>
 
-            {/* Montant total sélection */}
             <div className="flex justify-between items-center mt-4">
               <p className="font-bold">
                 Montant total sélection : {totalSelection.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar
@@ -202,7 +190,7 @@ export default function DemandesDecaissement() {
                 {decaissements.filter(d => d.statut === "brouillon").map(d => (
                   <TableRow key={d.id}>
                     <TableCell>{d.reference}</TableCell>
-                    <TableCell>{Number(d.montant_total).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
+                    <TableCell>{d.montant_total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span>
                     </TableCell>
