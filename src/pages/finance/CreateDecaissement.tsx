@@ -54,15 +54,24 @@ export default function DemandesDecaissement() {
     fetchData();
   }, []);
 
-  const toggleRH = (id: string) => setSelectedRH(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-  const toggleStock = (id: string) => setSelectedStock(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const toggleRH = (id: string) =>
+    setSelectedRH(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
-  const total = useMemo(
-    () =>
-      rhDemandes.filter(d => selectedRH.includes(d.id)).reduce((a, b) => a + b.montant, 0) +
-      stockDemandes.filter(d => selectedStock.includes(d.id)).reduce((a, b) => a + b.montant_estime, 0),
-    [selectedRH, selectedStock, rhDemandes, stockDemandes]
-  );
+  const toggleStock = (id: string) =>
+    setSelectedStock(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+
+  // 🔹 Calcul total corrigé
+  const total = useMemo(() => {
+    const totalRH = rhDemandes
+      .filter(d => selectedRH.includes(d.id))
+      .reduce((sum, d) => sum + (Number(d.montant) || 0), 0);
+
+    const totalStock = stockDemandes
+      .filter(d => selectedStock.includes(d.id))
+      .reduce((sum, d) => sum + (Number(d.montant_estime) || 0), 0);
+
+    return totalRH + totalStock;
+  }, [selectedRH, selectedStock, rhDemandes, stockDemandes]);
 
   const creerDecaissement = async () => {
     if (!selectedRH.length && !selectedStock.length) {
@@ -88,8 +97,7 @@ export default function DemandesDecaissement() {
   const soumettre = async (id: string) => {
     try {
       await financeApi.soumettreDecaissement(id);
-      // Rafraîchir les décaissements depuis le backend pour être sûr
-      await fetchData();
+      await fetchData(); // Rafraîchir les décaissements
       toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
     } catch {
       toast({ title: "Erreur", description: "Soumission échouée", variant: "destructive" });
@@ -119,7 +127,7 @@ export default function DemandesDecaissement() {
                 <TableRow key={d.id}>
                   <TableCell><Checkbox checked={selectedRH.includes(d.id)} onCheckedChange={() => toggleRH(d.id)} /></TableCell>
                   <TableCell>{d.description}</TableCell>
-                  <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
+                  <TableCell>{Number(d.montant).toLocaleString()} Ar</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.status] || "bg-gray-100 text-gray-700"}`}>
                       {d.status}
@@ -149,7 +157,7 @@ export default function DemandesDecaissement() {
                 <TableRow key={d.id}>
                   <TableCell><Checkbox checked={selectedStock.includes(d.id)} onCheckedChange={() => toggleStock(d.id)} /></TableCell>
                   <TableCell>{d.numero}</TableCell>
-                  <TableCell>{d.montant_estime.toLocaleString()} Ar</TableCell>
+                  <TableCell>{Number(d.montant_estime).toLocaleString()} Ar</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
                       {d.statut}
@@ -185,7 +193,7 @@ export default function DemandesDecaissement() {
               {decaissements.filter(d => d.statut === "brouillon").map(d => (
                 <TableRow key={d.id}>
                   <TableCell>{d.reference}</TableCell>
-                  <TableCell>{d.montant_total.toLocaleString()} Ar</TableCell>
+                  <TableCell>{Number(d.montant_total).toLocaleString()} Ar</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
                       {d.statut}
