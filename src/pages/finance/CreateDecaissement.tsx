@@ -56,19 +56,19 @@ export default function DemandesDecaissement() {
       ]);
 
       // 🔹 Transformer les données RH et Stock
-      const rhDemandes: Demande[] = demandesDisponibles.rh.map(d => ({
+      const rhDemandes: Demande[] = (demandesDisponibles.rh || []).map(d => ({
         ...d,
-        montant: Number(d.montant),
+        montant: Number(d.montant || 0),
         source: "RH",
       }));
-      const stockDemandes: Demande[] = demandesDisponibles.stock.map(d => ({
+      const stockDemandes: Demande[] = (demandesDisponibles.stock || []).map(d => ({
         ...d,
-        montant: Number(d.montant_estime),
+        montant: Number(d.montant_estime || 0),
         source: "Stock",
       }));
 
       setDemandes([...rhDemandes, ...stockDemandes]);
-      setDecaissements(dec);
+      setDecaissements(dec || []);
     } catch (err) {
       toast({ title: "Erreur", description: "Impossible de charger les données", variant: "destructive" });
     } finally {
@@ -99,7 +99,7 @@ export default function DemandesDecaissement() {
       const demandes_rh_ids = demandes.filter(d => selected.includes(d.id) && d.source === "RH").map(d => d.id);
       const demandes_stock_ids = demandes.filter(d => selected.includes(d.id) && d.source === "Stock").map(d => d.id);
 
-      await financeApi.createDecaissement({ demandes_rh_ids, demandes_stock_ids });
+      await financeApi.createDecaissement({ demandes_rh_ids, demandes_stock_ids, cree_par_id: user.id });
 
       toast({ title: "Succès", description: "Décaissement créé (brouillon)" });
       setSelected([]);
@@ -121,7 +121,7 @@ export default function DemandesDecaissement() {
     }
   };
 
-  if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>;
+  if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin w-8 h-8" /></div>;
 
   return (
     <div className="p-8 space-y-6">
@@ -156,7 +156,9 @@ export default function DemandesDecaissement() {
                     <TableCell>{d.montant.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
                     <TableCell>{d.source}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span>
+                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
+                        {d.statut.replace(/_/g, " ")}
+                      </span>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -194,7 +196,9 @@ export default function DemandesDecaissement() {
                     <TableCell>{d.reference}</TableCell>
                     <TableCell>{d.montant_total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span>
+                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
+                        {d.statut.replace(/_/g, " ")}
+                      </span>
                     </TableCell>
                     <TableCell>
                       <Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button>
