@@ -9,11 +9,8 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 
-interface Achat { id: string; article: string; nombre: number; montant: number; }
-interface Payement { id: string; montant: number; }
-interface DemandeRH { id: string; description: string; montant: number; status: string; achats?: Achat[]; payements?: Payement[]; }
-interface Article { id: string; nom: string; }
-interface DemandeStock { id: string; numero: string; article?: Article | null; quantite: number; montant_estime: number; justification: string; statut: string; }
+interface DemandeRH { id: string; description: string; montant: number; achats?: any[]; payements?: any[]; status: string; }
+interface DemandeStock { id: string; numero: string; article?: { nom: string }; quantite: number; montant_estime: number; justification: string; statut: string; }
 interface Decaissement { id: string; reference: string; statut: string; montant_total: number; }
 
 const STATUS_BADGES: Record<string, string> = {
@@ -22,88 +19,6 @@ const STATUS_BADGES: Record<string, string> = {
   approuve: "bg-green-100 text-green-800",
   rejete: "bg-red-100 text-red-800",
 };
-
-const RHTable = ({ demandes, selected, toggle }: { demandes: DemandeRH[]; selected: string[]; toggle: (id: string) => void }) => (
-  <Table>
-    <TableHeader>
-      <TableRow>
-        <TableHead></TableHead>
-        <TableHead>Description</TableHead>
-        <TableHead>Détails</TableHead>
-        <TableHead>Montant</TableHead>
-        <TableHead>Statut</TableHead>
-      </TableRow>
-    </TableHeader>
-    <TableBody>
-      {demandes.map(d => (
-        <TableRow key={d.id}>
-          <TableCell><Checkbox checked={selected.includes(d.id)} onCheckedChange={() => toggle(d.id)} /></TableCell>
-          <TableCell>{d.description}</TableCell>
-          <TableCell>
-            <strong>Achats :</strong>
-            <ul className="list-disc ml-4">{d.achats?.map(a => <li key={a.id}>{a.article} - {a.nombre} × {a.montant} Ar</li>) || "—"}</ul>
-            <strong>Paiements :</strong>
-            <ul className="list-disc ml-4">{d.payements?.map(p => <li key={p.id}>{p.montant} Ar</li>) || "—"}</ul>
-          </TableCell>
-          <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
-          <TableCell><span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.status] || "bg-gray-100 text-gray-700"}`}>{d.status}</span></TableCell>
-        </TableRow>
-      ))}
-    </TableBody>
-  </Table>
-);
-
-const StockTable = ({ demandes, selected, toggle }: { demandes: DemandeStock[]; selected: string[]; toggle: (id: string) => void }) => (
-  <Table>
-    <TableHeader>
-      <TableRow>
-        <TableHead></TableHead>
-        <TableHead>Numéro</TableHead>
-        <TableHead>Détails</TableHead>
-        <TableHead>Montant</TableHead>
-        <TableHead>Statut</TableHead>
-      </TableRow>
-    </TableHeader>
-    <TableBody>
-      {demandes.map(d => (
-        <TableRow key={d.id}>
-          <TableCell><Checkbox checked={selected.includes(d.id)} onCheckedChange={() => toggle(d.id)} /></TableCell>
-          <TableCell>{d.numero}</TableCell>
-          <TableCell>
-            <p><strong>Article :</strong> {d.article?.nom || "-"}</p>
-            <p><strong>Quantité :</strong> {d.quantite}</p>
-            <p><strong>Justification :</strong> {d.justification}</p>
-          </TableCell>
-          <TableCell>{d.montant_estime.toLocaleString()} Ar</TableCell>
-          <TableCell><span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span></TableCell>
-        </TableRow>
-      ))}
-    </TableBody>
-  </Table>
-);
-
-const BrouillonTable = ({ decaissements, soumettre }: { decaissements: Decaissement[]; soumettre: (id: string) => void }) => (
-  <Table>
-    <TableHeader>
-      <TableRow>
-        <TableHead>Référence</TableHead>
-        <TableHead>Montant</TableHead>
-        <TableHead>Statut</TableHead>
-        <TableHead>Action</TableHead>
-      </TableRow>
-    </TableHeader>
-    <TableBody>
-      {decaissements.map(d => (
-        <TableRow key={d.id}>
-          <TableCell>{d.reference}</TableCell>
-          <TableCell>{d.montant_total.toLocaleString()} Ar</TableCell>
-          <TableCell><span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span></TableCell>
-          <TableCell><Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button></TableCell>
-        </TableRow>
-      ))}
-    </TableBody>
-  </Table>
-);
 
 export default function DemandesDecaissement() {
   const { user } = useAuth();
@@ -126,10 +41,10 @@ export default function DemandesDecaissement() {
           stockApi.getDemandesAchat(),
           financeApi.getDecaissements(),
         ]);
-        setRhDemandes(rh.results || rh);
-        setStockDemandes(stock.results || stock);
-        setDecaissements(dec.results || dec);
-      } catch {
+        setRhDemandes(rh);
+        setStockDemandes(stock);
+        setDecaissements(dec);
+      } catch (err) {
         toast({ title: "Erreur", description: "Impossible de charger les données", variant: "destructive" });
       } finally {
         setLoading(false);
@@ -182,13 +97,89 @@ export default function DemandesDecaissement() {
   return (
     <div className="p-8 space-y-6">
       <h1 className="text-3xl font-bold">Demandes de Décaissement</h1>
-      <Card><CardHeader><CardTitle>Demandes RH (détails)</CardTitle></CardHeader><CardContent><RHTable demandes={rhDemandes} selected={selectedRH} toggle={toggleRH} /></CardContent></Card>
-      <Card><CardHeader><CardTitle>Demandes Stock (détails)</CardTitle></CardHeader><CardContent><StockTable demandes={stockDemandes} selected={selectedStock} toggle={toggleStock} /></CardContent></Card>
+
+      <Card>
+        <CardHeader><CardTitle>Demandes RH</CardTitle></CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead></TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Montant</TableHead>
+                <TableHead>Statut</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rhDemandes.map(d => (
+                <TableRow key={d.id}>
+                  <TableCell><Checkbox checked={selectedRH.includes(d.id)} onCheckedChange={() => toggleRH(d.id)} /></TableCell>
+                  <TableCell>{d.description}</TableCell>
+                  <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
+                  <TableCell><span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.status] || "bg-gray-100 text-gray-700"}`}>{d.status}</span></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Demandes Stock</CardTitle></CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead></TableHead>
+                <TableHead>Numéro</TableHead>
+                <TableHead>Montant</TableHead>
+                <TableHead>Statut</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {stockDemandes.map(d => (
+                <TableRow key={d.id}>
+                  <TableCell><Checkbox checked={selectedStock.includes(d.id)} onCheckedChange={() => toggleStock(d.id)} /></TableCell>
+                  <TableCell>{d.numero}</TableCell>
+                  <TableCell>{d.montant_estime.toLocaleString()} Ar</TableCell>
+                  <TableCell><span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       <div className="flex justify-between items-center">
         <p className="font-bold">Montant total : {total.toLocaleString()} Ar</p>
         <Button onClick={creerDecaissement} disabled={submitting}>{submitting ? "Création..." : "Créer le décaissement"}</Button>
       </div>
-      <Card><CardHeader><CardTitle>Brouillons</CardTitle></CardHeader><CardContent><BrouillonTable decaissements={decaissements.filter(d => d.statut === "brouillon")} soumettre={soumettre} /></CardContent></Card>
+
+      <Card>
+        <CardHeader><CardTitle>Brouillons</CardTitle></CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Référence</TableHead>
+                <TableHead>Montant</TableHead>
+                <TableHead>Statut</TableHead>
+                <TableHead>Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {decaissements.filter(d => d.statut === "brouillon").map(d => (
+                <TableRow key={d.id}>
+                  <TableCell>{d.reference}</TableCell>
+                  <TableCell>{d.montant_total.toLocaleString()} Ar</TableCell>
+                  <TableCell><span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span></TableCell>
+                  <TableCell><Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button></TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
