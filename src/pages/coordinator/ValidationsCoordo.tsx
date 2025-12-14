@@ -1,3 +1,4 @@
+// src/pages/cordo/DecaissementsRecus.tsx
 import React, { useEffect, useState } from "react";
 import { financeApi, cordoApi } from "@/lib/api";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
@@ -41,9 +42,7 @@ export default function DecaissementsRecus() {
     }
   };
 
-  useEffect(() => {
-    fetchDecaissements();
-  }, []);
+  useEffect(() => { fetchDecaissements(); }, []);
 
   // 🔹 Validation ou rejet d'un décaissement
   const handleDecision = async (id: string, decision: "approuve" | "rejete") => {
@@ -83,7 +82,11 @@ export default function DecaissementsRecus() {
   };
 
   if (loading) {
-    return <div className="flex justify-center p-8"><Loader2 className="animate-spin w-8 h-8" /></div>;
+    return (
+      <div className="flex justify-center p-8">
+        <Loader2 className="animate-spin w-8 h-8" />
+      </div>
+    );
   }
 
   return (

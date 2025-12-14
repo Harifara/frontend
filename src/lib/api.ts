@@ -974,9 +974,10 @@ export const financeApi = {
 
   getDecaissement: async (id: string): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
-      headers: getHeaders(token),
-    });
+    return fetchWithLog(
+      `${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`,
+      { headers: getHeaders(token) }
+    );
   },
 
   createDecaissement: async (payload: any): Promise<any> => {
@@ -990,11 +991,22 @@ export const financeApi = {
 
   updateDecaissement: async (id: string, payload: any): Promise<any> => {
     const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`, {
-      method: "PATCH",
-      headers: getHeaders(token),
-      body: JSON.stringify(payload),
-    });
+    return fetchWithLog(
+      `${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/`,
+      {
+        method: "PATCH",
+        headers: getHeaders(token),
+        body: JSON.stringify(payload),
+      }
+    );
+  },
+
+  soumettreDecaissement: async (id: string): Promise<any> => {
+    const token = await ensureKongToken();
+    return fetchWithLog(
+      `${API_BASE_URL}/finance/decaissements/${cleanUUID(id)}/soumettre/`,
+      { method: "POST", headers: getHeaders(token) }
+    );
   },
 
   // ===== DÉPENSES =====
@@ -1007,21 +1019,8 @@ export const financeApi = {
     });
   },
 
-  validateDepense: async (depenseId: string): Promise<any> => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(depenseId)}/valider/`, {
-      method: "POST",
-      headers: getHeaders(token),
-    });
-  },
-
-  rejeterDepense: async (depenseId: string): Promise<any> => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/depenses/${cleanUUID(depenseId)}/rejeter/`, {
-      method: "POST",
-      headers: getHeaders(token),
-    });
-  },
+  // Note : valider/rejeter une dépense n’existe pas côté backend actuellement
+  // Si besoin, il faudra créer un endpoint /depenses/:id/valider/ ou /rejeter/
 
   // ===== DEMANDES DISPONIBLES (RH + Stock) =====
   getDemandesDisponibles: async (): Promise<{ rh: any[]; stock: any[] }> => {

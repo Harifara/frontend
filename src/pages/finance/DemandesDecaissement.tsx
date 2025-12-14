@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { financeApi } from "@/lib/api";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,8 +39,9 @@ export default function DecaissementsEnAttente() {
     setLoading(true);
     try {
       const data = await financeApi.getDecaissements();
-      setDecaissements((data.results || data).filter((d: Decaissement) => d.statut === "en_attente_coordonnateur"));
-    } catch (err) {
+      const filtered = (data.results || data).filter((d: Decaissement) => d.statut === "en_attente_coordonnateur");
+      setDecaissements(filtered);
+    } catch (err: any) {
       console.error(err);
       toast({ title: "Erreur", description: "Impossible de charger les décaissements.", variant: "destructive" });
     } finally {
@@ -51,7 +51,11 @@ export default function DecaissementsEnAttente() {
 
   useEffect(() => { fetchDecaissements(); }, []);
 
-  if (loading) return <div className="flex justify-center items-center h-40"><Loader2 className="animate-spin w-8 h-8 mr-2" />Chargement...</div>;
+  if (loading) return (
+    <div className="flex justify-center items-center h-40">
+      <Loader2 className="animate-spin w-8 h-8 mr-2" />Chargement...
+    </div>
+  );
 
   return (
     <div className="p-4">
@@ -70,7 +74,7 @@ export default function DecaissementsEnAttente() {
           {decaissements.length ? decaissements.map(d => (
             <TableRow key={d.id}>
               <TableCell>{d.reference || d.id}</TableCell>
-              <TableCell>{Number(d.montant_total || 0).toFixed(2)} Ar</TableCell>
+              <TableCell>{Number(d.montant_total || 0).toLocaleString()} Ar</TableCell>
               <TableCell>
                 <span className={`px-2 py-1 rounded-full text-sm font-semibold ${STATUT_COLORS[d.statut] || "bg-gray-100 text-gray-700"}`}>
                   {STATUT_LABELS[d.statut] || d.statut}
@@ -81,9 +85,7 @@ export default function DecaissementsEnAttente() {
             </TableRow>
           )) : (
             <TableRow>
-              <TableCell colSpan={5} className="text-center py-6">
-                Aucun décaissement en attente
-              </TableCell>
+              <TableCell colSpan={5} className="text-center py-6">Aucun décaissement en attente</TableCell>
             </TableRow>
           )}
         </TableBody>
