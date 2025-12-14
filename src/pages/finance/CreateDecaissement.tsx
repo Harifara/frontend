@@ -1,4 +1,3 @@
-// src/pages/finance/DemandesDecaissement.tsx
 import React, { useEffect, useState, useMemo } from "react";
 import { financeApi, rhApi, stockApi } from "@/lib/api";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
@@ -54,23 +53,20 @@ export default function DemandesDecaissement() {
     fetchData();
   }, []);
 
-  const toggleRH = (id: string) =>
-    setSelectedRH(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const toggleRH = (id: string) => setSelectedRH(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  const toggleStock = (id: string) => setSelectedStock(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
 
-  const toggleStock = (id: string) =>
-    setSelectedStock(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
-
-  // 🔹 Calcul total corrigé
+  // 🔹 Calcul du total côté frontend
   const total = useMemo(() => {
-    const totalRH = rhDemandes
+    const rhTotal = rhDemandes
       .filter(d => selectedRH.includes(d.id))
-      .reduce((sum, d) => sum + (Number(d.montant) || 0), 0);
+      .reduce((sum, d) => sum + (d.montant || 0), 0);
 
-    const totalStock = stockDemandes
+    const stockTotal = stockDemandes
       .filter(d => selectedStock.includes(d.id))
-      .reduce((sum, d) => sum + (Number(d.montant_estime) || 0), 0);
+      .reduce((sum, d) => sum + (d.montant_estime || 0), 0);
 
-    return totalRH + totalStock;
+    return rhTotal + stockTotal;
   }, [selectedRH, selectedStock, rhDemandes, stockDemandes]);
 
   const creerDecaissement = async () => {
@@ -97,7 +93,7 @@ export default function DemandesDecaissement() {
   const soumettre = async (id: string) => {
     try {
       await financeApi.soumettreDecaissement(id);
-      await fetchData(); // Rafraîchir les décaissements
+      await fetchData(); // Rafraîchir la liste
       toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
     } catch {
       toast({ title: "Erreur", description: "Soumission échouée", variant: "destructive" });
@@ -127,7 +123,7 @@ export default function DemandesDecaissement() {
                 <TableRow key={d.id}>
                   <TableCell><Checkbox checked={selectedRH.includes(d.id)} onCheckedChange={() => toggleRH(d.id)} /></TableCell>
                   <TableCell>{d.description}</TableCell>
-                  <TableCell>{Number(d.montant).toLocaleString()} Ar</TableCell>
+                  <TableCell>{d.montant.toLocaleString()} Ar</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.status] || "bg-gray-100 text-gray-700"}`}>
                       {d.status}
@@ -157,7 +153,7 @@ export default function DemandesDecaissement() {
                 <TableRow key={d.id}>
                   <TableCell><Checkbox checked={selectedStock.includes(d.id)} onCheckedChange={() => toggleStock(d.id)} /></TableCell>
                   <TableCell>{d.numero}</TableCell>
-                  <TableCell>{Number(d.montant_estime).toLocaleString()} Ar</TableCell>
+                  <TableCell>{d.montant_estime.toLocaleString()} Ar</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
                       {d.statut}
@@ -193,7 +189,7 @@ export default function DemandesDecaissement() {
               {decaissements.filter(d => d.statut === "brouillon").map(d => (
                 <TableRow key={d.id}>
                   <TableCell>{d.reference}</TableCell>
-                  <TableCell>{Number(d.montant_total).toLocaleString()} Ar</TableCell>
+                  <TableCell>{d.montant_total.toLocaleString()} Ar</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
                       {d.statut}
