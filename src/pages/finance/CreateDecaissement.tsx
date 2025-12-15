@@ -1,220 +1,138 @@
-// src/pages/finance/DemandesDecaissement.tsx
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { financeApi } from "@/lib/api";
-import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
-
-interface Demande {
-  id: string;
-  description?: string;
-  numero?: string;
-  montant: number;
-  statut?: string;
-  source: "RH" | "Stock";
-}
+import { Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import { toast } from "react-hot-toast";
 
 interface Decaissement {
   id: string;
   reference: string;
-  statut: string;
   montant_total: number;
-  demandes_rh_ids?: string[];
-  demandes_stock_ids?: string[];
+  statut: string;
+  demandes_rh_ids: string[];
+  demandes_stock_ids: string[];
 }
 
-const STATUS_BADGES: Record<string, string> = {
-  brouillon: "bg-gray-200 text-gray-800",
-  en_attente_coordonnateur: "bg-yellow-100 text-yellow-800",
-  approuve: "bg-green-100 text-green-800",
-  rejete: "bg-red-100 text-red-800",
-  decaisse: "bg-blue-100 text-blue-800",
-};
-
-export default function DemandesDecaissement() {
-  const { user } = useAuth();
-  const { toast } = useToast();
-
-  const [loading, setLoading] = useState(true);
-  const [demandes, setDemandes] = useState<Demande[]>([]);
+const DecaissementsPage: React.FC = () => {
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
-  const [selected, setSelected] = useState<string[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [view, setView] = useState<"recues" | "brouillons">("recues");
+  const [demandesDisponibles, setDemandesDisponibles] = useState<{ rh: any[]; stock: any[] }>({ rh: [], stock: [] });
+  const [loading, setLoading] = useState(true);
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchDecaissements = async () => {
     try {
-      const [dec, demandesDisponibles] = await Promise.all([
-        financeApi.getDecaissements(),
-        financeApi.getDemandesDisponibles(),
-      ]);
-
-      const rhDemandes: Demande[] = (demandesDisponibles.rh || []).map(d => ({
-        id: d.id,
-        description: d.description,
-        numero: d.numero,
-        montant: Number(d.montant || 0),
-        statut: d.statut || "brouillon",
-        source: "RH",
-      }));
-
-      const stockDemandes: Demande[] = (demandesDisponibles.stock || []).map(d => ({
-        id: d.id,
-        description: d.description,
-        numero: d.numero,
-        montant: Number(d.montant_estime || 0),
-        statut: d.statut || "brouillon",
-        source: "Stock",
-      }));
-
-      setDemandes([...rhDemandes, ...stockDemandes]);
-      setDecaissements(dec || []);
+      const data = await financeApi.getDecaissements();
+      setDecaissements(data);
     } catch (err) {
-      toast({ title: "Erreur", description: "Impossible de charger les données", variant: "destructive" });
-    } finally {
-      setLoading(false);
+      console.error(err);
+      toast.error("Impossible de charger les décaissements");
+    }
+  };
+
+  const fetchDemandesDisponibles = async () => {
+    try {
+      const data = await financeApi.getDemandesDisponibles();
+      setDemandesDisponibles(data);
+    } catch (err) {
+      console.error(err);
+      toast.error("Impossible de charger les demandes disponibles");
     }
   };
 
   useEffect(() => {
-    fetchData();
+    const load = async () => {
+      setLoading(true);
+      await fetchDecaissements();
+      await fetchDemandesDisponibles();
+      setLoading(false);
+    };
+    load();
   }, []);
 
-  const toggle = (id: string) =>
-    setSelected(prev => (prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]));
-
-  const totalSelection = useMemo(() => {
-    return demandes
-      .filter(d => selected.includes(d.id))
-      .reduce((sum, d) => sum + (d.montant || 0), 0);
-  }, [selected, demandes]);
-
-  const creerDecaissement = async () => {
-    if (!selected.length) {
-      return toast({ title: "Erreur", description: "Sélectionnez au moins une demande", variant: "destructive" });
-    }
-    setSubmitting(true);
-    try {
-      const demandes_rh_ids = demandes.filter(d => selected.includes(d.id) && d.source === "RH").map(d => d.id);
-      const demandes_stock_ids = demandes.filter(d => selected.includes(d.id) && d.source === "Stock").map(d => d.id);
-
-      await financeApi.createDecaissement({ demandes_rh_ids, demandes_stock_ids, cree_par_id: user.id });
-
-      toast({ title: "Succès", description: "Décaissement créé (brouillon)" });
-      setSelected([]);
-      await fetchData();
-      setView("brouillons");
-    } catch {
-      toast({ title: "Erreur", description: "Création échouée", variant: "destructive" });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const soumettre = async (id: string) => {
+  const handleSoumettre = async (id: string) => {
     try {
       await financeApi.soumettreDecaissement(id);
-      toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
-      await fetchData();
-    } catch {
-      toast({ title: "Erreur", description: "Soumission échouée", variant: "destructive" });
+      toast.success("Décaissement soumis avec succès");
+      fetchDecaissements();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Erreur lors de la soumission");
     }
   };
 
-  if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin w-8 h-8" /></div>;
+  if (loading) return <p>Chargement...</p>;
 
   return (
-    <div className="p-8 space-y-6">
-      <h1 className="text-3xl font-bold">Demandes de Décaissement</h1>
-
-      <div className="space-x-2 mb-4">
-        <Button onClick={() => setView("recues")} variant={view === "recues" ? "default" : "outline"}>Voir demandes reçues</Button>
-        <Button onClick={() => setView("brouillons")} variant={view === "brouillons" ? "default" : "outline"}>Voir demandes à soumettre</Button>
-      </div>
-
-      {view === "recues" && (
-        <Card>
-          <CardHeader><CardTitle>Demandes reçues</CardTitle></CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead></TableHead>
-                  <TableHead>Description / Numéro</TableHead>
-                  <TableHead>Montant</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Statut</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {demandes.map(d => (
-                  <TableRow key={d.id}>
-                    <TableCell>
-                      <Checkbox checked={selected.includes(d.id)} onCheckedChange={() => toggle(d.id)} />
-                    </TableCell>
-                    <TableCell>{d.description || d.numero}</TableCell>
-                    <TableCell>{d.montant.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
-                    <TableCell>{d.source}</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut || "brouillon"]}`}>
-                        {(d.statut || "brouillon").replace(/_/g, " ")}
-                      </span>
-                    </TableCell>
-                  </TableRow>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Demandes de Décaissement</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {decaissements.length === 0 ? (
+            <p>Aucune demande pour le moment</p>
+          ) : (
+            <table className="w-full table-auto border-collapse border border-gray-200">
+              <thead>
+                <tr>
+                  <th className="border p-2">Référence</th>
+                  <th className="border p-2">Montant Total</th>
+                  <th className="border p-2">Statut</th>
+                  <th className="border p-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {decaissements.map((d) => (
+                  <tr key={d.id}>
+                    <td className="border p-2">{d.reference}</td>
+                    <td className="border p-2">{d.montant_total.toLocaleString()} Ar</td>
+                    <td className="border p-2">{d.statut}</td>
+                    <td className="border p-2">
+                      {d.statut === "brouillon" && (
+                        <Button onClick={() => handleSoumettre(d.id)}>Soumettre</Button>
+                      )}
+                    </td>
+                  </tr>
                 ))}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
 
-            <div className="flex justify-between items-center mt-4">
-              <p className="font-bold">
-                Montant total sélection : {totalSelection.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar
-              </p>
-              <Button onClick={creerDecaissement} disabled={submitting || selected.length === 0}>
-                {submitting ? "Création..." : "Créer le décaissement"}
-              </Button>
+      <Card>
+        <CardHeader>
+          <CardTitle>Demandes Disponibles</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <h3 className="font-bold mb-2">RH</h3>
+              {demandesDisponibles.rh.length === 0 ? (
+                <p>Aucune demande RH disponible</p>
+              ) : (
+                <ul className="list-disc list-inside">
+                  {demandesDisponibles.rh.map((r) => (
+                    <li key={r.id}>{r.reference} - {r.montant} Ar</li>
+                  ))}
+                </ul>
+              )}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {view === "brouillons" && (
-        <Card>
-          <CardHeader><CardTitle>Brouillons</CardTitle></CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Référence</TableHead>
-                  <TableHead>Montant</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {decaissements.filter(d => d.statut === "brouillon").map(d => (
-                  <TableRow key={d.id}>
-                    <TableCell>{d.reference}</TableCell>
-                    <TableCell>{d.montant_total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
-                    <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
-                        {d.statut.replace(/_/g, " ")}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+            <div>
+              <h3 className="font-bold mb-2">Stock</h3>
+              {demandesDisponibles.stock.length === 0 ? (
+                <p>Aucune demande Stock disponible</p>
+              ) : (
+                <ul className="list-disc list-inside">
+                  {demandesDisponibles.stock.map((s) => (
+                    <li key={s.id}>{s.reference} - {s.montant} Ar</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
-}
+};
+
+export default DecaissementsPage;
