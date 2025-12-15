@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { financeApi } from "@/lib/api";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-hot-toast";
 
 interface Decaissement {
@@ -55,11 +56,8 @@ const DecaissementsPage: React.FC = () => {
 
   const handleSoumettre = async (decaissement: Decaissement) => {
     try {
-      // On envoie les IDs des demandes associées
-      await financeApi.soumettreDecaissement(decaissement.id, {
-        rh_ids: decaissement.demandes_rh_ids,
-        stock_ids: decaissement.demandes_stock_ids,
-      });
+      // Appel simple, pas besoin de passer rh_ids / stock_ids
+      await financeApi.soumettreDecaissement(decaissement.id);
       toast.success("Décaissement soumis avec succès");
       await fetchDecaissements();
       await fetchDemandesDisponibles();
