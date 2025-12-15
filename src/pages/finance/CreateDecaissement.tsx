@@ -13,15 +13,8 @@ interface Decaissement {
   demandes_stock_ids: string[];
 }
 
-interface Demande {
-  id: string;
-  reference: string;
-  montant: number;
-}
-
 const DecaissementsPage: React.FC = () => {
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
-  const [demandesDisponibles, setDemandesDisponibles] = useState<{ rh: Demande[]; stock: Demande[] }>({ rh: [], stock: [] });
   const [loading, setLoading] = useState(true);
 
   const fetchDecaissements = async () => {
@@ -36,32 +29,10 @@ const DecaissementsPage: React.FC = () => {
     }
   };
 
-  const fetchDemandesDisponibles = async () => {
-    try {
-      console.log("[DEBUG] Chargement des demandes disponibles...");
-      const data: { rh: Demande[]; stock: Demande[] } = await financeApi.getDemandesDisponibles();
-      console.log("[DEBUG] Données reçues :", data);
-
-      if (!data || !data.rh || !data.stock) {
-        console.warn("[WARN] Données API mal formattées:", data);
-        toast.error("Les données reçues sont invalides");
-        setDemandesDisponibles({ rh: [], stock: [] });
-        return;
-      }
-
-      setDemandesDisponibles(data);
-    } catch (err: any) {
-      console.error("[ERROR] Impossible de charger les demandes disponibles:", err);
-      toast.error(err?.response?.data?.error || "Erreur lors du chargement des demandes disponibles");
-      setDemandesDisponibles({ rh: [], stock: [] });
-    }
-  };
-
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       await fetchDecaissements();
-      await fetchDemandesDisponibles();
       setLoading(false);
     };
     load();
@@ -73,14 +44,13 @@ const DecaissementsPage: React.FC = () => {
       await financeApi.soumettreDecaissement(decaissement.id);
       toast.success("Décaissement soumis avec succès");
       await fetchDecaissements();
-      await fetchDemandesDisponibles();
     } catch (err: any) {
       console.error("[ERROR] Erreur lors de la soumission du décaissement :", err);
       toast.error(err?.response?.data?.error || "Erreur lors de la soumission");
     }
   };
 
-  if (loading) return <p>Chargement des décaissements et demandes disponibles...</p>;
+  if (loading) return <p>Chargement des décaissements...</p>;
 
   return (
     <div className="space-y-6">
@@ -118,48 +88,6 @@ const DecaissementsPage: React.FC = () => {
               </tbody>
             </table>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Liste des demandes disponibles */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Demandes Disponibles</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4">
-            {/* Demandes RH */}
-            <div>
-              <h3 className="font-bold mb-2">RH</h3>
-              {demandesDisponibles.rh.length === 0 ? (
-                <p>Aucune demande RH disponible</p>
-              ) : (
-                <ul className="list-disc list-inside">
-                  {demandesDisponibles.rh.map((r) => (
-                    <li key={r.id}>
-                      {r.reference} - {r.montant.toLocaleString()} Ar
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {/* Demandes Stock */}
-            <div>
-              <h3 className="font-bold mb-2">Stock</h3>
-              {demandesDisponibles.stock.length === 0 ? (
-                <p>Aucune demande Stock disponible</p>
-              ) : (
-                <ul className="list-disc list-inside">
-                  {demandesDisponibles.stock.map((s) => (
-                    <li key={s.id}>
-                      {s.reference} - {s.montant.toLocaleString()} Ar
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
         </CardContent>
       </Card>
     </div>
