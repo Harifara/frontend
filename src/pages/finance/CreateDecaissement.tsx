@@ -26,7 +26,7 @@ const DecaissementsPage: React.FC = () => {
 
   const fetchDecaissements = async () => {
     try {
-      const data = await financeApi.getDecaissements();
+      const data: Decaissement[] = await financeApi.getDecaissements();
       setDecaissements(data);
     } catch (err) {
       console.error(err);
@@ -36,7 +36,7 @@ const DecaissementsPage: React.FC = () => {
 
   const fetchDemandesDisponibles = async () => {
     try {
-      const data = await financeApi.getDemandesDisponibles();
+      const data: { rh: Demande[]; stock: Demande[] } = await financeApi.getDemandesDisponibles();
       setDemandesDisponibles(data);
     } catch (err) {
       console.error(err);
@@ -56,14 +56,13 @@ const DecaissementsPage: React.FC = () => {
 
   const handleSoumettre = async (decaissement: Decaissement) => {
     try {
-      // Appel simple, pas besoin de passer rh_ids / stock_ids
       await financeApi.soumettreDecaissement(decaissement.id);
       toast.success("Décaissement soumis avec succès");
       await fetchDecaissements();
       await fetchDemandesDisponibles();
     } catch (err: any) {
       console.error(err);
-      toast.error(err?.message || "Erreur lors de la soumission");
+      toast.error(err?.response?.data?.error || "Erreur lors de la soumission");
     }
   };
 
@@ -71,6 +70,7 @@ const DecaissementsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Liste des décaissements */}
       <Card>
         <CardHeader>
           <CardTitle>Demandes de Décaissement</CardTitle>
@@ -107,12 +107,14 @@ const DecaissementsPage: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* Liste des demandes disponibles */}
       <Card>
         <CardHeader>
           <CardTitle>Demandes Disponibles</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
+            {/* Demandes RH */}
             <div>
               <h3 className="font-bold mb-2">RH</h3>
               {demandesDisponibles.rh.length === 0 ? (
@@ -120,11 +122,15 @@ const DecaissementsPage: React.FC = () => {
               ) : (
                 <ul className="list-disc list-inside">
                   {demandesDisponibles.rh.map((r) => (
-                    <li key={r.id}>{r.reference} - {r.montant.toLocaleString()} Ar</li>
+                    <li key={r.id}>
+                      {r.reference} - {r.montant.toLocaleString()} Ar
+                    </li>
                   ))}
                 </ul>
               )}
             </div>
+
+            {/* Demandes Stock */}
             <div>
               <h3 className="font-bold mb-2">Stock</h3>
               {demandesDisponibles.stock.length === 0 ? (
@@ -132,7 +138,9 @@ const DecaissementsPage: React.FC = () => {
               ) : (
                 <ul className="list-disc list-inside">
                   {demandesDisponibles.stock.map((s) => (
-                    <li key={s.id}>{s.reference} - {s.montant.toLocaleString()} Ar</li>
+                    <li key={s.id}>
+                      {s.reference} - {s.montant.toLocaleString()} Ar
+                    </li>
                   ))}
                 </ul>
               )}
