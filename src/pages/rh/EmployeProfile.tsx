@@ -79,7 +79,8 @@ const EmployeProfile = () => {
       <Card className="shadow-md">
         <CardHeader className="flex flex-col md:flex-row gap-6 items-center">
           {/* Photo de profil */}
-          <div className="relative w-32 h-32">
+          {/* Photo de profil */}
+          <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-gray-200 mx-auto md:mx-0">
             <img
               src={
                 employe.photo_profil
@@ -90,8 +91,10 @@ const EmployeProfile = () => {
               }
               alt="Profil"
               onError={(e) => { e.currentTarget.src = DEFAULT_USER_ICON; }}
+              className="w-full h-full object-cover object-center"
             />
           </div>
+
 
           {/* Infos de base */}
           <div className="space-y-1 text-center md:text-left">
