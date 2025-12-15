@@ -67,6 +67,7 @@ const navigation = [
   { name: "Dépenses", href: "/finance/depenses", icon: ClipboardList, roles: ["responsable_finance"] },
   { name: "Créer demande de décaissement", href: "/finance/demandes-decaissement/create", icon: ClipboardList, roles: ["responsable_finance"] },
   { name: "Demandes de décaissement", href: "/finance/demandes-decaissement", icon: ClipboardList, roles: ["responsable_finance"] },
+  { name: "Demandes disponibles", href: "/finance/demandes-disponibles", icon: ClipboardList, roles: ["responsable_finance"] },
 
   { name: "Validations Coordo", href: "/cordinator/ValidationsCoordo", icon: ClipboardList, roles: ["coordinateur"] },
 

@@ -26,21 +26,34 @@ const DecaissementsPage: React.FC = () => {
 
   const fetchDecaissements = async () => {
     try {
+      console.log("[DEBUG] Chargement des décaissements...");
       const data: Decaissement[] = await financeApi.getDecaissements();
+      console.log("[DEBUG] Décaissements reçus :", data);
       setDecaissements(data);
     } catch (err) {
-      console.error(err);
+      console.error("[ERROR] Impossible de charger les décaissements:", err);
       toast.error("Impossible de charger les décaissements");
     }
   };
 
   const fetchDemandesDisponibles = async () => {
     try {
+      console.log("[DEBUG] Chargement des demandes disponibles...");
       const data: { rh: Demande[]; stock: Demande[] } = await financeApi.getDemandesDisponibles();
+      console.log("[DEBUG] Données reçues :", data);
+
+      if (!data || !data.rh || !data.stock) {
+        console.warn("[WARN] Données API mal formattées:", data);
+        toast.error("Les données reçues sont invalides");
+        setDemandesDisponibles({ rh: [], stock: [] });
+        return;
+      }
+
       setDemandesDisponibles(data);
-    } catch (err) {
-      console.error(err);
-      toast.error("Impossible de charger les demandes disponibles");
+    } catch (err: any) {
+      console.error("[ERROR] Impossible de charger les demandes disponibles:", err);
+      toast.error(err?.response?.data?.error || "Erreur lors du chargement des demandes disponibles");
+      setDemandesDisponibles({ rh: [], stock: [] });
     }
   };
 
@@ -56,17 +69,18 @@ const DecaissementsPage: React.FC = () => {
 
   const handleSoumettre = async (decaissement: Decaissement) => {
     try {
+      console.log("[DEBUG] Soumission du décaissement :", decaissement.id);
       await financeApi.soumettreDecaissement(decaissement.id);
       toast.success("Décaissement soumis avec succès");
       await fetchDecaissements();
       await fetchDemandesDisponibles();
     } catch (err: any) {
-      console.error(err);
+      console.error("[ERROR] Erreur lors de la soumission du décaissement :", err);
       toast.error(err?.response?.data?.error || "Erreur lors de la soumission");
     }
   };
 
-  if (loading) return <p>Chargement...</p>;
+  if (loading) return <p>Chargement des décaissements et demandes disponibles...</p>;
 
   return (
     <div className="space-y-6">
