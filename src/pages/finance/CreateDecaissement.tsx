@@ -14,7 +14,7 @@ interface Demande {
   description?: string;
   numero?: string;
   montant: number;
-  statut: string;
+  statut?: string;
   source: "RH" | "Stock";
 }
 
@@ -55,14 +55,20 @@ export default function DemandesDecaissement() {
       ]);
 
       const rhDemandes: Demande[] = (demandesDisponibles.rh || []).map(d => ({
-        ...d,
+        id: d.id,
+        description: d.description,
+        numero: d.numero,
         montant: Number(d.montant || 0),
+        statut: d.statut || "brouillon",
         source: "RH",
       }));
 
       const stockDemandes: Demande[] = (demandesDisponibles.stock || []).map(d => ({
-        ...d,
+        id: d.id,
+        description: d.description,
+        numero: d.numero,
         montant: Number(d.montant_estime || 0),
+        statut: d.statut || "brouillon",
         source: "Stock",
       }));
 
@@ -85,7 +91,7 @@ export default function DemandesDecaissement() {
   const totalSelection = useMemo(() => {
     return demandes
       .filter(d => selected.includes(d.id))
-      .reduce((sum, d) => sum + Number(d.montant || 0), 0);
+      .reduce((sum, d) => sum + (d.montant || 0), 0);
   }, [selected, demandes]);
 
   const creerDecaissement = async () => {
@@ -102,6 +108,7 @@ export default function DemandesDecaissement() {
       toast({ title: "Succès", description: "Décaissement créé (brouillon)" });
       setSelected([]);
       await fetchData();
+      setView("brouillons");
     } catch {
       toast({ title: "Erreur", description: "Création échouée", variant: "destructive" });
     } finally {
@@ -154,8 +161,8 @@ export default function DemandesDecaissement() {
                     <TableCell>{d.montant.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
                     <TableCell>{d.source}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
-                        {d.statut.replace(/_/g, " ")}
+                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut || "brouillon"]}`}>
+                        {(d.statut || "brouillon").replace(/_/g, " ")}
                       </span>
                     </TableCell>
                   </TableRow>
@@ -167,7 +174,7 @@ export default function DemandesDecaissement() {
               <p className="font-bold">
                 Montant total sélection : {totalSelection.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar
               </p>
-              <Button onClick={creerDecaissement} disabled={submitting}>
+              <Button onClick={creerDecaissement} disabled={submitting || selected.length === 0}>
                 {submitting ? "Création..." : "Créer le décaissement"}
               </Button>
             </div>
