@@ -1,97 +1,157 @@
 import React, { useEffect, useState } from "react";
-import { financeApi } from "@/lib/api";
+import { financeApi, rhApi, stockApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-hot-toast";
 
-interface Decaissement {
+interface Demande {
   id: string;
   reference: string;
-  montant_total: number;
-  statut: string;
-  demandes_rh_ids: string[];
-  demandes_stock_ids: string[];
+  montant: number;
 }
 
-const DecaissementsPage: React.FC = () => {
-  const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
-  const [loading, setLoading] = useState(true);
+interface DecaissementPayload {
+  demandes_rh_ids: string[];
+  demandes_stock_ids: string[];
+  montant_total: number;
+}
 
-  // 🔹 Récupération des décaissements (uniquement brouillon ou en cours)
-  const fetchDecaissements = async () => {
+const CreerDecaissementPage: React.FC = () => {
+  const [demandesRH, setDemandesRH] = useState<Demande[]>([]);
+  const [demandesStock, setDemandesStock] = useState<Demande[]>([]);
+  const [selectedRH, setSelectedRH] = useState<string[]>([]);
+  const [selectedStock, setSelectedStock] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
+
+  const fetchDemandes = async () => {
     try {
-      const data: Decaissement[] = await financeApi.getDecaissements();
-      // Filtrer côté frontend pour ne pas afficher ceux déjà décaisse
-      const filtered = data.filter(d => d.statut !== "decaisse");
-      setDecaissements(filtered);
-    } catch (err) {
-      console.error("[ERROR] Impossible de charger les décaissements:", err);
-      toast.error("Impossible de charger les décaissements");
+      const [rhData, stockData] = await Promise.all([
+        rhApi.getDemandesRH(),
+        stockApi.getDemandesStock(),
+      ]);
+
+      setDemandesRH(Array.isArray(rhData) ? rhData : []);
+      setDemandesStock(Array.isArray(stockData) ? stockData : []);
+    } catch (err: any) {
+      console.error("Erreur récupération demandes:", err);
+      toast.error("Impossible de charger les demandes disponibles");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      await fetchDecaissements();
-      setLoading(false);
-    };
-    load();
+    fetchDemandes();
   }, []);
 
-  const handleSoumettre = async (decaissement: Decaissement) => {
+  const handleSelectRH = (id: string) => {
+    setSelectedRH(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleSelectStock = (id: string) => {
+    setSelectedStock(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const montantTotal = () => {
+    const totalRH = demandesRH.filter(d => selectedRH.includes(d.id)).reduce((sum, d) => sum + d.montant, 0);
+    const totalStock = demandesStock.filter(d => selectedStock.includes(d.id)).reduce((sum, d) => sum + d.montant, 0);
+    return totalRH + totalStock;
+  };
+
+  const handleCreateDecaissement = async () => {
+    if (selectedRH.length === 0 && selectedStock.length === 0) {
+      toast.error("Sélectionnez au moins une demande");
+      return;
+    }
+
+    const payload: DecaissementPayload = {
+      demandes_rh_ids: selectedRH,
+      demandes_stock_ids: selectedStock,
+      montant_total: montantTotal(),
+    };
+
     try {
-      await financeApi.soumettreDecaissement(decaissement.id);
-      toast.success("Décaissement soumis avec succès");
-      // Supprimer le décaissement soumis de l'affichage
-      setDecaissements(prev => prev.filter(d => d.id !== decaissement.id));
+      setCreating(true);
+      await financeApi.createDecaissement(payload);
+      toast.success("Décaissement créé avec succès");
+      setSelectedRH([]);
+      setSelectedStock([]);
+      await fetchDemandes();
     } catch (err: any) {
-      console.error("[ERROR] Erreur lors de la soumission du décaissement :", err);
-      toast.error(err?.response?.data?.error || "Erreur lors de la soumission");
+      console.error("Erreur création décaissement:", err);
+      toast.error("Impossible de créer le décaissement");
+    } finally {
+      setCreating(false);
     }
   };
 
-  if (loading) return <p>Chargement des décaissements...</p>;
+  if (loading) return <p>Chargement des demandes disponibles...</p>;
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Demandes de Décaissement</CardTitle>
+          <CardTitle>Demandes RH Disponibles</CardTitle>
         </CardHeader>
         <CardContent>
-          {decaissements.length === 0 ? (
-            <p>Aucune demande pour le moment</p>
+          {demandesRH.length === 0 ? (
+            <p>Aucune demande RH disponible</p>
           ) : (
-            <table className="w-full table-auto border-collapse border border-gray-200">
-              <thead>
-                <tr>
-                  <th className="border p-2">Référence</th>
-                  <th className="border p-2">Montant Total</th>
-                  <th className="border p-2">Statut</th>
-                  <th className="border p-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {decaissements.map(d => (
-                  <tr key={d.id}>
-                    <td className="border p-2">{d.reference}</td>
-                    <td className="border p-2">{d.montant_total.toLocaleString()} Ar</td>
-                    <td className="border p-2">{d.statut}</td>
-                    <td className="border p-2">
-                      {d.statut === "brouillon" && (
-                        <Button onClick={() => handleSoumettre(d)}>Soumettre</Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <ul className="list-disc list-inside">
+              {demandesRH.map(d => (
+                <li key={d.id}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={selectedRH.includes(d.id)}
+                      onChange={() => handleSelectRH(d.id)}
+                      className="mr-2"
+                    />
+                    {d.reference} - {d.montant.toLocaleString()} Ar
+                  </label>
+                </li>
+              ))}
+            </ul>
           )}
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Demandes Stock Disponibles</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {demandesStock.length === 0 ? (
+            <p>Aucune demande Stock disponible</p>
+          ) : (
+            <ul className="list-disc list-inside">
+              {demandesStock.map(d => (
+                <li key={d.id}>
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={selectedStock.includes(d.id)}
+                      onChange={() => handleSelectStock(d.id)}
+                      className="mr-2"
+                    />
+                    {d.reference} - {d.montant.toLocaleString()} Ar
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end space-x-2">
+        <span className="font-bold">Montant total: {montantTotal().toLocaleString()} Ar</span>
+        <Button onClick={handleCreateDecaissement} disabled={creating}>
+          {creating ? "Création..." : "Créer Décaissement"}
+        </Button>
+      </div>
     </div>
   );
 };
 
-export default DecaissementsPage;
+export default CreerDecaissementPage;
