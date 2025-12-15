@@ -24,16 +24,16 @@ const CreerDecaissementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
+  // 🔹 Récupérer les demandes RH et Stock
   const fetchDemandes = async () => {
     try {
       const [rhData, stockData] = await Promise.all([
         rhApi.getDemandesRH(),
         stockApi.getDemandesStock(),
       ]);
-
       setDemandesRH(Array.isArray(rhData) ? rhData : []);
       setDemandesStock(Array.isArray(stockData) ? stockData : []);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Erreur récupération demandes:", err);
       toast.error("Impossible de charger les demandes disponibles");
     } finally {
@@ -45,6 +45,7 @@ const CreerDecaissementPage: React.FC = () => {
     fetchDemandes();
   }, []);
 
+  // 🔹 Gestion de sélection des demandes
   const handleSelectRH = (id: string) => {
     setSelectedRH(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
@@ -53,12 +54,18 @@ const CreerDecaissementPage: React.FC = () => {
     setSelectedStock(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  // 🔹 Calcul du montant total sélectionné
   const montantTotal = () => {
-    const totalRH = demandesRH.filter(d => selectedRH.includes(d.id)).reduce((sum, d) => sum + d.montant, 0);
-    const totalStock = demandesStock.filter(d => selectedStock.includes(d.id)).reduce((sum, d) => sum + d.montant, 0);
+    const totalRH = demandesRH
+      .filter(d => selectedRH.includes(d.id))
+      .reduce((sum, d) => sum + (d.montant ?? 0), 0);
+    const totalStock = demandesStock
+      .filter(d => selectedStock.includes(d.id))
+      .reduce((sum, d) => sum + (d.montant ?? 0), 0);
     return totalRH + totalStock;
   };
 
+  // 🔹 Création du décaissement
   const handleCreateDecaissement = async () => {
     if (selectedRH.length === 0 && selectedStock.length === 0) {
       toast.error("Sélectionnez au moins une demande");
@@ -75,10 +82,11 @@ const CreerDecaissementPage: React.FC = () => {
       setCreating(true);
       await financeApi.createDecaissement(payload);
       toast.success("Décaissement créé avec succès");
+      // Réinitialiser les sélections et recharger les demandes
       setSelectedRH([]);
       setSelectedStock([]);
       await fetchDemandes();
-    } catch (err: any) {
+    } catch (err) {
       console.error("Erreur création décaissement:", err);
       toast.error("Impossible de créer le décaissement");
     } finally {
@@ -90,6 +98,7 @@ const CreerDecaissementPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* DEMANDES RH */}
       <Card>
         <CardHeader>
           <CardTitle>Demandes RH Disponibles</CardTitle>
@@ -108,7 +117,7 @@ const CreerDecaissementPage: React.FC = () => {
                       onChange={() => handleSelectRH(d.id)}
                       className="mr-2"
                     />
-                    {d.reference} - {d.montant.toLocaleString()} Ar
+                    {d.reference} - {(d.montant ?? 0).toLocaleString()} Ar
                   </label>
                 </li>
               ))}
@@ -117,6 +126,7 @@ const CreerDecaissementPage: React.FC = () => {
         </CardContent>
       </Card>
 
+      {/* DEMANDES STOCK */}
       <Card>
         <CardHeader>
           <CardTitle>Demandes Stock Disponibles</CardTitle>
@@ -135,7 +145,7 @@ const CreerDecaissementPage: React.FC = () => {
                       onChange={() => handleSelectStock(d.id)}
                       className="mr-2"
                     />
-                    {d.reference} - {d.montant.toLocaleString()} Ar
+                    {d.reference} - {(d.montant ?? 0).toLocaleString()} Ar
                   </label>
                 </li>
               ))}
@@ -144,7 +154,8 @@ const CreerDecaissementPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end space-x-2">
+      {/* MONTANT TOTAL ET BOUTON */}
+      <div className="flex justify-end items-center space-x-4">
         <span className="font-bold">Montant total: {montantTotal().toLocaleString()} Ar</span>
         <Button onClick={handleCreateDecaissement} disabled={creating}>
           {creating ? "Création..." : "Créer Décaissement"}
