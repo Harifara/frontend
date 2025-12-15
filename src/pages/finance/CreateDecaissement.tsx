@@ -24,13 +24,33 @@ const CreerDecaissementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
-  // 🔹 Récupérer les demandes RH et Stock
+  // 🔹 Récupérer le token pour accéder aux services sécurisés
+  const fetchToken = async (): Promise<string | null> => {
+    try {
+      const token = await financeApi.getServiceToken(); // backend renvoie le token
+      return token;
+    } catch (err) {
+      console.error("Impossible de récupérer le token :", err);
+      toast.error("Erreur de connexion au service RH/Stock");
+      return null;
+    }
+  };
+
+  // 🔹 Récupérer les demandes RH et Stock avec le token
   const fetchDemandes = async () => {
+    setLoading(true);
+    const token = await fetchToken();
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+
     try {
       const [rhData, stockData] = await Promise.all([
-        rhApi.getDemandesRH(),
-        stockApi.getDemandesStock(),
+        rhApi.getDemandesRH(token),
+        stockApi.getDemandesStock(token),
       ]);
+
       setDemandesRH(Array.isArray(rhData) ? rhData : []);
       setDemandesStock(Array.isArray(stockData) ? stockData : []);
     } catch (err) {
@@ -82,7 +102,6 @@ const CreerDecaissementPage: React.FC = () => {
       setCreating(true);
       await financeApi.createDecaissement(payload);
       toast.success("Décaissement créé avec succès");
-      // Réinitialiser les sélections et recharger les demandes
       setSelectedRH([]);
       setSelectedStock([]);
       await fetchDemandes();
