@@ -17,12 +17,13 @@ const DecaissementsPage: React.FC = () => {
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 🔹 Récupération des décaissements (uniquement brouillon ou en cours)
   const fetchDecaissements = async () => {
     try {
-      console.log("[DEBUG] Chargement des décaissements...");
       const data: Decaissement[] = await financeApi.getDecaissements();
-      console.log("[DEBUG] Décaissements reçus :", data);
-      setDecaissements(data);
+      // Filtrer côté frontend pour ne pas afficher ceux déjà décaisse
+      const filtered = data.filter(d => d.statut !== "decaisse");
+      setDecaissements(filtered);
     } catch (err) {
       console.error("[ERROR] Impossible de charger les décaissements:", err);
       toast.error("Impossible de charger les décaissements");
@@ -40,10 +41,10 @@ const DecaissementsPage: React.FC = () => {
 
   const handleSoumettre = async (decaissement: Decaissement) => {
     try {
-      console.log("[DEBUG] Soumission du décaissement :", decaissement.id);
       await financeApi.soumettreDecaissement(decaissement.id);
       toast.success("Décaissement soumis avec succès");
-      await fetchDecaissements();
+      // Supprimer le décaissement soumis de l'affichage
+      setDecaissements(prev => prev.filter(d => d.id !== decaissement.id));
     } catch (err: any) {
       console.error("[ERROR] Erreur lors de la soumission du décaissement :", err);
       toast.error(err?.response?.data?.error || "Erreur lors de la soumission");
@@ -54,7 +55,6 @@ const DecaissementsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Liste des décaissements */}
       <Card>
         <CardHeader>
           <CardTitle>Demandes de Décaissement</CardTitle>
@@ -73,7 +73,7 @@ const DecaissementsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {decaissements.map((d) => (
+                {decaissements.map(d => (
                   <tr key={d.id}>
                     <td className="border p-2">{d.reference}</td>
                     <td className="border p-2">{d.montant_total.toLocaleString()} Ar</td>
