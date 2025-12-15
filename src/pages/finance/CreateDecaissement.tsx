@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { financeApi, rhApi, stockApi } from "@/lib/api";
+import { financeApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "react-hot-toast";
@@ -24,33 +24,11 @@ const CreerDecaissementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
-  // 🔹 Récupérer le token pour accéder aux services sécurisés
-  const fetchToken = async (): Promise<string | null> => {
-    try {
-      const token = await financeApi.getServiceToken(); // backend renvoie le token
-      return token;
-    } catch (err) {
-      console.error("Impossible de récupérer le token :", err);
-      toast.error("Erreur de connexion au service RH/Stock");
-      return null;
-    }
-  };
-
-  // 🔹 Récupérer les demandes RH et Stock avec le token
+  // 🔹 Récupérer les demandes RH et Stock disponibles via financeApi
   const fetchDemandes = async () => {
     setLoading(true);
-    const token = await fetchToken();
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
     try {
-      const [rhData, stockData] = await Promise.all([
-        rhApi.getDemandesRH(token),
-        stockApi.getDemandesStock(token),
-      ]);
-
+      const { rh: rhData, stock: stockData } = await financeApi.getDemandesDisponibles();
       setDemandesRH(Array.isArray(rhData) ? rhData : []);
       setDemandesStock(Array.isArray(stockData) ? stockData : []);
     } catch (err) {
@@ -100,7 +78,7 @@ const CreerDecaissementPage: React.FC = () => {
 
     try {
       setCreating(true);
-      await financeApi.createDecaissement(payload);
+      await financeApi.createDecaissement(payload); // token géré automatiquement
       toast.success("Décaissement créé avec succès");
       setSelectedRH([]);
       setSelectedStock([]);
@@ -175,7 +153,9 @@ const CreerDecaissementPage: React.FC = () => {
 
       {/* MONTANT TOTAL ET BOUTON */}
       <div className="flex justify-end items-center space-x-4">
-        <span className="font-bold">Montant total: {montantTotal().toLocaleString()} Ar</span>
+        <span className="font-bold">
+          Montant total: {montantTotal().toLocaleString()} Ar
+        </span>
         <Button onClick={handleCreateDecaissement} disabled={creating}>
           {creating ? "Création..." : "Créer Décaissement"}
         </Button>
