@@ -14,7 +14,7 @@ interface Demande {
   description?: string;
   numero?: string;
   montant: number;
-  statut: string;
+  statut?: string;
   source: "RH" | "Stock";
 }
 
@@ -46,7 +46,6 @@ export default function DemandesDecaissement() {
   const [submitting, setSubmitting] = useState(false);
   const [view, setView] = useState<"recues" | "brouillons">("recues");
 
-  // 🔹 Fetch data depuis l'API finance
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -55,15 +54,21 @@ export default function DemandesDecaissement() {
         financeApi.getDemandesDisponibles(),
       ]);
 
-      // 🔹 Transformer les données RH et Stock
       const rhDemandes: Demande[] = (demandesDisponibles.rh || []).map(d => ({
-        ...d,
+        id: d.id,
+        description: d.description,
+        numero: d.numero,
         montant: Number(d.montant || 0),
+        statut: d.statut || "brouillon",
         source: "RH",
       }));
+
       const stockDemandes: Demande[] = (demandesDisponibles.stock || []).map(d => ({
-        ...d,
+        id: d.id,
+        description: d.description,
+        numero: d.numero,
         montant: Number(d.montant_estime || 0),
+        statut: d.statut || "brouillon",
         source: "Stock",
       }));
 
@@ -86,10 +91,9 @@ export default function DemandesDecaissement() {
   const totalSelection = useMemo(() => {
     return demandes
       .filter(d => selected.includes(d.id))
-      .reduce((sum, d) => sum + Number(d.montant || 0), 0);
+      .reduce((sum, d) => sum + (d.montant || 0), 0);
   }, [selected, demandes]);
 
-  // 🔹 Créer un décaissement (brouillon)
   const creerDecaissement = async () => {
     if (!selected.length) {
       return toast({ title: "Erreur", description: "Sélectionnez au moins une demande", variant: "destructive" });
@@ -103,7 +107,8 @@ export default function DemandesDecaissement() {
 
       toast({ title: "Succès", description: "Décaissement créé (brouillon)" });
       setSelected([]);
-      await fetchData(); // Rafraîchir les listes
+      await fetchData();
+      setView("brouillons");
     } catch {
       toast({ title: "Erreur", description: "Création échouée", variant: "destructive" });
     } finally {
@@ -115,7 +120,7 @@ export default function DemandesDecaissement() {
     try {
       await financeApi.soumettreDecaissement(id);
       toast({ title: "Envoyé", description: "Envoyé au coordonnateur" });
-      await fetchData(); // Rafraîchir
+      await fetchData();
     } catch {
       toast({ title: "Erreur", description: "Soumission échouée", variant: "destructive" });
     }
@@ -156,8 +161,8 @@ export default function DemandesDecaissement() {
                     <TableCell>{d.montant.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar</TableCell>
                     <TableCell>{d.source}</TableCell>
                     <TableCell>
-                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
-                        {d.statut.replace(/_/g, " ")}
+                      <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut || "brouillon"]}`}>
+                        {(d.statut || "brouillon").replace(/_/g, " ")}
                       </span>
                     </TableCell>
                   </TableRow>
@@ -169,7 +174,7 @@ export default function DemandesDecaissement() {
               <p className="font-bold">
                 Montant total sélection : {totalSelection.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} Ar
               </p>
-              <Button onClick={creerDecaissement} disabled={submitting}>
+              <Button onClick={creerDecaissement} disabled={submitting || selected.length === 0}>
                 {submitting ? "Création..." : "Créer le décaissement"}
               </Button>
             </div>
