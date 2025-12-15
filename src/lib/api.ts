@@ -1039,11 +1039,12 @@ export const financeApi = {
 
   // ===== DEMANDES DISPONIBLES (RH + Stock) =====
   getDemandesDisponibles: async (): Promise<{ rh: any[]; stock: any[] }> => {
-    const token = await ensureKongToken();
-    return fetchWithLog(`${API_BASE_URL}/finance/demandes-disponibles/`, {
-      headers: getHeaders(token),
-    });
-  },
+  const token = await ensureKongToken();
+  return fetchWithLog(`${API_BASE_URL}/finance/decaissements/demandes_disponibles/`, {
+    headers: getHeaders(token),
+  });
+},
+
 };
 
 // ==========================================
