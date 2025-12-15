@@ -9,34 +9,50 @@ interface Demande {
   montant: number;
 }
 
+interface DemandesDisponibles {
+  rh: Demande[];
+  stock: Demande[];
+}
+
 const DemandesDisponiblesPage: React.FC = () => {
-  const [demandesRH, setDemandesRH] = useState<Demande[]>([]);
-  const [demandesStock, setDemandesStock] = useState<Demande[]>([]);
+  const [demandesDisponibles, setDemandesDisponibles] = useState<DemandesDisponibles>({
+    rh: [],
+    stock: [],
+  });
   const [loading, setLoading] = useState(true);
 
-  const fetchDemandes = async () => {
+  const fetchDemandesDisponibles = async () => {
     try {
-      // RH
-      const rh: Demande[] = await rhApi.getDemandesRH();
-      setDemandesRH(rh);
-      console.log("[DEBUG] Demandes RH:", rh);
+      console.log("[DEBUG] Récupération des demandes RH et Stock...");
+      const [rhData, stockData] = await Promise.all([
+        rhApi.getDemandesRH().catch((err) => {
+          console.error("Erreur RH:", err);
+          return [];
+        }),
+        stockApi.getDemandesStock().catch((err) => {
+          console.error("Erreur Stock:", err);
+          return [];
+        }),
+      ]);
 
-      // Stock
-      const stock: Demande[] = await stockApi.getDemandesAchat();
-      setDemandesStock(stock);
-      console.log("[DEBUG] Demandes Stock:", stock);
+      // Sécurisation : toujours des tableaux
+      setDemandesDisponibles({
+        rh: Array.isArray(rhData) ? rhData : [],
+        stock: Array.isArray(stockData) ? stockData : [],
+      });
 
+      console.log("[DEBUG] Données RH:", rhData);
+      console.log("[DEBUG] Données Stock:", stockData);
     } catch (err: any) {
       console.error("[ERROR] Impossible de charger les demandes:", err);
-      toast.error(err.message || "Erreur lors du chargement des demandes");
-      setDemandesRH([]);
-      setDemandesStock([]);
+      toast.error(err?.message || "Erreur lors du chargement des demandes");
+      setDemandesDisponibles({ rh: [], stock: [] });
     }
   };
 
   useEffect(() => {
     setLoading(true);
-    fetchDemandes().finally(() => setLoading(false));
+    fetchDemandesDisponibles().finally(() => setLoading(false));
   }, []);
 
   if (loading) return <p>Chargement des demandes disponibles...</p>;
@@ -48,11 +64,11 @@ const DemandesDisponiblesPage: React.FC = () => {
           <CardTitle>Demandes RH Disponibles</CardTitle>
         </CardHeader>
         <CardContent>
-          {demandesRH.length === 0 ? (
+          {demandesDisponibles.rh.length === 0 ? (
             <p>Aucune demande RH disponible</p>
           ) : (
             <ul className="list-disc list-inside">
-              {demandesRH.map((r) => (
+              {demandesDisponibles.rh.map((r) => (
                 <li key={r.id}>
                   {r.reference} - {r.montant.toLocaleString()} Ar
                 </li>
@@ -67,11 +83,11 @@ const DemandesDisponiblesPage: React.FC = () => {
           <CardTitle>Demandes Stock Disponibles</CardTitle>
         </CardHeader>
         <CardContent>
-          {demandesStock.length === 0 ? (
+          {demandesDisponibles.stock.length === 0 ? (
             <p>Aucune demande Stock disponible</p>
           ) : (
             <ul className="list-disc list-inside">
-              {demandesStock.map((s) => (
+              {demandesDisponibles.stock.map((s) => (
                 <li key={s.id}>
                   {s.reference} - {s.montant.toLocaleString()} Ar
                 </li>
