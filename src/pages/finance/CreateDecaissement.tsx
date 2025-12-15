@@ -12,9 +12,15 @@ interface Decaissement {
   demandes_stock_ids: string[];
 }
 
+interface Demande {
+  id: string;
+  reference: string;
+  montant: number;
+}
+
 const DecaissementsPage: React.FC = () => {
   const [decaissements, setDecaissements] = useState<Decaissement[]>([]);
-  const [demandesDisponibles, setDemandesDisponibles] = useState<{ rh: any[]; stock: any[] }>({ rh: [], stock: [] });
+  const [demandesDisponibles, setDemandesDisponibles] = useState<{ rh: Demande[]; stock: Demande[] }>({ rh: [], stock: [] });
   const [loading, setLoading] = useState(true);
 
   const fetchDecaissements = async () => {
@@ -47,11 +53,16 @@ const DecaissementsPage: React.FC = () => {
     load();
   }, []);
 
-  const handleSoumettre = async (id: string) => {
+  const handleSoumettre = async (decaissement: Decaissement) => {
     try {
-      await financeApi.soumettreDecaissement(id);
+      // On envoie les IDs des demandes associées
+      await financeApi.soumettreDecaissement(decaissement.id, {
+        rh_ids: decaissement.demandes_rh_ids,
+        stock_ids: decaissement.demandes_stock_ids,
+      });
       toast.success("Décaissement soumis avec succès");
-      fetchDecaissements();
+      await fetchDecaissements();
+      await fetchDemandesDisponibles();
     } catch (err: any) {
       console.error(err);
       toast.error(err?.message || "Erreur lors de la soumission");
@@ -87,7 +98,7 @@ const DecaissementsPage: React.FC = () => {
                     <td className="border p-2">{d.statut}</td>
                     <td className="border p-2">
                       {d.statut === "brouillon" && (
-                        <Button onClick={() => handleSoumettre(d.id)}>Soumettre</Button>
+                        <Button onClick={() => handleSoumettre(d)}>Soumettre</Button>
                       )}
                     </td>
                   </tr>
@@ -111,7 +122,7 @@ const DecaissementsPage: React.FC = () => {
               ) : (
                 <ul className="list-disc list-inside">
                   {demandesDisponibles.rh.map((r) => (
-                    <li key={r.id}>{r.reference} - {r.montant} Ar</li>
+                    <li key={r.id}>{r.reference} - {r.montant.toLocaleString()} Ar</li>
                   ))}
                 </ul>
               )}
@@ -123,7 +134,7 @@ const DecaissementsPage: React.FC = () => {
               ) : (
                 <ul className="list-disc list-inside">
                   {demandesDisponibles.stock.map((s) => (
-                    <li key={s.id}>{s.reference} - {s.montant} Ar</li>
+                    <li key={s.id}>{s.reference} - {s.montant.toLocaleString()} Ar</li>
                   ))}
                 </ul>
               )}
