@@ -43,7 +43,7 @@ export default function DashboardStock() {
 
   const loadDashboard = async () => {
     try {
-      const res = await stockApi.getDashboardStock(); // appelle /dashboard-stock/
+      const res = await stockApi.getDashboardStock();
       setKpi(res.kpi ?? {});
       setStocks(res.stocks ?? []);
       setDemandesReappro(res.demandes_reappro ?? []);
@@ -52,6 +52,28 @@ export default function DashboardStock() {
       console.error("Erreur dashboard stock :", err);
     }
   };
+
+  // ----- charts data -----
+  const pieMagasins = stocks.reduce((acc: any[], s) => {
+    const idx = acc.findIndex(a => a.name === s.magasin?.nom);
+    if (idx >= 0) acc[idx].value += s.quantite;
+    else acc.push({ name: s.magasin?.nom ?? "Inconnu", value: s.quantite });
+    return acc;
+  }, []);
+
+  const barReappro = demandesReappro.map(d => ({
+    article: d.article?.nom ?? "-",
+    quantite: d.quantite,
+  })).slice(0, 10); // limiter à 10 pour lisibilité
+
+  const rupturesParCategorie = stocks.reduce((acc: any, s) => {
+    if (s.quantite <= s.article?.seuil_alerte) {
+      const cat = s.article?.categorie?.nom ?? "Inconnue";
+      acc[cat] = (acc[cat] || 0) + 1;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+  const barRuptures = Object.entries(rupturesParCategorie).map(([name, value]) => ({ name, value }));
 
   return (
     <div className="p-6 flex-1 bg-gray-50 min-h-screen">
@@ -66,15 +88,71 @@ export default function DashboardStock() {
         <KPICard label="Demandes d'achat en attente" value={kpi.demandes_achat_en_attente} color="bg-cyan-50" />
       </div>
 
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        {/* Répartition par magasin */}
+        <Card className="p-4 shadow rounded-2xl border">
+          <h3 className="font-semibold mb-3">Répartition des stocks par magasin</h3>
+          <div style={{ width: "100%", height: 250 }}>
+            <ResponsiveContainer>
+              <PieChart>
+                <Pie
+                  data={pieMagasins}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={80}
+                  label
+                >
+                  {pieMagasins.map((_, idx) => (
+                    <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* Demandes réappro */}
+        <Card className="p-4 shadow rounded-2xl border">
+          <h3 className="font-semibold mb-3">Top 10 demandes réappro</h3>
+          <div style={{ width: "100%", height: 250 }}>
+            <ResponsiveContainer>
+              <BarChart data={barReappro}>
+                <XAxis dataKey="article" stroke="#4b5563" />
+                <YAxis stroke="#4b5563" />
+                <Tooltip />
+                <Bar dataKey="quantite" fill="#0ea5a4" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        {/* Articles en rupture par catégorie */}
+        <Card className="p-4 shadow rounded-2xl border">
+          <h3 className="font-semibold mb-3">Articles en rupture par catégorie</h3>
+          <div style={{ width: "100%", height: 250 }}>
+            <ResponsiveContainer>
+              <BarChart data={barRuptures}>
+                <XAxis dataKey="name" stroke="#4b5563" />
+                <YAxis stroke="#4b5563" />
+                <Tooltip />
+                <Bar dataKey="value" fill="#ef4444" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
       {/* Listes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Stocks */}
+        {/* Stocks récents */}
         <Card className="p-4 shadow rounded-2xl border">
           <h3 className="font-semibold mb-3">Stocks récents</h3>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b">
-                <th className="py-2 text-left">Article</th>
+                <th>Article</th>
                 <th>Magasin</th>
                 <th>Quantité</th>
               </tr>
