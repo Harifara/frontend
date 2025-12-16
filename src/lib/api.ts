@@ -962,11 +962,13 @@ getStocksAutresMagasinsRaw: async (articleId: string) => {
   }
 },
  getDashboardStock: async () => {
-    const token = localStorage.getItem("token"); // ou le nom que tu utilises
+    const token = localStorage.getItem("token"); // assure-toi que le token est stocké ici
+    if (!token) throw new Error("Utilisateur non authentifié");
+
     const res = await fetch(`${API_BASE_URL}/stock/dashboard-stock/`, {
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`, // <--- ici
+        "Authorization": `Bearer ${token}`, // <--- token envoyé
       },
     });
 
