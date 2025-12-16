@@ -961,20 +961,15 @@ getStocksAutresMagasinsRaw: async (articleId: string) => {
     return []; // tableau vide pour éviter crash frontend
   }
 },
- getDashboardStock: async () => {
-    const token = localStorage.getItem("token"); // assure-toi que le token est stocké ici
-    if (!token) throw new Error("Utilisateur non authentifié");
-
+getDashboardStock: async () => {
+    const token = await ensureKongToken(); // ✅ utiliser Kong token
     const res = await fetch(`${API_BASE_URL}/stock/dashboard-stock/`, {
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`, // <--- token envoyé
-      },
+        headers: getHeaders(token),
     });
-
     if (!res.ok) throw new Error(`Erreur API: ${res.status}`);
     return res.json();
-  },
+},
+
 
 };
 
