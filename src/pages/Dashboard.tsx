@@ -1,40 +1,15 @@
 import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useAuth } from "@/contexts/AuthContext";
-
-import { API_BASE_URL } from "@/lib/api";
+import { rhApi, stockApi, API_BASE_URL } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-
-import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  Legend,
-} from "recharts";
-
-import {
-  Loader2,
-  Sun,
-  Moon,
-  Package,
-  AlertTriangle,
-  Repeat,
-  ShoppingCart,
-} from "lucide-react";
+import { ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, Legend } from "recharts";
+import { Loader2, Sun, Moon, Package, AlertTriangle, Repeat, ShoppingCart } from "lucide-react";
 
 const CHART_COLORS = ["#0ea5a4", "#06b6d4", "#f59e0b", "#ef4444", "#6366f1"];
 
 /* =====================================================
-   🔐 ROLES
+   🔐 DASHBOARD PRINCIPAL
 ===================================================== */
 export default function Dashboard() {
   const { user } = useAuth();
@@ -58,23 +33,24 @@ function DashboardRH() {
   const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchData = async () => {
+      if (!user?.token) {
+        setError("Token manquant, veuillez vous reconnecter.");
+        setLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch(`${API_BASE_URL}/rh/dashboard-rh/`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${user?.token}`, // ✅ Token pour auth
-          },
-        });
-        if (!response.ok) throw new Error("Erreur API RH");
-        const res = await response.json();
+        const res = await rhApi.getDashboardRH(user.token);
         if (isMounted) setData(res);
       } catch (err) {
         console.error("Erreur chargement Dashboard RH:", err);
+        setError("Erreur API RH");
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -82,12 +58,20 @@ function DashboardRH() {
 
     fetchData();
     return () => { isMounted = false; };
-  }, [user?.token]);
+  }, [user]);
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-96">
         <Loader2 className="animate-spin w-8 h-8" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-red-500 font-bold text-center py-20">
+        {error}
       </div>
     );
   }
@@ -102,10 +86,7 @@ function DashboardRH() {
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Kpi title="Total employés" value={kpi.total_employes ?? 0} />
         <Kpi title="Contrats" value={(kpi.contrats_actifs ?? 0) + (kpi.contrats_expires ?? 0)} />
-        <Kpi
-          title="Congés"
-          value={(kpi.conges_en_attente ?? 0) + (kpi.conges_en_cours ?? 0) + (kpi.conges_refuses ?? 0)}
-        />
+        <Kpi title="Congés" value={(kpi.conges_en_attente ?? 0) + (kpi.conges_en_cours ?? 0) + (kpi.conges_refuses ?? 0)} />
         <Kpi title="Affectations" value={kpi.affectations_actives ?? 0} />
         <Kpi title="Fonctions" value={charts.employes_par_fonction?.length ?? 0} />
         <Kpi title="Demandes" value={kpi.demandes_total ?? 0} />
@@ -145,12 +126,7 @@ function DashboardRH() {
         </ChartCard>
 
         <ChartCard title="Paiements par mois">
-          <LineChart
-            data={(charts.payements_par_mois ?? []).map((i: any) => ({
-              mois: dayjs(i.mois).format("MMM YYYY"),
-              total: i.total ?? 0,
-            }))}
-          >
+          <LineChart data={(charts.payements_par_mois ?? []).map((i: any) => ({ mois: dayjs(i.mois).format("MMM YYYY"), total: i.total ?? 0 }))}>
             <XAxis dataKey="mois" />
             <YAxis />
             <Tooltip />
@@ -169,21 +145,13 @@ function DashboardStock() {
   const [kpi, setKpi] = useState<any>({});
   const [stocks, setStocks] = useState<any[]>([]);
   const [dark, setDark] = useState(false);
-  const { user } = useAuth();
 
   useEffect(() => {
     let isMounted = true;
 
     const fetchData = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/stock/dashboard-stock/`, {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${user?.token}`, // ✅ Token pour auth
-          },
-        });
-        if (!response.ok) throw new Error("Erreur API Stock");
-        const res = await response.json();
+        const res = await stockApi.getDashboardStock();
         if (isMounted) {
           setKpi(res.kpi ?? {});
           setStocks(res.stocks ?? []);
@@ -195,7 +163,7 @@ function DashboardStock() {
 
     fetchData();
     return () => { isMounted = false; };
-  }, [user?.token]);
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
@@ -214,9 +182,7 @@ function DashboardStock() {
     <div className="p-6 mt-12 bg-gradient-to-b from-gray-50 to-white dark:from-gray-950 dark:to-gray-900">
       <div className="flex justify-between mb-6">
         <h2 className="text-2xl font-bold">Dashboard Stock</h2>
-        <button onClick={() => setDark((v) => !v)} className="flex gap-2">
-          {dark ? <Sun /> : <Moon />}
-        </button>
+        <button onClick={() => setDark((v) => !v)} className="flex gap-2">{dark ? <Sun /> : <Moon />}</button>
       </div>
 
       {/* KPI */}
@@ -234,9 +200,7 @@ function DashboardStock() {
           <ResponsiveContainer>
             <PieChart>
               <Pie data={pieMagasins} dataKey="value" nameKey="name" label>
-                {pieMagasins.map((_, i) => (
-                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                ))}
+                {pieMagasins.map((_, i) => <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />)}
               </Pie>
               <Tooltip />
               <Legend />
