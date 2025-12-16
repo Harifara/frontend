@@ -2,11 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { rhApi, stockApi } from "@/lib/api";
 
-/* UI */
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
-/* Charts */
 import {
   ResponsiveContainer,
   BarChart,
@@ -17,10 +15,8 @@ import {
   XAxis,
   YAxis,
   Tooltip,
-  Legend,
 } from "recharts";
 
-/* Icons */
 import {
   Users,
   Package,
@@ -45,30 +41,26 @@ const KPICard = ({ label, value, icon, color }: any) => (
   </Card>
 );
 
-/* ========================================================= */
-/* ======================= DASHBOARD ======================= */
-/* ========================================================= */
 export default function Dashboard() {
   const { user } = useAuth();
-  const role = user?.role;
 
-  const isAdmin = role === "admin";
-  const isRH = role === "responsable_rh";
-  const isStock = role === "responsable_stock";
-  const isMagasinier = role === "magasinier";
+  /* ================= ROLES (MATCH BACKEND) ================= */
+  const isAdmin = user?.is_superuser === true;
+  const isRH = user?.groups?.includes("RH");
+  const isStock = user?.groups?.includes("STOCK");
+  const isMagasinier = user?.groups?.includes("MAGASINIER");
 
   /* ======================= STATES ======================= */
 
-  /* ---- RH ---- */
+  // RH
   const [rhKpi, setRhKpi] = useState<any>({});
   const [employes, setEmployes] = useState<any[]>([]);
   const [conges, setConges] = useState<any[]>([]);
   const [contrats, setContrats] = useState<any[]>([]);
 
-  /* ---- STOCK ---- */
+  // STOCK
   const [stockKpi, setStockKpi] = useState<any>({});
   const [stocks, setStocks] = useState<any[]>([]);
-  const [demandesReappro, setDemandesReappro] = useState<any[]>([]);
   const [demandesAchat, setDemandesAchat] = useState<any[]>([]);
 
   /* ======================= LOAD ======================= */
@@ -81,11 +73,11 @@ export default function Dashboard() {
     try {
       const res = await rhApi.getDashboardRH();
       setRhKpi(res.kpi ?? {});
-      setEmployes(res.employers ?? []);
+      setEmployes(res.employes ?? []);
       setConges(res.conges ?? []);
       setContrats(res.contrats ?? []);
     } catch (e) {
-      console.error("Erreur RH", e);
+      console.error("Erreur dashboard RH", e);
     }
   };
 
@@ -94,16 +86,14 @@ export default function Dashboard() {
       const res = await stockApi.getDashboardStock();
       setStockKpi(res.kpi ?? {});
       setStocks(res.stocks ?? []);
-      setDemandesReappro(res.demandes_reappro ?? []);
       setDemandesAchat(res.demandes_achat ?? []);
     } catch (e) {
-      console.error("Erreur Stock", e);
+      console.error("Erreur dashboard Stock", e);
     }
   };
 
   /* ======================= CHARTS ======================= */
 
-  /* RH */
   const pieSexe = useMemo(() => {
     const map: any = {};
     employes.forEach(e => {
@@ -121,7 +111,6 @@ export default function Dashboard() {
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [conges]);
 
-  /* STOCK */
   const pieMagasins = useMemo(() => {
     const map: any = {};
     stocks.forEach(s => {
@@ -133,12 +122,12 @@ export default function Dashboard() {
 
   /* ======================= RENDER ======================= */
   return (
-    <div className="p-6 bg-gray-50 min-h-screen flex-1">
+    <div className="p-6 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold mb-6">
-        Dashboard — {user?.full_name || user?.username}
+        Dashboard — {user?.username}
       </h1>
 
-      {/* ======================= KPI ======================= */}
+      {/* ================= KPI ================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         {(isAdmin || isRH) && (
           <>
@@ -150,92 +139,65 @@ export default function Dashboard() {
 
         {(isAdmin || isStock || isMagasinier) && (
           <>
-            <KPICard label="Articles en stock" value={stockKpi.total_articles} icon={<Package />} color="bg-blue-50" />
+            <KPICard label="Articles" value={stockKpi.total_articles} icon={<Package />} color="bg-blue-50" />
             <KPICard label="Ruptures" value={stockKpi.articles_rupture} icon={<AlertTriangle />} color="bg-red-50" />
-            <KPICard label="Demandes d'achat" value={stockKpi.demandes_achat_en_attente} icon={<ShoppingCart />} color="bg-cyan-50" />
+            <KPICard label="Achats en attente" value={stockKpi.demandes_achat_en_attente} icon={<ShoppingCart />} color="bg-cyan-50" />
           </>
         )}
       </div>
 
-      {/* ======================= CHARTS ======================= */}
+      {/* ================= CHARTS ================= */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         {(isAdmin || isRH) && (
-          <Card className="p-4 rounded-2xl shadow border">
+          <Card className="p-4">
             <h3 className="font-semibold mb-3">Employés par sexe</h3>
-            <div className="h-[250px]">
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie data={pieSexe} dataKey="value" nameKey="name" label>
-                    {pieSexe.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <ResponsiveContainer height={250}>
+              <PieChart>
+                <Pie data={pieSexe} dataKey="value" nameKey="name" label>
+                  {pieSexe.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </Card>
         )}
 
         {(isAdmin || isRH) && (
-          <Card className="p-4 rounded-2xl shadow border">
+          <Card className="p-4">
             <h3 className="font-semibold mb-3">Congés par statut</h3>
-            <div className="h-[250px]">
-              <ResponsiveContainer>
-                <BarChart data={barConges}>
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="#0ea5a4" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <ResponsiveContainer height={250}>
+              <BarChart data={barConges}>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#0ea5a4" />
+              </BarChart>
+            </ResponsiveContainer>
           </Card>
         )}
 
         {(isAdmin || isStock || isMagasinier) && (
-          <Card className="p-4 rounded-2xl shadow border">
+          <Card className="p-4">
             <h3 className="font-semibold mb-3">Stocks par magasin</h3>
-            <div className="h-[250px]">
-              <ResponsiveContainer>
-                <PieChart>
-                  <Pie data={pieMagasins} dataKey="value" nameKey="name" label>
-                    {pieMagasins.map((_, i) => (
-                      <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <ResponsiveContainer height={250}>
+              <PieChart>
+                <Pie data={pieMagasins} dataKey="value" nameKey="name" label>
+                  {pieMagasins.map((_, i) => (
+                    <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </Card>
         )}
       </div>
 
-      {/* ======================= TABLES ======================= */}
-      {(isAdmin || isRH) && (
-        <Card className="p-4 rounded-2xl shadow border mb-6">
-          <h3 className="font-semibold mb-3">Derniers congés</h3>
-          <table className="w-full text-sm">
-            <tbody>
-              {conges.slice(0, 5).map((c, i) => (
-                <tr key={i} className="border-b">
-                  <td>{c.employer?.nom_employer}</td>
-                  <td>{c.type_conge?.nom}</td>
-                  <td>
-                    <Badge variant={c.status_conge === "en_attente" ? "destructive" : "default"}>
-                      {c.status_conge}
-                    </Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      )}
-
+      {/* ================= TABLE ================= */}
       {(isAdmin || isStock || isMagasinier) && (
-        <Card className="p-4 rounded-2xl shadow border">
+        <Card className="p-4">
           <h3 className="font-semibold mb-3">Demandes d'achat</h3>
           <table className="w-full text-sm">
             <tbody>
