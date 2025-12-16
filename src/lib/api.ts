@@ -562,16 +562,8 @@ getDemandesRH: async () => fetchWithLog(`${API_BASE_URL}/rh/demandes/`, {
     method: "POST",
     headers: getHeaders(await ensureKongToken()),
   }),
-  getDashboardRH: async () => {
-    const response = await fetch(`${API_BASE_URL}/rh/dashboard-rh/`, {
-      headers: {
-        "Content-Type": "application/json",
-        // ajoute token si nécessaire
-      },
-    });
-    if (!response.ok) throw new Error("Erreur API RH");
-    return response.json();
-  },
+  getDashboard: async () => _call(`${API_BASE_URL}/rh/dashboard-rh/`),
+  getDemandes: async () => _call(`${API_BASE_URL}/rh/dashboard-rh/`).then(res => res.lists.demandes),
 
 
 };
@@ -966,9 +958,8 @@ getStocksAutresMagasinsRaw: async (articleId: string) => {
     return []; // tableau vide pour éviter crash frontend
   }
 },
-getDashboardStock: async () => {
-    return stockApi._call(`${API_BASE_URL}/stock/dashboard-stock/`);
-  },
+getDashboard: async () => _call(`${API_BASE_URL}/stock/dashboard-stock/`),
+getArticles: async () => _call(`${API_BASE_URL}/stock/dashboard-stock/`).then(res => res.stocks),
 
 };
 
