@@ -145,6 +145,7 @@ export default function Depenses() {
     (d.statut?.toLowerCase() || "").includes(searchTerm.toLowerCase())
   );
 
+
   if (loading) return <p className="p-8 text-center">Chargement...</p>;
 
   return (
