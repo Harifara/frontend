@@ -562,6 +562,9 @@ getDemandesRH: async () => fetchWithLog(`${API_BASE_URL}/rh/demandes/`, {
     method: "POST",
     headers: getHeaders(await ensureKongToken()),
   }),
+getDashboardRH: async () => {
+  return api.get("/rh/dashboard-rh/").then(res => res.data);
+},
 
 
 
