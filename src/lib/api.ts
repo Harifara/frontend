@@ -957,6 +957,9 @@ getStocksAutresMagasinsRaw: async (articleId: string) => {
     return []; // tableau vide pour éviter crash frontend
   }
 },
+getDashboardStock: async () => {
+    return stockApi._call(`${API_BASE_URL}/stock/dashboard-stock/`);
+  },
 
 };
 
