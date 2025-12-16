@@ -961,9 +961,16 @@ getStocksAutresMagasinsRaw: async (articleId: string) => {
     return []; // tableau vide pour éviter crash frontend
   }
 },
-getDashboardStock: async () => {
-    const res = await fetch(`${API_BASE_URL}/stock/dashboard-stock/`);
-    if (!res.ok) throw new Error("Erreur API");
+ getDashboardStock: async () => {
+    const token = localStorage.getItem("token"); // ou le nom que tu utilises
+    const res = await fetch(`${API_BASE_URL}/stock/dashboard-stock/`, {
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`, // <--- ici
+      },
+    });
+
+    if (!res.ok) throw new Error(`Erreur API: ${res.status}`);
     return res.json();
   },
 
