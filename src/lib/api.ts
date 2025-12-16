@@ -959,7 +959,7 @@ getStocksAutresMagasinsRaw: async (articleId: string) => {
   }
 },
 getDashboard: async () => _call(`${API_BASE_URL}/stock/dashboard-stock/`),
-getArticles: async () => _call(`${API_BASE_URL}/stock/dashboard-stock/`).then(res => res.stocks),
+
 
 };
 
