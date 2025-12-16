@@ -56,17 +56,29 @@ type DashboardRHResponse = {
 export default function DashboardRH() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardRHResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadDashboard();
   }, []);
 
   const loadDashboard = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const res = await rhApi.getDashboardRH();
+      if (!res || !res.kpi) {
+        throw new Error("Données invalides du dashboard RH");
+      }
+
+      // Conversion des montants en nombres pour éviter les problèmes d'affichage
+      res.kpi.montant_achats = Number(res.kpi.montant_achats || 0);
+      res.kpi.montant_payements = Number(res.kpi.montant_payements || 0);
+
       setData(res);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erreur dashboard RH", err);
+      setError(err.message || "Erreur lors du chargement du dashboard RH");
     } finally {
       setLoading(false);
     }
@@ -76,8 +88,12 @@ export default function DashboardRH() {
     return <div className="p-6">Chargement du dashboard RH...</div>;
   }
 
+  if (error) {
+    return <div className="p-6 text-red-600">Erreur: {error}</div>;
+  }
+
   if (!data) {
-    return <div className="p-6 text-red-600">Erreur chargement dashboard</div>;
+    return <div className="p-6 text-red-600">Pas de données disponibles</div>;
   }
 
   const { kpi } = data;
