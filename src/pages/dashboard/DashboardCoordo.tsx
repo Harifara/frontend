@@ -2,11 +2,10 @@
 import React, { useEffect, useState } from "react";
 import { cordoApi } from "@/lib/api";
 import KPICard from "@/components/dashboard/KPICard";
-import { ListChecks, FileText, CheckCircle, XCircle } from "lucide-react";
+import { ListChecks, FileText, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHead } from "@/components/ui/table";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_BADGES: Record<string, string> = {
@@ -27,9 +26,14 @@ export default function DashboardCoordonnateur() {
     try {
       const data = await cordoApi.getDashboard();
       setKpi(data.kpi);
-      setDecaissements(data.decaissements || []);
+      // 🔹 utiliser la bonne clé renvoyée par le backend
+      setDecaissements(data.decaissements_en_attente || []);
     } catch (err: any) {
-      toast({ title: "Erreur", description: err.message || "Impossible de charger le dashboard", variant: "destructive" });
+      toast({
+        title: "Erreur",
+        description: err.message || "Impossible de charger le dashboard",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -52,9 +56,9 @@ export default function DashboardCoordonnateur() {
       {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         <KPICard icon={ListChecks} label="Décaissements en attente" value={kpi?.en_attente || 0} />
-        <KPICard icon={CheckCircle} label="Décaissements approuvés" value={kpi?.approuve || 0} />
-        <KPICard icon={XCircle} label="Décaissements rejetés" value={kpi?.rejete || 0} />
-        <KPICard icon={FileText} label="Total décaissements" value={kpi?.total || 0} />
+        <KPICard icon={CheckCircle} label="Décaissements approuvés" value={kpi?.approuvees || 0} />
+        <KPICard icon={XCircle} label="Décaissements rejetés" value={kpi?.rejetees || 0} />
+        <KPICard icon={FileText} label="Total décaissements" value={kpi?.total_validations || 0} />
       </div>
 
       {/* Décaissements en attente */}
@@ -76,7 +80,7 @@ export default function DashboardCoordonnateur() {
             <TableBody>
               {decaissements.length ? decaissements.map(d => (
                 <TableRow key={d.id}>
-                  <TableCell>{d.reference}</TableCell>
+                  <TableCell>{d.reference || d.id}</TableCell>
                   <TableCell>{Number(d.montant_total || 0).toLocaleString()} Ar</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
@@ -92,7 +96,9 @@ export default function DashboardCoordonnateur() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-6">Aucun décaissement en attente</TableCell>
+                  <TableCell colSpan={5} className="text-center py-6">
+                    Aucun décaissement en attente
+                  </TableCell>
                 </TableRow>
               )}
             </TableBody>
