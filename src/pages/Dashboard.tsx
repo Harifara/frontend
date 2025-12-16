@@ -222,6 +222,7 @@ export default function Dashboard() {
             <KPICard Icon={ClipboardList} label="Congés en attente" value={pendingCongesCount} sub={`${congesCount} total`} />
             <KPICard Icon={ListChecks} label="Affectations" value={affectationsCount} sub="Mouvements récents" />
             <KPICard Icon={FileText} label="Contrats" value={contratsCount} sub="Contrats enregistrés" />
+            <KPICard Icon={FileText} label="Demandes" value={demandesCount} sub="Demandes enregistrées" />
           </>
         )}
         {(isAdmin || isStock || isMagasinier) && (
