@@ -18,10 +18,46 @@ import {
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.jpg";
 
+// ✅ Définition correcte : navigation est bien un tableau
+const navigation = [
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin","responsable_rh","responsable_stock","responsable_finance","magasinier","coordinateur"] },
+  { name: "Utilisateurs", href: "/users", icon: Users, roles: ["admin"] },
+  { name: "Logs d'audit", href: "/audit-logs", icon: FileSearch, roles: ["admin"] },
+  {
+    name: "Localisation",
+    icon: MapPin,
+    roles: ["responsable_rh"],
+    items: [
+      { name: "Districts", href: "/rh/districts", icon: MapPin, roles: ["responsable_rh"] },
+      { name: "Communes", href: "/rh/communes", icon: MapPin, roles: ["responsable_rh"] },
+      { name: "Fokontanys", href: "/rh/fokontanys", icon: MapPin, roles: ["responsable_rh"] },
+    ],
+  },
+  { name: "Fonctions", href: "/rh/fonctions", icon: FileText, roles: ["responsable_rh"] },
+  { name: "Employés", href: "/rh/employes", icon: Users, roles: ["responsable_rh"] },
+  {
+    name: "Contrats",
+    icon: FileText,
+    roles: ["responsable_rh"],
+    items: [
+      { name: "Types de contrats", href: "/rh/type-contrats", icon: FileText, roles: ["responsable_rh"] },
+      { name: "Contrats", href: "/rh/contrats", icon: FileText, roles: ["responsable_rh"] },
+    ],
+  },
+  { name: "Magasins", href: "/stock/magasins", icon: Warehouse, roles: ["responsable_stock"] },
+  { name: "Articles", href: "/stock/articles", icon: ClipboardList, roles: ["responsable_stock"] },
+  { name: "Gestion de stock", href: "/stock/gestion-stock", icon: ClipboardList, roles: ["responsable_stock","magasinier"] },
+  { name: "Mouvements de stock", href: "/stock/mouvement-stock", icon: ClipboardList, roles: ["responsable_stock","magasinier"] },
+  { name: "Demandes de réapprovisionnement", href: "/stock/demandes-reappro", icon: ClipboardList, roles: ["responsable_stock","magasinier"] },
+  { name: "Demandes d'achat", href: "/stock/demandes-achat", icon: ClipboardList, roles: ["responsable_stock"] },
+  { name: "Dépenses", href: "/finance/depenses", icon: ClipboardList, roles: ["responsable_finance"] },
+  { name: "Demandes de décaissement", href: "/finance/demandes-decaissement", icon: ClipboardList, roles: ["responsable_finance"] },
+  { name: "Validations Coordo", href: "/cordinator/ValidationsCoordo", icon: ClipboardList, roles: ["coordinateur"] },
+];
+
 // Fonction pour initiales utilisateur
 const getInitials = (user: any) => {
-  if (user?.full_name)
-    return user.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
+  if (user?.full_name) return user.full_name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
   return user?.username?.slice(0, 2).toUpperCase() || "";
 };
 
@@ -41,7 +77,7 @@ export const Sidebar = () => {
   };
 
   return (
-    <aside className="fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white shadow-xl z-50 flex flex-col backdrop-blur-md">
+    <aside className="fixed inset-y-0 left-0 w-64 bg-gradient-to-b from-gray-900 to-gray-800 text-white shadow-xl z-50 flex flex-col">
       {/* Logo */}
       <div className="flex flex-col items-center justify-center h-28 px-4 border-b border-gray-700">
         <div className="w-16 h-16 rounded-full overflow-hidden shadow-lg flex items-center justify-center bg-white">
@@ -66,7 +102,7 @@ export const Sidebar = () => {
                   {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {isOpen && (
-                  <div className="pl-8 space-y-1 transition-all duration-300">
+                  <div className="pl-8 space-y-1">
                     {item.items.filter(sub => sub.roles.includes(user.role)).map(sub => {
                       const isActive = location.pathname === sub.href;
                       return (
