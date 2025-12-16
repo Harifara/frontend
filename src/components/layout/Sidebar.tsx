@@ -18,7 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.jpg";
 
-// ✅ Définition correcte : navigation est bien un tableau
+// ✅ Navigation bien défini comme tableau
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin","responsable_rh","responsable_stock","responsable_finance","magasinier","coordinateur"] },
   { name: "Utilisateurs", href: "/users", icon: Users, roles: ["admin"] },
@@ -95,14 +95,14 @@ export const Sidebar = () => {
               <div key={item.name} className="space-y-1">
                 <button
                   onClick={() => toggleDropdown(item.name)}
-                  className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:bg-gray-700/50"
+                  className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300 hover:bg-gray-700/50"
                 >
                   <item.icon className="w-5 h-5 mr-3 text-green-400" />
                   <span className="flex-1 text-left">{item.name}</span>
                   {isOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                 </button>
                 {isOpen && (
-                  <div className="pl-8 space-y-1">
+                  <div className="pl-8 space-y-1 transition-all duration-300">
                     {item.items.filter(sub => sub.roles.includes(user.role)).map(sub => {
                       const isActive = location.pathname === sub.href;
                       return (
@@ -110,7 +110,7 @@ export const Sidebar = () => {
                           key={sub.name}
                           to={sub.href}
                           className={cn(
-                            "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200",
+                            "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300",
                             isActive
                               ? "bg-green-600 text-white shadow-md"
                               : "hover:bg-gray-700/40 text-gray-300"
@@ -133,7 +133,7 @@ export const Sidebar = () => {
               key={item.name}
               to={item.href}
               className={cn(
-                "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200",
+                "flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-300",
                 isActive
                   ? "bg-green-600 text-white shadow-md"
                   : "hover:bg-gray-700/40 text-gray-300"
