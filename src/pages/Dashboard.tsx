@@ -46,7 +46,7 @@ const KPICard = ({ Icon, label, value, sub }: any) => (
       <Icon className="w-8 h-8 text-slate-700" />
       <div>
         <div className="text-xl font-semibold">{value}</div>
-        {sub ? <div className="text-sm text-gray-500">{sub}</div> : <div className="text-sm text-gray-500">{label}</div>}
+        <div className="text-sm text-gray-500">{sub || label}</div>
       </div>
     </div>
   </Card>
@@ -55,11 +55,7 @@ const KPICard = ({ Icon, label, value, sub }: any) => (
 /* ----- format helper ----- */
 const formatDate = (iso?: string) => {
   if (!iso) return "-";
-  try {
-    return iso.slice(0, 10);
-  } catch {
-    return iso;
-  }
+  return iso.slice(0, 10);
 };
 
 /* ----- main component ----- */
@@ -73,19 +69,19 @@ export default function Dashboard() {
   const isMagasinier = role === "magasinier";
 
   /* ====== STATES ====== */
-  const [employeesCount, setEmployeesCount] = useState<number>(0);
-  const [employes, setEmployes] = useState<any[]>([]); // <-- state ajouté pour les filtres sexe
-  const [districtsCount, setDistrictsCount] = useState<number>(0);
-  const [communesCount, setCommunesCount] = useState<number>(0);
-  const [fokontanyCount, setFokontanyCount] = useState<number>(0);
-  const [affectationsCount, setAffectationsCount] = useState<number>(0);
-  const [congesCount, setCongesCount] = useState<number>(0);
-  const [pendingCongesCount, setPendingCongesCount] = useState<number>(0);
-  const [contratsCount, setContratsCount] = useState<number>(0);
-  const [locationsCount, setLocationsCount] = useState<number>(0);
-  const [paymentsCount, setPaymentsCount] = useState<number>(0);
-  const [achatsCount, setAchatsCount] = useState<number>(0);
-  const [demandesCount, setDemandesCount] = useState<number>(0);
+  const [employeesCount, setEmployeesCount] = useState(0);
+  const [employes, setEmployes] = useState<any[]>([]);
+  const [districtsCount, setDistrictsCount] = useState(0);
+  const [communesCount, setCommunesCount] = useState(0);
+  const [fokontanyCount, setFokontanyCount] = useState(0);
+  const [affectationsCount, setAffectationsCount] = useState(0);
+  const [congesCount, setCongesCount] = useState(0);
+  const [pendingCongesCount, setPendingCongesCount] = useState(0);
+  const [contratsCount, setContratsCount] = useState(0);
+  const [locationsCount, setLocationsCount] = useState(0);
+  const [paymentsCount, setPaymentsCount] = useState(0);
+  const [achatsCount, setAchatsCount] = useState(0);
+  const [demandesCount, setDemandesCount] = useState(0);
 
   const [recentAffectations, setRecentAffectations] = useState<any[]>([]);
   const [recentConges, setRecentConges] = useState<any[]>([]);
@@ -108,7 +104,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadAll = async () => {
@@ -149,15 +144,18 @@ export default function Dashboard() {
       ]);
 
       const emp = normalize(employesRes);
-      setEmployes(emp); // <-- set dans state
+      const conges = normalize(congesRes);
+      const decaissements = normalize(financeDecaissementsRes);
+      const validations = normalize(cordoValidationsRes);
+
+      setEmployes(emp);
       setEmployeesCount(emp.length);
       setDistrictsCount(normalize(districtsRes).length);
       setCommunesCount(normalize(communesRes).length);
       setFokontanyCount(normalize(fokosRes).length);
       setAffectationsCount(normalize(affectRes).length);
-      const conges = normalize(congesRes);
       setCongesCount(conges.length);
-      setPendingCongesCount(conges.filter((c: any) => (c.status_conge || c.status || "").toString().toLowerCase().includes("attente")).length);
+      setPendingCongesCount(conges.filter(c => (c.status_conge || c.status || "").toLowerCase().includes("attente")).length);
       setContratsCount(normalize(contratsRes).length);
       setLocationsCount(normalize(locationsRes).length);
       setPaymentsCount(normalize(payementsRes).length);
@@ -176,42 +174,26 @@ export default function Dashboard() {
         { name: "May", employees: total },
       ]);
 
-      setStockStats({ articles: normalize(stockArticlesRes).length || 48, demandesAchat: normalize(stockDemandesAchatRes).length || 12, ruptures: 5 });
+      setStockStats({
+        articles: normalize(stockArticlesRes).length || 48,
+        demandesAchat: normalize(stockDemandesAchatRes).length || 12,
+        ruptures: 5,
+      });
 
-      const decaissements = normalize(financeDecaissementsRes);
       setFinanceStats({
         decaissements: decaissements.length || 14,
-        valides: decaissements.filter((d: any) => (d.status || "").toLowerCase() === "valide").length || 8,
-        enAttente: decaissements.filter((d: any) => ((d.status || "").toLowerCase().includes("attente") || (d.status || "").toLowerCase().includes("non_envoy"))).length || 4,
-        rejetes: decaissements.filter((d: any) => (d.status || "").toLowerCase() === "rejete").length || 2,
+        valides: decaissements.filter(d => (d.status || "").toLowerCase() === "valide").length || 8,
+        enAttente: decaissements.filter(d => ["attente", "non_envoy"].some(s => (d.status || "").toLowerCase().includes(s))).length || 4,
+        rejetes: decaissements.filter(d => (d.status || "").toLowerCase() === "rejete").length || 2,
       });
 
-      const validations = normalize(cordoValidationsRes);
       setCordoStats({
         validations: validations.length || 7,
-        aTraiter: validations.filter((v: any) => (v.decision || "").toLowerCase() === "non_traite").length || 2,
+        aTraiter: validations.filter(v => (v.decision || "").toLowerCase() === "non_traite").length || 2,
       });
+
     } catch (err) {
       console.error("Erreur loadAll :", err);
-      setEmployes([]);
-      setEmployeesCount(0);
-      setDistrictsCount(0);
-      setCommunesCount(0);
-      setFokontanyCount(0);
-      setAffectationsCount(0);
-      setCongesCount(0);
-      setPendingCongesCount(0);
-      setContratsCount(0);
-      setLocationsCount(0);
-      setPaymentsCount(0);
-      setAchatsCount(0);
-      setDemandesCount(0);
-      setRecentAffectations([]);
-      setRecentConges([]);
-      setEmployeeEvolution([]);
-      setStockStats({ articles: 48, demandesAchat: 12, ruptures: 5 });
-      setFinanceStats({ decaissements: 14, valides: 8, enAttente: 4, rejetes: 2 });
-      setCordoStats({ validations: 7, aTraiter: 2 });
     } finally {
       setLoading(false);
     }
@@ -219,7 +201,9 @@ export default function Dashboard() {
 
   return (
     <div className="p-6 flex-1 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold text-gray-800 mb-4">Bonjour, {user?.full_name || user?.username || "Utilisateur"}</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-4">
+        Bonjour, {user?.full_name || user?.username || "Utilisateur"}
+      </h1>
 
       {/* Role badges */}
       <div className="flex items-center gap-3 mb-6">
@@ -246,16 +230,14 @@ export default function Dashboard() {
             <KPICard Icon={Map} label="Demandes d'achat" value={stockStats.demandesAchat} sub="En cours / à valider" />
           </>
         )}
-        {(isAdmin || role === "responsable_finance" || role === "finance") && (
+        {(isAdmin || ["responsable_finance", "finance"].includes(role || "")) && (
           <>
             <KPICard Icon={CreditCard} label="Décaissements" value={financeStats.decaissements} sub={`${financeStats.valides} validés`} />
             <KPICard Icon={Building} label="Paiements" value={paymentsCount} sub="Transactions" />
           </>
         )}
-        {(isAdmin || role === "coordinateur" || role === "coordo") && (
-          <>
-            <KPICard Icon={AlertCircle} label="Validations Coordo" value={coordoStats.validations} sub={`${coordoStats.aTraiter} à traiter`} />
-          </>
+        {(isAdmin || ["coordinateur", "coordo"].includes(role || "")) && (
+          <KPICard Icon={AlertCircle} label="Validations Coordo" value={coordoStats.validations} sub={`${coordoStats.aTraiter} à traiter`} />
         )}
       </div>
 
@@ -309,9 +291,7 @@ export default function Dashboard() {
                     outerRadius={80}
                     label
                   >
-                    <Cell fill={CHART_COLORS[0]} />
-                    <Cell fill={CHART_COLORS[1]} />
-                    <Cell fill={CHART_COLORS[2]} />
+                    {CHART_COLORS.map((color, idx) => <Cell key={idx} fill={color} />)}
                   </Pie>
                   <Tooltip />
                 </PieChart>
