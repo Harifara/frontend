@@ -1,41 +1,34 @@
 import { useEffect, useState } from "react";
 import { financeApi } from "@/lib/api";
 import KPICard from "@/components/dashboard/KPICard";
-import { CreditCard, CheckCircle, XCircle, Clock } from "lucide-react";
+import { CreditCard, DollarSign, FileText, ListChecks } from "lucide-react";
 
 export default function DashboardFinance() {
-  const [stats, setStats] = useState({
-    total: 0,
-    attente: 0,
-    valide: 0,
-    rejete: 0,
-  });
+  const [kpi, setKpi] = useState<any>(null);
 
   useEffect(() => {
-    load();
+    loadDashboard();
   }, []);
 
-  const load = async () => {
-    const res = await financeApi.getDecaissements();
-    const d = res.results;
-
-    setStats({
-      total: d.length,
-      attente: d.filter(x => x.status === "attente").length,
-      valide: d.filter(x => x.status === "valide").length,
-      rejete: d.filter(x => x.status === "rejete").length,
-    });
+  const loadDashboard = async () => {
+    try {
+      const res = await financeApi.getDashboardFinance();
+      setKpi(res.kpi);
+    } catch (err) {
+      console.error("Erreur dashboard finance", err);
+    }
   };
 
-  return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Dashboard Finance</h1>
+  if (!kpi) return <div className="p-6">Chargement du dashboard Finance...</div>;
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <KPICard icon={CreditCard} label="Total" value={stats.total} />
-        <KPICard icon={Clock} label="En attente" value={stats.attente} />
-        <KPICard icon={CheckCircle} label="Validés" value={stats.valide} />
-        <KPICard icon={XCircle} label="Rejetés" value={stats.rejete} />
+  return (
+    <div className="p-6 space-y-6">
+      <h1 className="text-2xl font-bold mb-4">Dashboard Finance</h1>
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <KPICard icon={DollarSign} label="Décaissements total" value={kpi.decaissements_total} />
+        <KPICard icon={ListChecks} label="En attente" value={kpi.en_attente} />
+        <KPICard icon={FileText} label="Approuvés" value={kpi.approuve} />
+        <KPICard icon={CreditCard} label="Montant total dépensé" value={kpi.montant_total_depense} />
       </div>
     </div>
   );

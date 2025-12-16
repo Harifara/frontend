@@ -1062,6 +1062,12 @@ export const financeApi = {
     headers: getHeaders(token),
   });
 },
+getDashboardFinance: async (): Promise<any> => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/finance/dashboard-finance/`, {
+      headers: getHeaders(token),
+    });
+  },
 
 };
 
