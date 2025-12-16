@@ -136,7 +136,7 @@ export default function Dashboard() {
         rhApi.getLocations().catch(() => ({ results: [] })),
         rhApi.getPayements?.().catch(() => ({ results: [] })),
         rhApi.getAchats().catch(() => ({ results: [] })),
-        rhApi.getDemandes().catch(() => ({ results: [] }))
+        rhApi.getDemandes().catch(() => ({ results: [] })),
         stockApi.getArticles?.().catch(() => ({ results: [] })),
         stockApi.getDemandesAchat?.().catch(() => ({ results: [] })),
         financeApi.getDecaissements?.().catch(() => ({ results: [] })),
