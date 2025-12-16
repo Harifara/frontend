@@ -27,10 +27,9 @@ export default function DashboardStock() {
     setError(null);
 
     try {
-      // Appelle l'API /dashboard-stock
-      const res = await stockApi.getDashboardStock();
+      // ⚡ Utilise le bon endpoint corrigé
+      const res = await stockApi.getDashboardStock?.() || await stockApi.getDashboard();
 
-      // Vérifie que la réponse contient bien les KPI
       if (!res || !res.kpi) {
         throw new Error("Réponse API invalide");
       }
