@@ -33,15 +33,14 @@ export default function DecaissementsRecus() {
   const [commentaires, setCommentaires] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState<Record<string, boolean>>({});
 
-  // 🔹 Récupération des décaissements depuis l'API
   const fetchDecaissements = async () => {
     setLoading(true);
     try {
       const res = await financeApi.getDecaissements();
       const list = res.results || res;
-      setDecaissements(list); // afficher tous les décaissements
+      setDecaissements(list); // 🔹 récupérer tous les décaissements, pas seulement "en attente"
     } catch (err) {
-      console.error("Erreur lors de la récupération des décaissements :", err);
+      console.error(err);
       toast({ title: "Erreur", description: "Chargement impossible", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -50,7 +49,6 @@ export default function DecaissementsRecus() {
 
   useEffect(() => { fetchDecaissements(); }, []);
 
-  // 🔹 Validation ou rejet d'un décaissement
   const handleDecision = async (id: string, decision: "approuve" | "rejete") => {
     setSubmitting(prev => ({ ...prev, [id]: true }));
     try {
@@ -59,26 +57,26 @@ export default function DecaissementsRecus() {
         decision,
         commentaire: commentaires[id] || "",
       };
-      const response = await cordoApi.createValidation(payload);
+      await cordoApi.createValidation(payload);
 
       toast({
         title: "Succès",
         description: `Décaissement ${decision === "approuve" ? "approuvé" : "rejeté"}`
       });
 
-      // 🔹 Mettre à jour le statut du décaissement dans le tableau
+      // 🔹 mettre à jour le statut en front
       setDecaissements(prev =>
         prev.map(d => d.id === id 
           ? { 
               ...d, 
               statut: decision === "approuve" ? "valide" : "rejete",
-              date_decaissement: decision === "approuve" ? new Date().toISOString() : d.date_decaissement
+              date_decaissement: new Date().toISOString()
             } 
           : d
         )
       );
     } catch (err: any) {
-      console.error("Erreur lors de la validation :", err);
+      console.error(err);
       toast({
         title: "Erreur",
         description: err?.response?.data?.detail || err?.message || "Action échouée",
@@ -89,13 +87,7 @@ export default function DecaissementsRecus() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center p-8">
-        <Loader2 className="animate-spin w-8 h-8" />
-      </div>
-    );
-  }
+  if (loading) return <div className="flex justify-center p-8"><Loader2 className="animate-spin w-8 h-8" /></div>;
 
   return (
     <div className="p-8 space-y-6">
