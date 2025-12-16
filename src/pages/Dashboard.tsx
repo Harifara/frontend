@@ -6,16 +6,14 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
   BarChart,
   Bar,
   PieChart,
   Pie,
   Cell,
+  XAxis,
+  YAxis,
+  Tooltip,
 } from "recharts";
 
 const CHART_COLORS = ["#0ea5a4", "#06b6d4", "#f59e0b", "#ef4444", "#6366f1"];
@@ -36,13 +34,13 @@ const KPICard: React.FC<KPICardProps> = ({ label, value, sub, color = "bg-white"
   </Card>
 );
 
-const formatDate = (iso?: string) => iso?.slice(0, 10) ?? "-";
-
 export default function DashboardStock() {
   const [kpi, setKpi] = useState<any>({});
   const [stocks, setStocks] = useState<any[]>([]);
   const [demandesReappro, setDemandesReappro] = useState<any[]>([]);
   const [demandesAchat, setDemandesAchat] = useState<any[]>([]);
+  const [entreesStock, setEntreesStock] = useState<any[]>([]);
+  const [sortiesStock, setSortiesStock] = useState<any[]>([]);
 
   useEffect(() => {
     loadDashboard();
@@ -55,12 +53,14 @@ export default function DashboardStock() {
       setStocks(res.stocks ?? []);
       setDemandesReappro(res.demandes_reappro ?? []);
       setDemandesAchat(res.demandes_achat ?? []);
+      setEntreesStock(res.mouvements?.entrees ?? []);
+      setSortiesStock(res.mouvements?.sorties ?? []);
     } catch (err) {
       console.error("Erreur dashboard stock :", err);
     }
   };
 
-  // ----- Charts data -----
+  // ----- Charts -----
   const pieMagasins = stocks.reduce((acc: any[], s) => {
     const idx = acc.findIndex(a => a.name === s.magasin?.nom);
     if (idx >= 0) acc[idx].value += s.quantite;
@@ -82,6 +82,16 @@ export default function DashboardStock() {
   }, {});
   const barRuptures = Object.entries(rupturesParCategorie).map(([name, value]) => ({ name, value }));
 
+  const barEntrees = entreesStock.map(e => ({
+    article: e.article?.nom ?? "-",
+    quantite: e.quantite,
+  }));
+
+  const barSorties = sortiesStock.map(s => ({
+    article: s.article?.nom ?? "-",
+    quantite: s.quantite,
+  }));
+
   return (
     <div className="p-6 flex-1 bg-gray-50 min-h-screen">
       <h1 className="text-3xl font-bold text-gray-800 mb-4">Dashboard Stock</h1>
@@ -93,23 +103,18 @@ export default function DashboardStock() {
         <KPICard label="Demandes réappro en attente" value={kpi.demandes_reappro_en_attente} color="bg-yellow-50" />
         <KPICard label="Transferts en attente" value={kpi.transferts_en_attente} color="bg-blue-50" />
         <KPICard label="Demandes d'achat en attente" value={kpi.demandes_achat_en_attente} color="bg-cyan-50" />
+        <KPICard label="Total entrées" value={kpi.total_entrees} color="bg-green-50" />
+        <KPICard label="Total sorties" value={kpi.total_sorties} color="bg-pink-50" />
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* Répartition par magasin */}
         <Card className="p-4 shadow rounded-2xl border">
           <h3 className="font-semibold mb-3">Répartition des stocks par magasin</h3>
           <div style={{ width: "100%", height: 250 }}>
             <ResponsiveContainer>
               <PieChart>
-                <Pie
-                  data={pieMagasins}
-                  dataKey="value"
-                  nameKey="name"
-                  outerRadius={80}
-                  label
-                >
+                <Pie data={pieMagasins} dataKey="value" nameKey="name" outerRadius={80} label>
                   {pieMagasins.map((_, idx) => (
                     <Cell key={idx} fill={CHART_COLORS[idx % CHART_COLORS.length]} />
                   ))}
@@ -120,7 +125,6 @@ export default function DashboardStock() {
           </div>
         </Card>
 
-        {/* Demandes réappro */}
         <Card className="p-4 shadow rounded-2xl border">
           <h3 className="font-semibold mb-3">Top 10 demandes réappro</h3>
           <div style={{ width: "100%", height: 250 }}>
@@ -135,7 +139,6 @@ export default function DashboardStock() {
           </div>
         </Card>
 
-        {/* Articles en rupture par catégorie */}
         <Card className="p-4 shadow rounded-2xl border">
           <h3 className="font-semibold mb-3">Articles en rupture par catégorie</h3>
           <div style={{ width: "100%", height: 250 }}>
@@ -145,6 +148,37 @@ export default function DashboardStock() {
                 <YAxis stroke="#4b5563" />
                 <Tooltip />
                 <Bar dataKey="value" fill="#ef4444" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      </div>
+
+      {/* Entrées / Sorties Stock */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <Card className="p-4 shadow rounded-2xl border">
+          <h3 className="font-semibold mb-3">Dernières entrées</h3>
+          <div style={{ width: "100%", height: 250 }}>
+            <ResponsiveContainer>
+              <BarChart data={barEntrees}>
+                <XAxis dataKey="article" stroke="#4b5563" />
+                <YAxis stroke="#4b5563" />
+                <Tooltip />
+                <Bar dataKey="quantite" fill="#22c55e" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+
+        <Card className="p-4 shadow rounded-2xl border">
+          <h3 className="font-semibold mb-3">Dernières sorties</h3>
+          <div style={{ width: "100%", height: 250 }}>
+            <ResponsiveContainer>
+              <BarChart data={barSorties}>
+                <XAxis dataKey="article" stroke="#4b5563" />
+                <YAxis stroke="#4b5563" />
+                <Tooltip />
+                <Bar dataKey="quantite" fill="#ef4444" />
               </BarChart>
             </ResponsiveContainer>
           </div>
