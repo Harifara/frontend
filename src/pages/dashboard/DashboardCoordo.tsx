@@ -1,3 +1,4 @@
+// src/pages/coordonnateur/Dashboard.tsx
 import React, { useEffect, useState } from "react";
 import { cordoApi } from "@/lib/api";
 import KPICard from "@/components/dashboard/KPICard";
@@ -26,7 +27,7 @@ export default function DashboardCoordonnateur() {
     try {
       const data = await cordoApi.getDashboard();
       setKpi(data.kpi);
-      setDecaissements(data.decaissements_en_attente || []);
+      setDecaissements(data.decaissements || []);
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Impossible de charger le dashboard", variant: "destructive" });
     } finally {
@@ -51,9 +52,9 @@ export default function DashboardCoordonnateur() {
       {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         <KPICard icon={ListChecks} label="Décaissements en attente" value={kpi?.en_attente || 0} />
-        <KPICard icon={CheckCircle} label="Décaissements approuvés" value={kpi?.approuvees || 0} />
-        <KPICard icon={XCircle} label="Décaissements rejetés" value={kpi?.rejetees || 0} />
-        <KPICard icon={FileText} label="Total décaissements" value={kpi?.total_validations || 0} />
+        <KPICard icon={CheckCircle} label="Décaissements approuvés" value={kpi?.approuve || 0} />
+        <KPICard icon={XCircle} label="Décaissements rejetés" value={kpi?.rejete || 0} />
+        <KPICard icon={FileText} label="Total décaissements" value={kpi?.total || 0} />
       </div>
 
       {/* Décaissements en attente */}
