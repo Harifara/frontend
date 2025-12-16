@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
-import { useAuth } from "@/hooks/useAuth";
+import { AuthContext } from "@/contexts/AuthContext";
 
 import { rhApi, stockApi } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
