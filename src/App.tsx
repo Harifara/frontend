@@ -11,6 +11,11 @@ import DashboardLayout from "./components/layout/DashboardLayout";
 // Pages principales
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
+import DashboardRH from "./pages/dashboard/DashboardRH";
+import DashboardStock from "./pages/dashboard/DashboardStock";
+import DashboardFinance from "./pages/dashboard/DashboardFinance";
+import DashboardCoordo from "./pages/dashboard/DashboardCoordo";
+import DashboardAdmin from "./pages/dashboard/DashboardAdmin";
 import Users from "./pages/Users";
 import AuditLogs from "./pages/AuditLogs";
 import NotFound from "./pages/NotFound";
@@ -96,6 +101,11 @@ const App = () => (
             >
               {/* Dashboard */}
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/dashboard/rh" element={<DashboardRH />} />
+              <Route path="/dashboard/stock" element={<DashboardStock />} />
+              <Route path="/dashboard/finance" element={<DashboardFinance />} />
+              <Route path="/dashboard/coordo" element={<DashboardCoordo />} />
+              <Route path="/dashboard/admin" element={<DashboardAdmin />} />
 
               {/* Utilisateurs & Logs */}
               <Route path="/users" element={<Users />} />
