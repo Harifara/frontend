@@ -298,37 +298,7 @@ export default function DashboardStock() {
       </div>
 
       {/* Entrées / Sorties Stock */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        <Card className="p-4 rounded-2xl border shadow-sm bg-white/70 dark:bg-gray-900/60 backdrop-blur-md">
-          <h3 className="font-semibold mb-3 text-gray-800 dark:text-gray-100">Dernières entrées</h3>
-          <div style={{ width: "100%", height: 260 }}>
-            <ResponsiveContainer>
-              <BarChart data={barEntrees}>
-                <XAxis dataKey="article" stroke="#6b7280" tick={{ fill: "#6b7280" }} />
-                <YAxis stroke="#6b7280" tick={{ fill: "#6b7280" }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar dataKey="quantite" name="Quantité" fill="#22c55e" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        <Card className="p-4 rounded-2xl border shadow-sm bg-white/70 dark:bg-gray-900/60 backdrop-blur-md">
-          <h3 className="font-semibold mb-3 text-gray-800 dark:text-gray-100">Dernières sorties</h3>
-          <div style={{ width: "100%", height: 260 }}>
-            <ResponsiveContainer>
-              <BarChart data={barSorties}>
-                <XAxis dataKey="article" stroke="#6b7280" tick={{ fill: "#6b7280" }} />
-                <YAxis stroke="#6b7280" tick={{ fill: "#6b7280" }} />
-                <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Bar dataKey="quantite" name="Quantité" fill="#ef4444" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-      </div>
+     
 
       {/* Listes */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
