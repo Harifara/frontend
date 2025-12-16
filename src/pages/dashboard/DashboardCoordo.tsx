@@ -1,4 +1,3 @@
-// src/pages/coordonnateur/Dashboard.tsx
 import React, { useEffect, useState } from "react";
 import { cordoApi } from "@/lib/api";
 import KPICard from "@/components/dashboard/KPICard";
@@ -12,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 const STATUS_BADGES: Record<string, string> = {
   brouillon: "bg-gray-100 text-gray-800",
   en_attente_coordonnateur: "bg-yellow-100 text-yellow-800",
-  approuve: "bg-green-100 text-green-800",
+  valide: "bg-green-100 text-green-800",
   rejete: "bg-red-100 text-red-800",
 };
 
@@ -27,7 +26,7 @@ export default function DashboardCoordonnateur() {
     try {
       const data = await cordoApi.getDashboard();
       setKpi(data.kpi);
-      setDecaissements(data.decaissements || []);
+      setDecaissements(data.decaissements_en_attente || []);
     } catch (err: any) {
       toast({ title: "Erreur", description: err.message || "Impossible de charger le dashboard", variant: "destructive" });
     } finally {
@@ -52,9 +51,9 @@ export default function DashboardCoordonnateur() {
       {/* KPI */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         <KPICard icon={ListChecks} label="Décaissements en attente" value={kpi?.en_attente || 0} />
-        <KPICard icon={CheckCircle} label="Décaissements approuvés" value={kpi?.approuve || 0} />
-        <KPICard icon={XCircle} label="Décaissements rejetés" value={kpi?.rejete || 0} />
-        <KPICard icon={FileText} label="Total décaissements" value={kpi?.total || 0} />
+        <KPICard icon={CheckCircle} label="Décaissements approuvés" value={kpi?.approuvees || 0} />
+        <KPICard icon={XCircle} label="Décaissements rejetés" value={kpi?.rejetees || 0} />
+        <KPICard icon={FileText} label="Total décaissements" value={kpi?.total_validations || 0} />
       </div>
 
       {/* Décaissements en attente */}
@@ -80,7 +79,7 @@ export default function DashboardCoordonnateur() {
                   <TableCell>{Number(d.montant_total || 0).toLocaleString()} Ar</TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
-                      {d.statut}
+                      {d.statut === "valide" ? "Validé" : d.statut === "rejete" ? "Rejeté" : "En attente"}
                     </span>
                   </TableCell>
                   <TableCell>{new Date(d.date_creation).toLocaleString()}</TableCell>
