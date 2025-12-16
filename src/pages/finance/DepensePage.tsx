@@ -13,9 +13,9 @@ import { createPDFDoc } from "@/lib/pdfTemplate";
 
 interface Depense {
   id?: string;
-  numero: string;
-  description: string;
   montant: number;
+  mode_paiement: string;
+  date_depense: string;
   statut: string;
 }
 
@@ -27,34 +27,16 @@ export default function Depenses() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedIdToDelete, setSelectedIdToDelete] = useState<string | null>(null);
   const [editing, setEditing] = useState<Depense | null>(null);
-  const [form, setForm] = useState<Depense>({
-    numero: "",
-    description: "",
-    montant: 0,
-    statut: "en_attente",
-  });
+  const [form, setForm] = useState<Depense>({ montant: 0, mode_paiement: "", date_depense: "", statut: "en_attente" });
   const { toast } = useToast();
 
-  // Charger les dépenses depuis l'API
   const fetchData = async () => {
     setLoading(true);
     try {
       const data = await financeApi.getDepenses();
-      // Mapper les données pour garantir que tous les champs existent
-      const mappedData = data.map((d: any) => ({
-        id: d.id,
-        numero: d.reference || "",
-        description: d.description || "",
-        montant: d.montant || 0,
-        statut: d.statut || "en_attente",
-      }));
-      setDepenses(mappedData);
+      setDepenses(data);
     } catch (err: any) {
-      toast({
-        title: "Erreur",
-        description: err.message || "Impossible de charger les dépenses.",
-        variant: "destructive",
-      });
+      toast({ title: "Erreur", description: err.message || "Impossible de charger les dépenses.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -66,7 +48,7 @@ export default function Depenses() {
 
   const openAddModal = () => {
     setEditing(null);
-    setForm({ numero: "", description: "", montant: 0, statut: "en_attente" });
+    setForm({ montant: 0, mode_paiement: "", date_depense: "", statut: "en_attente" });
     setIsModalOpen(true);
   };
 
@@ -82,14 +64,9 @@ export default function Depenses() {
   };
 
   const handleSubmit = async () => {
-    if (!form.numero || !form.description || !form.montant) {
-      return toast({
-        title: "Champs manquants",
-        description: "Veuillez remplir tous les champs.",
-        variant: "destructive",
-      });
+    if (!form.mode_paiement || !form.date_depense || !form.montant) {
+      return toast({ title: "Champs manquants", description: "Veuillez remplir tous les champs.", variant: "destructive" });
     }
-
     try {
       if (editing?.id) {
         await financeApi.updateDepense(editing.id, form);
@@ -120,31 +97,28 @@ export default function Depenses() {
   };
 
   const exportPDF = async () => {
-    const data = depenses.map(d => [d.numero, d.description, d.montant, d.statut]);
-    await createPDFDoc("Liste des Dépenses", data, ["Numéro", "Description", "Montant", "Statut"], "depenses.pdf");
+    const data = depenses.map(d => [d.id, d.montant, d.mode_paiement, new Date(d.date_depense).toLocaleDateString(), d.statut]);
+    await createPDFDoc("Liste des Dépenses", data, ["ID", "Montant", "Mode Paiement", "Date", "Statut"], "depenses.pdf");
   };
 
   const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(
-      depenses.map(d => ({
-        Numéro: d.numero,
-        Description: d.description,
-        Montant: d.montant,
-        Statut: d.statut,
-      }))
-    );
+    const ws = XLSX.utils.json_to_sheet(depenses.map(d => ({
+      ID: d.id,
+      Montant: d.montant,
+      "Mode Paiement": d.mode_paiement,
+      Date: new Date(d.date_depense).toLocaleDateString(),
+      Statut: d.statut
+    })));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Dépenses");
     XLSX.writeFile(wb, "depenses.xlsx");
   };
 
-  // Filtrer les dépenses avec fallback pour éviter les erreurs
   const filteredDepenses = depenses.filter(d =>
-    (d.numero?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-    (d.description?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-    (d.statut?.toLowerCase() || "").includes(searchTerm.toLowerCase())
+    (d.mode_paiement?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+    (d.statut?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+    (d.date_depense ? new Date(d.date_depense).toLocaleDateString().toLowerCase() : "").includes(searchTerm.toLowerCase())
   );
-
 
   if (loading) return <p className="p-8 text-center">Chargement...</p>;
 
@@ -156,12 +130,7 @@ export default function Depenses() {
       </div>
 
       <div className="flex gap-4">
-        <Input
-          placeholder="Rechercher..."
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          className="flex-1"
-        />
+        <Input placeholder="Rechercher..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="flex-1" />
         <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
         <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
       </div>
@@ -174,9 +143,10 @@ export default function Depenses() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Numéro</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead>ID</TableHead>
                 <TableHead>Montant</TableHead>
+                <TableHead>Mode Paiement</TableHead>
+                <TableHead>Date</TableHead>
                 <TableHead>Statut</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -184,9 +154,10 @@ export default function Depenses() {
             <TableBody>
               {filteredDepenses.length ? filteredDepenses.map(d => (
                 <TableRow key={d.id}>
-                  <TableCell>{d.numero}</TableCell>
-                  <TableCell>{d.description}</TableCell>
+                  <TableCell>{d.id}</TableCell>
                   <TableCell>{d.montant}</TableCell>
+                  <TableCell>{d.mode_paiement}</TableCell>
+                  <TableCell>{new Date(d.date_depense).toLocaleDateString()}</TableCell>
                   <TableCell>{d.statut}</TableCell>
                   <TableCell className="flex gap-2 justify-center">
                     <Button size="sm" variant="outline" onClick={() => openEditModal(d)}>Modifier</Button>
@@ -195,9 +166,7 @@ export default function Depenses() {
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-6">
-                    Aucune dépense trouvée.
-                  </TableCell>
+                  <TableCell colSpan={6} className="text-center py-6">Aucune dépense trouvée.</TableCell>
                 </TableRow>
               )}
             </TableBody>
@@ -205,7 +174,7 @@ export default function Depenses() {
         </CardContent>
       </Card>
 
-      {/* Modal Ajout / Edition */}
+      {/* Modal Ajout / Modification */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
@@ -213,16 +182,16 @@ export default function Depenses() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Numéro</Label>
-              <Input value={form.numero} onChange={e => setForm({ ...form, numero: e.target.value })} />
-            </div>
-            <div>
-              <Label>Description</Label>
-              <Input value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-            </div>
-            <div>
               <Label>Montant</Label>
               <Input type="number" value={form.montant} onChange={e => setForm({ ...form, montant: Number(e.target.value) })} />
+            </div>
+            <div>
+              <Label>Mode Paiement</Label>
+              <Input value={form.mode_paiement} onChange={e => setForm({ ...form, mode_paiement: e.target.value })} />
+            </div>
+            <div>
+              <Label>Date Dépense</Label>
+              <Input type="date" value={form.date_depense?.split("T")[0] || ""} onChange={e => setForm({ ...form, date_depense: e.target.value })} />
             </div>
             <div>
               <Label>Statut</Label>
@@ -235,7 +204,7 @@ export default function Depenses() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal suppression */}
+      {/* Modal Suppression */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
