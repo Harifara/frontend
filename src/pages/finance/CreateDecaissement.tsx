@@ -7,11 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/contexts/AuthContext";
 
 interface DemandeRH { id: string; description: string; montant: number; status: string; }
 interface DemandeStock { id: string; numero: string; montant_estime: number; statut: string; }
-interface Decaissement { id: string; reference: string; statut: string; montant_total: number; }
+interface Decaissement { id: string; reference: string; statut: string; montant_total: number; demandes_rh_ids: string[]; demandes_stock_ids: string[]; }
 
 const STATUS_BADGES: Record<string, string> = {
   brouillon: "bg-gray-200 text-gray-800",
@@ -70,18 +69,18 @@ export default function DemandesDecaissement() {
     }
     setSubmitting(true);
     try {
-      const newDec = await financeApi.createDecaissement({
+      const newDec: Decaissement = await financeApi.createDecaissement({
         demandes_rh_ids: selectedRH,
         demandes_stock_ids: selectedStock,
       });
 
-      // Vérifier quelles demandes n'ont pas pu être prises en compte
-      const failedRHIds = newDec.demandes_rh_ids.filter((id: string) => !selectedRH.includes(id));
-      const failedStockIds = newDec.demandes_stock_ids.filter((id: string) => !selectedStock.includes(id));
+      // Vérifier les demandes échouées
+      const failedRHIds = selectedRH.filter(id => !newDec.demandes_rh_ids.includes(id));
+      const failedStockIds = selectedStock.filter(id => !newDec.demandes_stock_ids.includes(id));
       setFailedRH(failedRHIds);
       setFailedStock(failedStockIds);
 
-      setDecaissements(prev => [...prev, { ...newDec, montant_total: totalSelection }]);
+      await fetchData(); // Recharger depuis l'API pour éviter doublons
       setSelectedRH([]);
       setSelectedStock([]);
       toast({ title: "Succès", description: "Décaissement créé (brouillon)" });
@@ -108,7 +107,6 @@ export default function DemandesDecaissement() {
     <div className="p-8 space-y-6">
       <h1 className="text-3xl font-bold">Demandes de Décaissement</h1>
 
-      {/* Warning si certaines demandes ont échoué */}
       {(failedRH.length > 0 || failedStock.length > 0) && (
         <div className="p-4 bg-yellow-100 text-yellow-800 rounded">
           <p>⚠️ Certaines demandes n'ont pas pu être incluses :</p>
@@ -202,9 +200,7 @@ export default function DemandesDecaissement() {
                   <TableCell>{d.reference}</TableCell>
                   <TableCell>{(d.montant_total || 0).toLocaleString()} Ar</TableCell>
                   <TableCell>
-                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
-                      {d.statut}
-                    </span>
+                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>{d.statut}</span>
                   </TableCell>
                   <TableCell>
                     <Button size="sm" onClick={() => soumettre(d.id)}>Soumettre</Button>
