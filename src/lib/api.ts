@@ -562,9 +562,16 @@ getDemandesRH: async () => fetchWithLog(`${API_BASE_URL}/rh/demandes/`, {
     method: "POST",
     headers: getHeaders(await ensureKongToken()),
   }),
-  getDashboardStock: async () => {
-      return rhApi._call(`${API_BASE_URL}/rh/dashboard-rh/`);
-    },
+  getDashboardRH: async () => {
+    const response = await fetch(`${API_BASE_URL}/rh/dashboard-rh/`, {
+      headers: {
+        "Content-Type": "application/json",
+        // ajoute token si nécessaire
+      },
+    });
+    if (!response.ok) throw new Error("Erreur API RH");
+    return response.json();
+  },
 
 
 };

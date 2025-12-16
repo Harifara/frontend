@@ -63,7 +63,7 @@ function DashboardRH() {
 
     const fetchData = async () => {
       try {
-        const res = await rhApi._call(`${API_BASE_URL}/rh/dashboard-rh/`);
+        const res = await rhApi.getDashboardRH(); // <-- méthode exposée par rhApi
         if (isMounted) setData(res);
       } catch (err) {
         console.error("Erreur chargement Dashboard RH:", err);
