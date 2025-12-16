@@ -12,6 +12,12 @@ import {
   ClipboardList,
   FileText,
   Briefcase,
+  DollarSign,
+  ShoppingCart,
+  Package,
+  CalendarDays,
+  Plane,
+  CheckSquare,
   LogOut,
   ChevronDown,
   ChevronUp,
@@ -19,61 +25,63 @@ import {
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.jpg";
 
-// Navigation dynamique selon le rôle
+
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin", "responsable_rh", "responsable_stock", "responsable_finance", "magasinier", "coordinateur"] },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, roles: ["admin","responsable_rh","responsable_stock","responsable_finance","magasinier","coordinateur"] },
   { name: "Utilisateurs", href: "/users", icon: Users, roles: ["admin"] },
   { name: "Logs d'audit", href: "/audit-logs", icon: FileSearch, roles: ["admin"] },
+
   {
     name: "Localisation",
     icon: MapPin,
     roles: ["responsable_rh"],
     items: [
-      { name: "Districts", href: "/rh/districts", icon: MapPin, roles: ["responsable_rh"] },
+      { name: "Districts", href: "/rh/districts", icon: Building2, roles: ["responsable_rh"] },
       { name: "Communes", href: "/rh/communes", icon: MapPin, roles: ["responsable_rh"] },
       { name: "Fokontanys", href: "/rh/fokontanys", icon: MapPin, roles: ["responsable_rh"] },
     ],
   },
-  { name: "Fonctions", href: "/rh/fonctions", icon: FileText, roles: [ "responsable_rh"] },
+
+  { name: "Fonctions", href: "/rh/fonctions", icon: Briefcase, roles: ["responsable_rh"] },
   { name: "Employés", href: "/rh/employes", icon: Users, roles: ["responsable_rh"] },
+
   {
     name: "Contrats",
     icon: FileText,
-    roles: [ "responsable_rh"],
+    roles: ["responsable_rh"],
     items: [
       { name: "Types de contrats", href: "/rh/type-contrats", icon: FileText, roles: ["responsable_rh"] },
       { name: "Contrats", href: "/rh/contrats", icon: FileText, roles: ["responsable_rh"] },
-        ],
+    ],
   },
-  
+
   { name: "Locations", href: "/rh/locations", icon: MapPin, roles: ["responsable_rh"] },
-  { name: "Mode de payement", href: "/rh/mode-payement", icon: MapPin, roles: ["responsable_rh"] },
-  { name: "Payements", href: "/rh/payements", icon: MapPin, roles: ["responsable_rh"] },
-  { name: "TypeAchat", href: "/rh/TypeAchat", icon: ClipboardList, roles: [ "responsable_rh"] },
-  { name: "Achats", href: "/rh/achats", icon: ClipboardList, roles: [ "responsable_rh"] },
+  { name: "Mode de payement", href: "/rh/mode-payement", icon: DollarSign, roles: ["responsable_rh"] },
+  { name: "Payements", href: "/rh/payements", icon: DollarSign, roles: ["responsable_rh"] },
+
+  { name: "TypeAchat", href: "/rh/TypeAchat", icon: ShoppingCart, roles: ["responsable_rh"] },
+  { name: "Achats", href: "/rh/achats", icon: ShoppingCart, roles: ["responsable_rh"] },
   { name: "Demandes", href: "/rh/demandes", icon: ClipboardList, roles: ["responsable_rh"] },
-  { name: "Affectations", href: "/rh/affectations", icon: Briefcase, roles: [ "responsable_rh"] },
-  { name: "Type de congés", href: "/rh/type-conges", icon: ClipboardList, roles: ["responsable_rh"] },
-  { name: "Congés", href: "/rh/conges", icon: ClipboardList, roles: ["responsable_rh"] },
+  { name: "Affectations", href: "/rh/affectations", icon: Briefcase, roles: ["responsable_rh"] },
+
+  { name: "Type de congés", href: "/rh/type-conges", icon: CalendarDays, roles: ["responsable_rh"] },
+  { name: "Congés", href: "/rh/conges", icon: Plane, roles: ["responsable_rh"] },
+
   { name: "Magasins", href: "/stock/magasins", icon: Warehouse, roles: ["responsable_stock"] },
-  { name: "Catégories", href: "/rh/categories", icon: ClipboardList, roles: [ "responsable_stock"] },
-  { name: "Articles", href: "/stock/articles", icon: ClipboardList, roles: [ "responsable_stock"] },
-  { name: "Gestion de stock", href: "/stock/gestion-stock", icon: ClipboardList, roles: ["responsable_stock", "magasinier"] },
-  { name: "Mouvements de stock", href: "/stock/mouvement-stock", icon: ClipboardList, roles: ["responsable_stock", "magasinier"] },
-  { name: "Demandes de réapprovisionnement", href: "/stock/demandes-reappro", icon: ClipboardList, roles: ["responsable_stock", "magasinier"] },
-  { name: "Demandes d'achat", href: "/stock/demandes-achat", icon: ClipboardList, roles: [ "responsable_stock"] },
+  { name: "Catégories", href: "/rh/categories", icon: Package, roles: ["responsable_stock"] },
+  { name: "Articles", href: "/stock/articles", icon: Package, roles: ["responsable_stock"] },
+  { name: "Gestion de stock", href: "/stock/gestion-stock", icon: ClipboardList, roles: ["responsable_stock","magasinier"] },
+  { name: "Mouvements de stock", href: "/stock/mouvement-stock", icon: ClipboardList, roles: ["responsable_stock","magasinier"] },
+  { name: "Demandes de réapprovisionnement", href: "/stock/demandes-reappro", icon: ClipboardList, roles: ["responsable_stock","magasinier"] },
+  { name: "Demandes d'achat", href: "/stock/demandes-achat", icon: ShoppingCart, roles: ["responsable_stock"] },
 
-  
-  { name: "Dépenses", href: "/finance/depenses", icon: ClipboardList, roles: ["responsable_finance"] },
-  { name: "Créer demande de décaissement", href: "/finance/demandes-decaissement/create", icon: ClipboardList, roles: ["responsable_finance"] },
-  { name: "Demandes de décaissement", href: "/finance/demandes-decaissement", icon: ClipboardList, roles: ["responsable_finance"] },
-  
+  { name: "Dépenses", href: "/finance/depenses", icon: DollarSign, roles: ["responsable_finance"] },
+  { name: "Créer demande de décaissement", href: "/finance/demandes-decaissement/create", icon: DollarSign, roles: ["responsable_finance"] },
+  { name: "Demandes de décaissement", href: "/finance/demandes-decaissement", icon: DollarSign, roles: ["responsable_finance"] },
 
-  { name: "Validations Coordo", href: "/cordinator/ValidationsCoordo", icon: ClipboardList, roles: ["coordinateur"] },
-
-
-
+  { name: "Validations Coordo", href: "/cordinator/ValidationsCoordo", icon: CheckSquare, roles: ["coordinateur"] },
 ];
+
 
 // Fonction pour initiales utilisateur
 const getInitials = (user: any) => {
