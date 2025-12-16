@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { stockApi } from "@/lib/api";
 import KPICard from "@/components/dashboard/KPICard";
-import { ShoppingCart, AlertCircle, Package, ArrowUpCircle, ArrowDownCircle } from "lucide-react";
+import {
+  ShoppingCart,
+  AlertCircle,
+  Package,
+  ArrowUpCircle,
+  ArrowDownCircle,
+} from "lucide-react";
 
 interface DashboardStats {
   total_articles: number;
@@ -48,20 +54,30 @@ export default function DashboardStock() {
   };
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Dashboard Stock</h1>
+    <div className="p-6 bg-gray-50 min-h-screen">
+      <h1 className="text-3xl font-bold mb-2">Dashboard Stock</h1>
+      <p className="text-gray-500 mb-6">Vue d’ensemble des indicateurs clés</p>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        <KPICard icon={Package} label="Articles" value={stats.total_articles} />
-        <KPICard icon={AlertCircle} label="Ruptures" value={stats.articles_rupture} />
-        <KPICard icon={ShoppingCart} label="Demandes d'achat" value={stats.demandes_achat_en_attente} />
-        <KPICard icon={ArrowUpCircle} label="Entrées" value={stats.total_entrees} />
-        <KPICard icon={ArrowDownCircle} label="Sorties" value={stats.total_sorties} />
+      {/* Section Stock */}
+      <h2 className="text-xl font-semibold mb-4">📦 Stock</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <KPICard icon={Package} label="Articles" value={stats.total_articles} color="blue" />
+        <KPICard icon={AlertCircle} label="Ruptures" value={stats.articles_rupture} color="red" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-        <KPICard icon={ShoppingCart} label="Demandes réappro en attente" value={stats.demandes_reappro_en_attente} />
-        <KPICard icon={Package} label="Transferts en attente" value={stats.transferts_en_attente} />
+      {/* Section Flux */}
+      <h2 className="text-xl font-semibold mb-4">🔄 Flux</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <KPICard icon={ArrowUpCircle} label="Entrées" value={stats.total_entrees} color="green" />
+        <KPICard icon={ArrowDownCircle} label="Sorties" value={stats.total_sorties} color="purple" />
+      </div>
+
+      {/* Section Demandes */}
+      <h2 className="text-xl font-semibold mb-4">🛒 Demandes</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <KPICard icon={ShoppingCart} label="Demandes d'achat" value={stats.demandes_achat_en_attente} color="yellow" />
+        <KPICard icon={ShoppingCart} label="Réappro en attente" value={stats.demandes_reappro_en_attente} color="orange" />
+        <KPICard icon={Package} label="Transferts en attente" value={stats.transferts_en_attente} color="teal" />
       </div>
     </div>
   );
