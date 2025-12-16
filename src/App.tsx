@@ -10,7 +10,7 @@ import DashboardLayout from "./components/layout/DashboardLayout";
 
 // Pages principales
 import Login from "./pages/Login";
-import Dashboard from "./pages/DashboardGlobal";
+import Dashboard from "./pages/Dashboard";
 import Users from "./pages/Users";
 import AuditLogs from "./pages/AuditLogs";
 import NotFound from "./pages/NotFound";
@@ -84,7 +84,7 @@ const App = () => (
           <Routes>
             {/* Auth */}
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Navigate to="/DashboardGlobal" replace />} />
+            <Route path="/" element={<Navigate to="/Dashboard" replace />} />
 
             {/* Routes protégées */}
             <Route
