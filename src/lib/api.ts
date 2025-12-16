@@ -563,10 +563,15 @@ getDemandesRH: async () => fetchWithLog(`${API_BASE_URL}/rh/demandes/`, {
     headers: getHeaders(await ensureKongToken()),
   }),
   // === DASHBOARD RH ===
-getDashboardRH: async () =>
-  fetchWithLog(`${API_BASE_URL}/rh/dashboard-rh/`, {
-    headers: getHeaders(await ensureKongToken()),
-  }),
+getDashboardRH: async () => {
+    const token = await ensureKongToken(); // ✅ utiliser Kong token
+    const res = await fetch(`${API_BASE_URL}/rh/dashboard-rh/`, {
+        headers: getHeaders(token),
+    });
+    if (!res.ok) throw new Error(`Erreur API: ${res.status}`);
+    return res.json();
+},
+
 
 
 };
