@@ -961,9 +961,11 @@ getStocksAutresMagasinsRaw: async (articleId: string) => {
     return []; // tableau vide pour éviter crash frontend
   }
 },
-getDashboard: async () => _call(`${API_BASE_URL}/stock/dashboard-stock/`),
-getDashboardStock: async () => _call(`${API_BASE_URL}/stock/dashboard-stock/`),
-
+getDashboardStock: async () => {
+    const res = await fetch(`${API_BASE_URL}/stock/dashboard-stock/`);
+    if (!res.ok) throw new Error("Erreur API");
+    return res.json();
+  },
 
 };
 
