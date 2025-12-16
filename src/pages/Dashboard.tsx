@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useAuth } from "@/contexts/AuthContext";
 
-import { rhApi, stockApi } from "@/lib/api";
+import { rhApi, stockApi, API_BASE_URL } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -31,6 +31,8 @@ import {
   ShoppingCart,
 } from "lucide-react";
 
+const CHART_COLORS = ["#0ea5a4", "#06b6d4", "#f59e0b", "#ef4444", "#6366f1"];
+
 /* =====================================================
    🔐 ROLES
 ===================================================== */
@@ -39,8 +41,7 @@ export default function Dashboard() {
 
   const isAdmin = user?.role === "admin";
   const isRH = user?.role === "responsable_rh";
-  const isStock =
-    user?.role === "responsable_stock" || user?.role === "magasinier";
+  const isStock = user?.role === "responsable_stock" || user?.role === "magasinier";
 
   return (
     <div className="w-full">
@@ -53,8 +54,6 @@ export default function Dashboard() {
 /* =====================================================
    ================= DASHBOARD RH ======================
 ===================================================== */
-const CHART_COLORS = ["#0ea5a4", "#06b6d4", "#f59e0b", "#ef4444", "#6366f1"];
-
 function DashboardRH() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -62,17 +61,19 @@ function DashboardRH() {
   useEffect(() => {
     let isMounted = true;
 
-    rhApi._call(`${API_BASE_URL}/rh/dashboard-rh/`)
-      .then((res) => {
+    const fetchData = async () => {
+      try {
+        const res = await rhApi._call(`${API_BASE_URL}/rh/dashboard-rh/`);
         if (isMounted) setData(res);
-      })
-      .finally(() => {
+      } catch (err) {
+        console.error("Erreur chargement Dashboard RH:", err);
+      } finally {
         if (isMounted) setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
+      }
     };
+
+    fetchData();
+    return () => { isMounted = false; };
   }, []);
 
   if (loading) {
@@ -83,7 +84,7 @@ function DashboardRH() {
     );
   }
 
-  const { kpi, charts } = data ?? { kpi: {}, charts: {} };
+  const { kpi = {}, charts = {} } = data ?? {};
 
   return (
     <div className="p-6 space-y-8">
@@ -92,38 +93,23 @@ function DashboardRH() {
       {/* KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <Kpi title="Total employés" value={kpi.total_employes ?? 0} />
-        <Kpi
-          title="Contrats"
-          value={(kpi.contrats_actifs ?? 0) + (kpi.contrats_expires ?? 0)}
-        />
+        <Kpi title="Contrats" value={(kpi.contrats_actifs ?? 0) + (kpi.contrats_expires ?? 0)} />
         <Kpi
           title="Congés"
-          value={
-            (kpi.conges_en_attente ?? 0) +
-            (kpi.conges_en_cours ?? 0) +
-            (kpi.conges_refuses ?? 0)
-          }
+          value={(kpi.conges_en_attente ?? 0) + (kpi.conges_en_cours ?? 0) + (kpi.conges_refuses ?? 0)}
         />
         <Kpi title="Affectations" value={kpi.affectations_actives ?? 0} />
-        <Kpi
-          title="Fonctions"
-          value={charts.employes_par_fonction?.length ?? 0}
-        />
+        <Kpi title="Fonctions" value={charts.employes_par_fonction?.length ?? 0} />
         <Kpi title="Demandes" value={kpi.demandes_total ?? 0} />
         <Kpi title="Montant achats" value={kpi.montant_achats ?? 0} />
-        <Kpi title="Montant paiements" value={kpi.montant_payements ?? 0} />
+        <Kpi title="Montant paiements" value={kpi.montant_paiements ?? 0} />
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <ChartCard title="Employés par sexe">
           <PieChart>
-            <Pie
-              data={charts.employes_par_sexe ?? []}
-              dataKey="total"
-              nameKey="sexe"
-              label
-            >
+            <Pie data={charts.employes_par_sexe ?? []} dataKey="total" nameKey="sexe" label>
               {(charts.employes_par_sexe ?? []).map((entry: any, index: number) => (
                 <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
               ))}
@@ -178,17 +164,19 @@ function DashboardStock() {
 
   useEffect(() => {
     let isMounted = true;
-
-    stockApi.getDashboardStock().then((res) => {
-      if (isMounted) {
-        setKpi(res.kpi ?? {});
-        setStocks(res.stocks ?? []);
+    const fetchData = async () => {
+      try {
+        const res = await stockApi.getDashboardStock();
+        if (isMounted) {
+          setKpi(res.kpi ?? {});
+          setStocks(res.stocks ?? []);
+        }
+      } catch (err) {
+        console.error("Erreur chargement Dashboard Stock:", err);
       }
-    });
-
-    return () => {
-      isMounted = false;
     };
+    fetchData();
+    return () => { isMounted = false; };
   }, []);
 
   useEffect(() => {
@@ -216,21 +204,9 @@ function DashboardStock() {
       {/* KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
         <KPICard label="Articles" value={kpi.total_articles} icon={<Package />} />
-        <KPICard
-          label="Ruptures"
-          value={kpi.articles_rupture}
-          icon={<AlertTriangle />}
-        />
-        <KPICard
-          label="Réappro"
-          value={kpi.demandes_reappro_en_attente}
-          icon={<Repeat />}
-        />
-        <KPICard
-          label="Achats"
-          value={kpi.demandes_achat_en_attente}
-          icon={<ShoppingCart />}
-        />
+        <KPICard label="Ruptures" value={kpi.articles_rupture} icon={<AlertTriangle />} />
+        <KPICard label="Réappro" value={kpi.demandes_reappro_en_attente} icon={<Repeat />} />
+        <KPICard label="Achats" value={kpi.demandes_achat_en_attente} icon={<ShoppingCart />} />
       </div>
 
       {/* Chart */}
@@ -268,15 +244,7 @@ function Kpi({ title, value }: { title: string; value?: number }) {
   );
 }
 
-function KPICard({
-  label,
-  value,
-  icon,
-}: {
-  label: string;
-  value?: number;
-  icon: JSX.Element;
-}) {
+function KPICard({ label, value, icon }: { label: string; value?: number; icon: JSX.Element }) {
   return (
     <Card className="p-4 flex items-center gap-3">
       {icon}
