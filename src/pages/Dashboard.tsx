@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import dayjs from "dayjs";
 import { useAuth } from "@/contexts/AuthContext";
 
-import { rhApi, stockApi, API_BASE_URL } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -55,6 +55,7 @@ export default function Dashboard() {
    ================= DASHBOARD RH ======================
 ===================================================== */
 function DashboardRH() {
+  const { user } = useAuth();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -63,7 +64,14 @@ function DashboardRH() {
 
     const fetchData = async () => {
       try {
-        const res = await rhApi.getDashboardRH(); // <-- méthode exposée par rhApi
+        const response = await fetch(`${API_BASE_URL}/rh/dashboard-rh/`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${user?.token}`, // ✅ Token pour auth
+          },
+        });
+        if (!response.ok) throw new Error("Erreur API RH");
+        const res = await response.json();
         if (isMounted) setData(res);
       } catch (err) {
         console.error("Erreur chargement Dashboard RH:", err);
@@ -74,7 +82,7 @@ function DashboardRH() {
 
     fetchData();
     return () => { isMounted = false; };
-  }, []);
+  }, [user?.token]);
 
   if (loading) {
     return (
@@ -161,12 +169,21 @@ function DashboardStock() {
   const [kpi, setKpi] = useState<any>({});
   const [stocks, setStocks] = useState<any[]>([]);
   const [dark, setDark] = useState(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     let isMounted = true;
+
     const fetchData = async () => {
       try {
-        const res = await stockApi.getDashboardStock();
+        const response = await fetch(`${API_BASE_URL}/stock/dashboard-stock/`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${user?.token}`, // ✅ Token pour auth
+          },
+        });
+        if (!response.ok) throw new Error("Erreur API Stock");
+        const res = await response.json();
         if (isMounted) {
           setKpi(res.kpi ?? {});
           setStocks(res.stocks ?? []);
@@ -175,9 +192,10 @@ function DashboardStock() {
         console.error("Erreur chargement Dashboard Stock:", err);
       }
     };
+
     fetchData();
     return () => { isMounted = false; };
-  }, []);
+  }, [user?.token]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
