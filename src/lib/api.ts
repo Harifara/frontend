@@ -562,8 +562,11 @@ getDemandesRH: async () => fetchWithLog(`${API_BASE_URL}/rh/demandes/`, {
     method: "POST",
     headers: getHeaders(await ensureKongToken()),
   }),
-  getDashboard: async () => _call(`${API_BASE_URL}/rh/dashboard-rh/`),
-  getDemandes: async () => _call(`${API_BASE_URL}/rh/dashboard-rh/`).then(res => res.lists.demandes),
+  // === DASHBOARD RH ===
+getDashboardRH: async () =>
+  fetchWithLog(`${API_BASE_URL}/rh/dashboard-rh/`, {
+    headers: getHeaders(await ensureKongToken()),
+  }),
 
 
 };
