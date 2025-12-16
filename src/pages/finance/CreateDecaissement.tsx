@@ -232,7 +232,7 @@ export default function DemandesDecaissement() {
 
       {/* Brouillons */}
       <Card>
-        <CardHeader><CardTitle>Brouillons</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Demande a soummetre</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
