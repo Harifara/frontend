@@ -18,6 +18,12 @@ interface Decaissement {
   date_decaissement?: string;
 }
 
+const STATUS_BADGES: Record<string, string> = {
+  en_attente_coordonnateur: "bg-yellow-100 text-yellow-800",
+  valide: "bg-green-100 text-green-800",
+  rejete: "bg-red-100 text-red-800",
+};
+
 export default function DecaissementsRecus() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -33,7 +39,7 @@ export default function DecaissementsRecus() {
     try {
       const res = await financeApi.getDecaissements();
       const list = res.results || res;
-      setDecaissements(list.filter((d: Decaissement) => d.statut === "en_attente_coordonnateur"));
+      setDecaissements(list); // afficher tous les décaissements
     } catch (err) {
       console.error("Erreur lors de la récupération des décaissements :", err);
       toast({ title: "Erreur", description: "Chargement impossible", variant: "destructive" });
@@ -61,14 +67,16 @@ export default function DecaissementsRecus() {
       });
 
       // 🔹 Mettre à jour le statut du décaissement dans le tableau
-      if (response.decaissement) {
-        setDecaissements(prev =>
-          prev.map(d => (d.id === id ? { ...d, statut: response.decaissement.statut } : d))
-        );
-      } else {
-        // Si pas de réponse Finance, retirer de la liste pour éviter doublon
-        setDecaissements(prev => prev.filter(d => d.id !== id));
-      }
+      setDecaissements(prev =>
+        prev.map(d => d.id === id 
+          ? { 
+              ...d, 
+              statut: decision === "approuve" ? "valide" : "rejete",
+              date_decaissement: decision === "approuve" ? new Date().toISOString() : d.date_decaissement
+            } 
+          : d
+        )
+      );
     } catch (err: any) {
       console.error("Erreur lors de la validation :", err);
       toast({
@@ -95,7 +103,7 @@ export default function DecaissementsRecus() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Demandes en attente de validation</CardTitle>
+          <CardTitle>Demandes de décaissement</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -105,6 +113,7 @@ export default function DecaissementsRecus() {
                 <TableHead>Montant</TableHead>
                 <TableHead>Date création</TableHead>
                 <TableHead>Commentaire</TableHead>
+                <TableHead>Statut</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -121,28 +130,37 @@ export default function DecaissementsRecus() {
                       onChange={e => setCommentaires(prev => ({ ...prev, [d.id]: e.target.value }))}
                     />
                   </TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded text-xs ${STATUS_BADGES[d.statut] || "bg-gray-100 text-gray-700"}`}>
+                      {d.statut === "valide" ? "Validé" : d.statut === "rejete" ? "Rejeté" : "En attente"}
+                    </span>
+                  </TableCell>
                   <TableCell className="flex space-x-2">
-                    <Button
-                      size="sm"
-                      onClick={() => handleDecision(d.id, "approuve")}
-                      disabled={submitting[d.id]}
-                    >
-                      {submitting[d.id] ? "..." : "Approuver"}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDecision(d.id, "rejete")}
-                      disabled={submitting[d.id]}
-                    >
-                      {submitting[d.id] ? "..." : "Rejeter"}
-                    </Button>
+                    {d.statut === "en_attente_coordonnateur" && (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() => handleDecision(d.id, "approuve")}
+                          disabled={submitting[d.id]}
+                        >
+                          {submitting[d.id] ? "..." : "Approuver"}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDecision(d.id, "rejete")}
+                          disabled={submitting[d.id]}
+                        >
+                          {submitting[d.id] ? "..." : "Rejeter"}
+                        </Button>
+                      </>
+                    )}
                   </TableCell>
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-6">
-                    Aucun décaissement en attente
+                  <TableCell colSpan={6} className="text-center py-6">
+                    Aucun décaissement disponible
                   </TableCell>
                 </TableRow>
               )}
