@@ -36,6 +36,7 @@ const STATUS_BADGES: Record<string, string> = {
   en_attente_coordonnateur: "bg-yellow-100 text-yellow-800",
   approuve: "bg-green-100 text-green-800",
   rejete: "bg-red-100 text-red-800",
+  en_cours: "bg-blue-100 text-blue-800",
 };
 
 export default function DemandesDecaissement() {
@@ -103,8 +104,16 @@ export default function DemandesDecaissement() {
       const newDec: Decaissement = await financeApi.createDecaissement({
         demandes_rh_ids: selectedRH,
         demandes_stock_ids: selectedStock,
-        montant_total: totalSelection, // 🔹 envoyer le montant calculé
+        montant_total: totalSelection,
       });
+
+      // 🔹 Mettre à jour localement les statuts des demandes sélectionnées
+      setRhDemandes(demandes =>
+        demandes.map(d => selectedRH.includes(d.id) ? { ...d, status: "en_cours" } : d)
+      );
+      setStockDemandes(demandes =>
+        demandes.map(d => selectedStock.includes(d.id) ? { ...d, statut: "en_cours" } : d)
+      );
 
       const failedRHIds = selectedRH.filter(id => !newDec.demandes_rh_ids.includes(id));
       const failedStockIds = selectedStock.filter(id => !newDec.demandes_stock_ids.includes(id));
