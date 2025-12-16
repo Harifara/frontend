@@ -31,7 +31,7 @@ const CreerDecaissementPage: React.FC = () => {
       const { rh: rhData, stock: stockData } = await financeApi.getDemandesDisponibles();
       setDemandesRH(Array.isArray(rhData) ? rhData : []);
       setDemandesStock(Array.isArray(stockData) ? stockData : []);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erreur récupération demandes:", err);
       toast.error("Impossible de charger les demandes disponibles");
     } finally {
@@ -78,14 +78,14 @@ const CreerDecaissementPage: React.FC = () => {
 
     try {
       setCreating(true);
-      await financeApi.createDecaissement(payload); // token géré automatiquement
+      await financeApi.createDecaissement(payload);
       toast.success("Décaissement créé avec succès");
       setSelectedRH([]);
       setSelectedStock([]);
       await fetchDemandes();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erreur création décaissement:", err);
-      toast.error("Impossible de créer le décaissement");
+      toast.error(err.message || "Impossible de créer le décaissement");
     } finally {
       setCreating(false);
     }
