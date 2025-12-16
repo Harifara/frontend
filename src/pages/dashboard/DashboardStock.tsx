@@ -3,8 +3,14 @@ import { stockApi } from "@/lib/api";
 import KPICard from "@/components/dashboard/KPICard";
 import { ShoppingCart, AlertCircle, Package } from "lucide-react";
 
+interface DashboardStats {
+  totalArticles: number;
+  demandesAchat: number;
+  ruptures: number;
+}
+
 export default function DashboardStock() {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStats>({
     totalArticles: 0,
     demandesAchat: 0,
     ruptures: 0,
@@ -19,15 +25,23 @@ export default function DashboardStock() {
   const loadDashboard = async () => {
     setLoading(true);
     setError(null);
+
     try {
-      const res = await stockApi.getDashboardStock(); // Appelle l'API /dashboard_stock
+      // Appelle l'API /dashboard-stock
+      const res = await stockApi.getDashboardStock();
+
+      // Vérifie que la réponse contient bien les KPI
+      if (!res || !res.kpi) {
+        throw new Error("Réponse API invalide");
+      }
+
       setStats({
-        totalArticles: res.kpi.total_articles,
-        demandesAchat: res.kpi.demandes_achat_en_attente,
-        ruptures: res.kpi.articles_rupture,
+        totalArticles: res.kpi.total_articles ?? 0,
+        demandesAchat: res.kpi.demandes_achat_en_attente ?? 0,
+        ruptures: res.kpi.articles_rupture ?? 0,
       });
     } catch (err: any) {
-      console.error(err);
+      console.error("Erreur DashboardStock:", err);
       setError("Impossible de charger le dashboard");
     } finally {
       setLoading(false);
