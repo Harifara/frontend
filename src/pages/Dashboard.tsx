@@ -20,7 +20,14 @@ import {
 
 const CHART_COLORS = ["#0ea5a4", "#06b6d4", "#f59e0b", "#ef4444", "#6366f1"];
 
-const KPICard = ({ label, value, sub, color = "bg-white" }: any) => (
+interface KPICardProps {
+  label: string;
+  value?: number;
+  sub?: string;
+  color?: string;
+}
+
+const KPICard: React.FC<KPICardProps> = ({ label, value, sub, color = "bg-white" }) => (
   <Card className={`p-4 shadow rounded-2xl border hover:shadow-lg transition ${color}`}>
     <div>
       <div className="text-xl font-semibold">{value ?? 0}</div>
@@ -53,7 +60,7 @@ export default function DashboardStock() {
     }
   };
 
-  // ----- charts data -----
+  // ----- Charts data -----
   const pieMagasins = stocks.reduce((acc: any[], s) => {
     const idx = acc.findIndex(a => a.name === s.magasin?.nom);
     if (idx >= 0) acc[idx].value += s.quantite;
@@ -64,15 +71,15 @@ export default function DashboardStock() {
   const barReappro = demandesReappro.map(d => ({
     article: d.article?.nom ?? "-",
     quantite: d.quantite,
-  })).slice(0, 10); // limiter à 10 pour lisibilité
+  })).slice(0, 10);
 
-  const rupturesParCategorie = stocks.reduce((acc: any, s) => {
+  const rupturesParCategorie = stocks.reduce((acc: Record<string, number>, s) => {
     if (s.quantite <= s.article?.seuil_alerte) {
       const cat = s.article?.categorie?.nom ?? "Inconnue";
       acc[cat] = (acc[cat] || 0) + 1;
     }
     return acc;
-  }, {} as Record<string, number>);
+  }, {});
   const barRuptures = Object.entries(rupturesParCategorie).map(([name, value]) => ({ name, value }));
 
   return (
@@ -83,7 +90,7 @@ export default function DashboardStock() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <KPICard label="Total articles" value={kpi.total_articles} color="bg-teal-50" />
         <KPICard label="Articles en rupture" value={kpi.articles_rupture} color="bg-red-50" />
-        <KPICard label="Demandes réappro en attente" value={kpi.demandes_en_attente} color="bg-yellow-50" />
+        <KPICard label="Demandes réappro en attente" value={kpi.demandes_reappro_en_attente} color="bg-yellow-50" />
         <KPICard label="Transferts en attente" value={kpi.transferts_en_attente} color="bg-blue-50" />
         <KPICard label="Demandes d'achat en attente" value={kpi.demandes_achat_en_attente} color="bg-cyan-50" />
       </div>
