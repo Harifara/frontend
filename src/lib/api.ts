@@ -1121,4 +1121,12 @@ export const cordoApi = {
       headers: getHeaders(token),
     });
   },
+
+  // ---------------- Dashboard coordonnateur ----------------
+  getDashboard: async (): Promise<any> => {
+    const token = await ensureKongToken();
+    return fetchWithLog(`${API_BASE_URL}/cordo/dashboard/`, {
+      headers: getHeaders(token),
+    });
+  },
 };
