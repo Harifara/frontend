@@ -68,11 +68,7 @@ export default function DashboardFinance() {
           value={kpi.decaissements_brouillon ?? 0}
         />
       </div>
-      <KPICard
-            icon={DollarSign}
-            label="Décaissements effectués"
-            value={kpi.decaissements_effectues ?? 0}
-          />
+      
 
       {/* Optionnel : autres KPI ou graphiques */}
       
