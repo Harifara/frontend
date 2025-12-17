@@ -18,28 +18,33 @@ import {
   Cell,
   Tooltip,
   Legend,
-  ResponsiveContainer,
+  ResponsiveContainer
 } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
-// Types
+// Types pour Dashboard RH
 type KPI = {
   total_employes: number;
   employes_actifs: number;
   employes_conge: number;
   employes_inactifs: number;
   employes_suspendus: number;
+
   conges_en_attente: number;
   conges_en_cours: number;
   conges_refuses: number;
+
   contrats_actifs: number;
   contrats_expires: number;
   contrats_expirant_30j: number;
+
   affectations_actives: number;
+
   demandes_total: number;
   demandes_en_attente: number;
   demandes_validees: number;
   demandes_refusees: number;
+
   montant_achats: number;
   montant_payements: number;
 };
@@ -94,28 +99,6 @@ export default function DashboardRH() {
 
   const { kpi, charts } = data;
 
-  const renderPieChart = (chartData: any[], dataKey: string, nameKey: string) => (
-    <ResponsiveContainer width="100%" height={300}>
-      <PieChart>
-        <Pie
-          data={chartData}
-          dataKey={dataKey}
-          nameKey={nameKey}
-          cx="50%"
-          cy="50%"
-          outerRadius={100}
-          label
-        >
-          {chartData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip />
-        <Legend />
-      </PieChart>
-    </ResponsiveContainer>
-  );
-
   return (
     <div className="p-6 space-y-8">
       <h1 className="text-2xl font-bold">Dashboard Ressources Humaines</h1>
@@ -146,7 +129,26 @@ export default function DashboardRH() {
             <CardTitle>Employés par statut</CardTitle>
           </CardHeader>
           <CardContent>
-            {renderPieChart(charts.employes_par_statut, "total", "status_employer")}
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={charts.employes_par_statut}
+                  dataKey="total"
+                  nameKey="status_employer"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  fill="#10b981"
+                  label
+                >
+                  {charts.employes_par_statut.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
@@ -155,7 +157,25 @@ export default function DashboardRH() {
             <CardTitle>Congés par statut</CardTitle>
           </CardHeader>
           <CardContent>
-            {renderPieChart(charts.conges_par_statut, "total", "status_conge")}
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={charts.conges_par_statut}
+                  dataKey="total"
+                  nameKey="status_conge"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label
+                >
+                  {charts.conges_par_statut.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
@@ -164,7 +184,25 @@ export default function DashboardRH() {
             <CardTitle>Contrats par nature</CardTitle>
           </CardHeader>
           <CardContent>
-            {renderPieChart(charts.contrats_par_nature, "total", "nature_contrat")}
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={charts.contrats_par_nature}
+                  dataKey="total"
+                  nameKey="nature_contrat"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label
+                >
+                  {charts.contrats_par_nature.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
@@ -173,25 +211,25 @@ export default function DashboardRH() {
             <CardTitle>Demandes par statut</CardTitle>
           </CardHeader>
           <CardContent>
-            {renderPieChart(charts.demandes_par_statut, "total", "status")}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Répartition des employés par sexe</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {renderPieChart(charts.employes_par_sexe, "total", "sexe")}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Employés par district</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {renderPieChart(charts.employes_par_district, "total", "district__nom")}
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={charts.demandes_par_statut}
+                  dataKey="total"
+                  nameKey="status"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label
+                >
+                  {charts.demandes_par_statut.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
