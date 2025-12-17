@@ -12,6 +12,8 @@ import {
   CreditCard,
   ShoppingCart,
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 // Types pour Dashboard RH
 type KPI = {
@@ -86,85 +88,100 @@ export default function DashboardRH() {
   if (error) return <div className="p-6 text-red-600">Erreur: {error}</div>;
   if (!data) return <div className="p-6 text-red-600">Pas de données disponibles</div>;
 
-  const { kpi, lists } = data;
+  const { kpi, charts } = data;
 
   return (
     <div className="p-6 space-y-8">
       <h1 className="text-2xl font-bold">Dashboard Ressources Humaines</h1>
 
-      {/* ================= KPI EMPLOYÉS ================= */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Employés</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <KPICard icon={Users} label="Total employés" value={kpi.total_employes} />
-          <KPICard icon={UserCheck} label="Actifs" value={kpi.employes_actifs} />
-          <KPICard icon={ClipboardList} label="En congé" value={kpi.employes_conge} />
-          <KPICard icon={UserX} label="Suspendus" value={kpi.employes_suspendus} />
-        </div>
+      {/* ================= KPI ================= */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <KPICard icon={Users} label="Total employés" value={kpi.total_employes} />
+        <KPICard icon={UserCheck} label="Actifs" value={kpi.employes_actifs} />
+        <KPICard icon={ClipboardList} label="En congé" value={kpi.employes_conge} />
+        <KPICard icon={UserX} label="Suspendus" value={kpi.employes_suspendus} />
+        <KPICard icon={ClipboardList} label="Congés en attente" value={kpi.conges_en_attente} />
+        <KPICard icon={ListChecks} label="Congés en cours" value={kpi.conges_en_cours} />
+        <KPICard icon={UserX} label="Congés refusés" value={kpi.conges_refuses} />
+        <KPICard icon={FileText} label="Contrats actifs" value={kpi.contrats_actifs} />
+        <KPICard icon={FileText} label="Contrats expirés" value={kpi.contrats_expires} />
+        <KPICard icon={FileText} label="Expire < 30 jours" value={kpi.contrats_expirant_30j} />
+        <KPICard icon={ClipboardList} label="Affectations actives" value={kpi.affectations_actives} />
+        <KPICard icon={CreditCard} label="Demandes totales" value={kpi.demandes_total} />
+        <KPICard icon={ClipboardList} label="Demandes en attente" value={kpi.demandes_en_attente} />
+        <KPICard icon={ShoppingCart} label="Achats (Ar)" value={kpi.montant_achats} />
+        <KPICard icon={CreditCard} label="Paiements (Ar)" value={kpi.montant_payements} />
       </div>
 
-      {/* ================= KPI CONGÉS ================= */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Congés</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <KPICard icon={ClipboardList} label="En attente" value={kpi.conges_en_attente} />
-          <KPICard icon={ListChecks} label="En cours" value={kpi.conges_en_cours} />
-          <KPICard icon={UserX} label="Refusés" value={kpi.conges_refuses} />
-        </div>
-      </div>
+      {/* ================= CHARTS ================= */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Employés par statut</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={charts.employes_par_statut}>
+                <XAxis dataKey="status_employer" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="total" fill="#10b981" name="Nombre employés" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-      {/* ================= KPI CONTRATS ================= */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Contrats</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <KPICard icon={FileText} label="Actifs" value={kpi.contrats_actifs} />
-          <KPICard icon={FileText} label="Expirés" value={kpi.contrats_expires} />
-          <KPICard icon={FileText} label="Expire < 30 jours" value={kpi.contrats_expirant_30j} />
-        </div>
-      </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Congés par statut</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={charts.conges_par_statut}>
+                <XAxis dataKey="status_conge" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="total" fill="#f59e0b" name="Nombre congés" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-      {/* ================= KPI AFFECTATIONS ================= */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Affectations</h2>
-        <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
-          <KPICard icon={ClipboardList} label="Affectations actives" value={kpi.affectations_actives} />
-        </div>
-      </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Contrats par nature</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={charts.contrats_par_nature}>
+                <XAxis dataKey="nature_contrat" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="total" fill="#3b82f6" name="Nombre contrats" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-      {/* ================= KPI DEMANDES / FINANCE ================= */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Demandes & Finance RH</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          <KPICard icon={CreditCard} label="Demandes totales" value={kpi.demandes_total} />
-          <KPICard icon={ClipboardList} label="En attente" value={kpi.demandes_en_attente} />
-          <KPICard icon={ShoppingCart} label="Achats (Ar)" value={kpi.montant_achats} />
-          <KPICard icon={CreditCard} label="Paiements (Ar)" value={kpi.montant_payements} />
-        </div>
-      </div>
-
-      {/* ================= LISTES RÉCENTES ================= */}
-      <div>
-        <h2 className="text-lg font-semibold mb-4">Derniers employés</h2>
-        <table className="min-w-full bg-white shadow rounded-lg">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-4 py-2">Nom</th>
-              <th className="px-4 py-2">Fonction</th>
-              <th className="px-4 py-2">District</th>
-              <th className="px-4 py-2">Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            {lists.employes.map((e) => (
-              <tr key={e.id} className="border-b">
-                <td className="px-4 py-2">{e.nom}</td>
-                <td className="px-4 py-2">{e.fonction?.nom}</td>
-                <td className="px-4 py-2">{e.district?.nom}</td>
-                <td className="px-4 py-2">{e.status_employer}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Card>
+          <CardHeader>
+            <CardTitle>Demandes par statut</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={charts.demandes_par_statut}>
+                <XAxis dataKey="status" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="total" fill="#8b5cf6" name="Nombre demandes" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
