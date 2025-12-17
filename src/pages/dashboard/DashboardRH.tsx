@@ -1,3 +1,4 @@
+// src/pages/rh/DashboardRH.tsx
 import { useEffect, useState } from "react";
 import { rhApi } from "@/lib/api";
 import KPICard from "@/components/dashboard/KPICard";
@@ -67,11 +68,8 @@ export default function DashboardRH() {
     setError(null);
     try {
       const res = await rhApi.getDashboardRH();
-      if (!res || !res.kpi) {
-        throw new Error("Données invalides du dashboard RH");
-      }
+      if (!res || !res.kpi) throw new Error("Données invalides du dashboard RH");
 
-      // Conversion des montants en nombres pour éviter les problèmes d'affichage
       res.kpi.montant_achats = Number(res.kpi.montant_achats || 0);
       res.kpi.montant_payements = Number(res.kpi.montant_payements || 0);
 
@@ -84,19 +82,11 @@ export default function DashboardRH() {
     }
   };
 
-  if (loading) {
-    return <div className="p-6">Chargement du dashboard RH...</div>;
-  }
+  if (loading) return <div className="p-6">Chargement du dashboard RH...</div>;
+  if (error) return <div className="p-6 text-red-600">Erreur: {error}</div>;
+  if (!data) return <div className="p-6 text-red-600">Pas de données disponibles</div>;
 
-  if (error) {
-    return <div className="p-6 text-red-600">Erreur: {error}</div>;
-  }
-
-  if (!data) {
-    return <div className="p-6 text-red-600">Pas de données disponibles</div>;
-  }
-
-  const { kpi } = data;
+  const { kpi, lists } = data;
 
   return (
     <div className="p-6 space-y-8">
@@ -150,6 +140,31 @@ export default function DashboardRH() {
           <KPICard icon={ShoppingCart} label="Achats (Ar)" value={kpi.montant_achats} />
           <KPICard icon={CreditCard} label="Paiements (Ar)" value={kpi.montant_payements} />
         </div>
+      </div>
+
+      {/* ================= LISTES RÉCENTES ================= */}
+      <div>
+        <h2 className="text-lg font-semibold mb-4">Derniers employés</h2>
+        <table className="min-w-full bg-white shadow rounded-lg">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="px-4 py-2">Nom</th>
+              <th className="px-4 py-2">Fonction</th>
+              <th className="px-4 py-2">District</th>
+              <th className="px-4 py-2">Statut</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lists.employes.map((e) => (
+              <tr key={e.id} className="border-b">
+                <td className="px-4 py-2">{e.nom}</td>
+                <td className="px-4 py-2">{e.fonction?.nom}</td>
+                <td className="px-4 py-2">{e.district?.nom}</td>
+                <td className="px-4 py-2">{e.status_employer}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
