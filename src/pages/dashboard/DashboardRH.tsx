@@ -12,7 +12,14 @@ import {
   CreditCard,
   ShoppingCart,
 } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 // Types pour Dashboard RH
@@ -55,6 +62,8 @@ type DashboardRHResponse = {
   charts: Record<string, any>;
   lists: ListesRecente;
 };
+
+const COLORS = ["#10b981", "#f59e0b", "#3b82f6", "#8b5cf6", "#f87171", "#facc15"];
 
 export default function DashboardRH() {
   const [loading, setLoading] = useState(true);
@@ -113,7 +122,7 @@ export default function DashboardRH() {
         <KPICard icon={CreditCard} label="Paiements (Ar)" value={kpi.montant_payements} />
       </div>
 
-      {/* ================= CHARTS ================= */}
+      {/* ================= PIE CHARTS ================= */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -121,13 +130,24 @@ export default function DashboardRH() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={charts.employes_par_statut}>
-                <XAxis dataKey="status_employer" />
-                <YAxis />
+              <PieChart>
+                <Pie
+                  data={charts.employes_par_statut}
+                  dataKey="total"
+                  nameKey="status_employer"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  fill="#10b981"
+                  label
+                >
+                  {charts.employes_par_statut.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="total" fill="#10b981" name="Nombre employés" />
-              </BarChart>
+              </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -138,13 +158,23 @@ export default function DashboardRH() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={charts.conges_par_statut}>
-                <XAxis dataKey="status_conge" />
-                <YAxis />
+              <PieChart>
+                <Pie
+                  data={charts.conges_par_statut}
+                  dataKey="total"
+                  nameKey="status_conge"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label
+                >
+                  {charts.conges_par_statut.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="total" fill="#f59e0b" name="Nombre congés" />
-              </BarChart>
+              </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -155,13 +185,23 @@ export default function DashboardRH() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={charts.contrats_par_nature}>
-                <XAxis dataKey="nature_contrat" />
-                <YAxis />
+              <PieChart>
+                <Pie
+                  data={charts.contrats_par_nature}
+                  dataKey="total"
+                  nameKey="nature_contrat"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label
+                >
+                  {charts.contrats_par_nature.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="total" fill="#3b82f6" name="Nombre contrats" />
-              </BarChart>
+              </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
@@ -172,13 +212,23 @@ export default function DashboardRH() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={charts.demandes_par_statut}>
-                <XAxis dataKey="status" />
-                <YAxis />
+              <PieChart>
+                <Pie
+                  data={charts.demandes_par_statut}
+                  dataKey="total"
+                  nameKey="status"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label
+                >
+                  {charts.demandes_par_statut.map((entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="total" fill="#8b5cf6" name="Nombre demandes" />
-              </BarChart>
+              </PieChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
