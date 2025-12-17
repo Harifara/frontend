@@ -106,15 +106,12 @@ export default function DashboardRH() {
       {/* ================= KPI ================= */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <KPICard icon={Users} label="Total employés" value={kpi.total_employes} />
-        <KPICard icon={UserCheck} label="Actifs" value={kpi.employes_actifs} />
+        
         <KPICard icon={ClipboardList} label="En congé" value={kpi.employes_conge} />
-        <KPICard icon={UserX} label="Suspendus" value={kpi.employes_suspendus} />
-        <KPICard icon={ClipboardList} label="Congés en attente" value={kpi.conges_en_attente} />
-        <KPICard icon={ListChecks} label="Congés en cours" value={kpi.conges_en_cours} />
-        <KPICard icon={UserX} label="Congés refusés" value={kpi.conges_refuses} />
+
         <KPICard icon={FileText} label="Contrats actifs" value={kpi.contrats_actifs} />
         <KPICard icon={FileText} label="Contrats expirés" value={kpi.contrats_expires} />
-        <KPICard icon={FileText} label="Expire < 30 jours" value={kpi.contrats_expirant_30j} />
+     
         <KPICard icon={ClipboardList} label="Affectations actives" value={kpi.affectations_actives} />
         <KPICard icon={CreditCard} label="Demandes totales" value={kpi.demandes_total} />
         <KPICard icon={ClipboardList} label="Demandes en attente" value={kpi.demandes_en_attente} />
