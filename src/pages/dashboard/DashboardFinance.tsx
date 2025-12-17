@@ -67,16 +67,15 @@ export default function DashboardFinance() {
           label="Brouillons"
           value={kpi.decaissements_brouillon ?? 0}
         />
-        <KPICard
-            icon={FileText}
-            label="Rejetés"
-            value={kpi.decaissements_rejete ?? 0}
+      </div>
+      <KPICard
+            icon={DollarSign}
+            label="Décaissements effectués"
+            value={kpi.decaissements_effectues ?? 0}
           />
-        {kpi.decaissements_rejete !== undefined && (
-          
-          
-      </div>
-      </div>
+
+      {/* Optionnel : autres KPI ou graphiques */}
+      
     </div>
   );
 }
