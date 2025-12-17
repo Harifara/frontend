@@ -62,29 +62,20 @@ export default function DashboardFinance() {
           label="Montant total dépensé"
           value={kpi.montant_total_depense?.toLocaleString() ?? 0}
         />
-      </div>
-
-      {/* Optionnel : autres KPI ou graphiques */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
         <KPICard
           icon={FileText}
           label="Brouillons"
           value={kpi.decaissements_brouillon ?? 0}
         />
-        {kpi.decaissements_rejete !== undefined && (
-          <KPICard
+        <KPICard
             icon={FileText}
             label="Rejetés"
             value={kpi.decaissements_rejete ?? 0}
           />
-        )}
-        {kpi.decaissements_effectues !== undefined && (
-          <KPICard
-            icon={DollarSign}
-            label="Décaissements effectués"
-            value={kpi.decaissements_effectues ?? 0}
-          />
-        )}
+        {kpi.decaissements_rejete !== undefined && (
+          
+          
+      </div>
       </div>
     </div>
   );
