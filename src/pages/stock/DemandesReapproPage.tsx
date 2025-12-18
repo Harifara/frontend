@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Demande {
   id: string;
@@ -38,6 +39,8 @@ export default function DemandesReapproPage() {
   const [quantite, setQuantite] = useState(1);
   const [priorite, setPriorite] = useState("normale");
   const [motif, setMotif] = useState("");
+  const { user } = useAuth();
+      const isResponsableStock = user?.role === "responsable_stock";
 
   const [stocksAutresMagasins, setStocksAutresMagasins] = useState<
     { magasin: string; quantite: number; magasin_id?: string; quantiteToTransfer?: number }[]
@@ -209,7 +212,9 @@ export default function DemandesReapproPage() {
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Demandes de Réapprovisionnement</h1>
+        {!isResponsableStock && (
         <Button onClick={() => setShowModal(true)}>Nouvelle Demande</Button>
+        )}
       </div>
 
       {loading ? (
@@ -244,8 +249,9 @@ export default function DemandesReapproPage() {
                 <TableCell>{d.commentaire_validation || "-"}</TableCell>
                 <TableCell className="space-x-2">
                   {d.statut === "en_attente" && (
-                    <>
+                    <>{!isResponsableStock && (
                       <Button onClick={() => handleVerifierStock(d)}>Vérifier Stock</Button>
+                    )}
                       <Button onClick={() => handleValider(d)} variant="success">
                         Valider
                       </Button>
