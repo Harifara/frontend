@@ -15,6 +15,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { useAuth } from "@/contexts/AuthContext";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -62,6 +64,9 @@ const StockManagement: React.FC = () => {
   });
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isResponsableStock = user?.role === "responsable_stock";
+
 
   // -----------------------
   // Fetch Data
@@ -218,7 +223,12 @@ const StockManagement: React.FC = () => {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold">Gestion des Stocks</h2>
         <div className="flex gap-2">
-          <Button onClick={() => { setOpenModal(true); setEditingStock(null); }}>+ Nouveau</Button>
+          {isResponsableStock && (
+            <Button onClick={() => { setOpenModal(true); setEditingStock(null); }}>
+              + Nouveau
+            </Button>
+          )}
+
           <Button onClick={exportPDF} variant="outline">Exporter PDF</Button>
           <Button onClick={exportExcel} variant="outline">Exporter Excel</Button>
         </div>
