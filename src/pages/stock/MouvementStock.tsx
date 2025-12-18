@@ -3,6 +3,7 @@ import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@
 import { Button } from "@/components/ui/button";
 import { stockApi } from "@/lib/api";
 import ModalMouvementStock from "./ModalMouvementStock";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function MouvementsStock() {
   const [mouvements, setMouvements] = useState<any[]>([]);
@@ -33,6 +34,8 @@ export default function MouvementsStock() {
     setEditingMouvement(mouvement);
     setOpenModal(true);
   };
+   const { user } = useAuth();
+    const isResponsableStock = user?.role === "responsable_stock";
 
   const handleAdd = () => {
     setEditingMouvement(null);
@@ -43,7 +46,10 @@ export default function MouvementsStock() {
     <div>
       <div className="flex justify-between mb-4">
         <h1 className="text-2xl font-bold">Mouvements de Stock</h1>
-        <Button onClick={handleAdd}>Ajouter Mouvement</Button>
+        {!isResponsableStock && (
+          <Button onClick={handleAdd}>Ajouter Mouvement</Button>
+        )}
+
       </div>
 
       {loading && <p className="text-gray-500">Chargement des mouvements...</p>}
@@ -60,7 +66,9 @@ export default function MouvementsStock() {
               <TableHead>Magasin Source</TableHead>
               <TableHead>Magasin Dest</TableHead>
               <TableHead>Date</TableHead>
+              {!isResponsableStock && (
               <TableHead>Actions</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -73,7 +81,9 @@ export default function MouvementsStock() {
                 <TableCell>{m.magasin_dest?.nom || "-"}</TableCell>
                 <TableCell>{new Date(m.date_mouvement).toLocaleString()}</TableCell>
                 <TableCell>
+                  {!isResponsableStock && (
                   <Button variant="outline" size="sm" onClick={() => handleEdit(m)}>Modifier</Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
