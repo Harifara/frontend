@@ -257,7 +257,9 @@ const StockManagement: React.FC = () => {
               <TableHead>Quantité</TableHead>
               <TableHead>Seuil Alerte</TableHead>
               <TableHead>Date Péremption</TableHead>
+              {isResponsableStock && (
               <TableHead>Actions</TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -278,8 +280,10 @@ const StockManagement: React.FC = () => {
                   <TableCell>{s.seuil_alerte}</TableCell>
                   <TableCell>{s.date_peremption || "—"}</TableCell>
                   <TableCell className="space-x-2">
+                    {isResponsableStock && (
                     <Button variant="outline" size="sm" onClick={() => handleEdit(s)}>Modifier</Button>
                     <Button variant="destructive" size="sm" onClick={() => openDeleteModal(s)}>Supprimer</Button>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
