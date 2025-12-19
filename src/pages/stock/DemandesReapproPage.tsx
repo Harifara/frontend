@@ -41,11 +41,11 @@ export default function DemandesReapproPage() {
   const [motif, setMotif] = useState("");
   const { user } = useAuth();
       const isResponsableStock = user?.role === "responsable_stock";
+      const isMagasinier = user?.role === "magasinier";
 
   const [stocksAutresMagasins, setStocksAutresMagasins] = useState<
     { magasin: string; quantite: number; magasin_id?: string; quantiteToTransfer?: number }[]
-  >([]);
-
+  
   const priorites = ["faible", "normale", "haute", "urgente"];
 
   // --------------------
@@ -247,6 +247,7 @@ export default function DemandesReapproPage() {
                 <TableCell>{d.priorite}</TableCell>
                 <TableCell>{d.motif}</TableCell>
                 <TableCell>{d.commentaire_validation || "-"}</TableCell>
+                <>{!isMagasinier && (
                 <TableCell className="space-x-2">
                   {d.statut === "en_attente" && (
                     <>{!isResponsableStock && (
@@ -261,6 +262,7 @@ export default function DemandesReapproPage() {
                     </>
                   )}
                 </TableCell>
+                )}</>
               </TableRow>
             ))}
           </TableBody>
