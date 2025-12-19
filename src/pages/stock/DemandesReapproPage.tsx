@@ -45,6 +45,7 @@ export default function DemandesReapproPage() {
 
   const [stocksAutresMagasins, setStocksAutresMagasins] = useState<
     { magasin: string; quantite: number; magasin_id?: string; quantiteToTransfer?: number }[]
+>([]);
   
   const priorites = ["faible", "normale", "haute", "urgente"];
 
